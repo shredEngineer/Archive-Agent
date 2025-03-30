@@ -11,10 +11,10 @@ else
 	echo " ❌ Archive Agent Qdrant server is NOT running."
 
 	if docker ps -a --filter "name=$CONTAINER_NAME" --format "{{.Names}}" | grep -q "^$CONTAINER_NAME$"; then
-		echo " 🔁 Restarting existing container '$CONTAINER_NAME'..."
+		echo " 🔁 Restarting Archive Agent Qdrant server"
 		docker start "$CONTAINER_NAME"
 	else
-		echo " 🚀 Starting new container '$CONTAINER_NAME'..."
+		echo " 🚀 Starting Archive Agent Qdrant server"
 		docker run -d \
 			--name "$CONTAINER_NAME" \
 			--restart unless-stopped \
