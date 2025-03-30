@@ -92,18 +92,18 @@ Creates default `config.json` and `watchlist.json`.
 ### Watch files and folders
 
 ```bash
-archive-agent watch <PATH>
+archive-agent watch <PATTERN>
 ```
 
-You can specify more than one path.
+You can specify more than one pattern or path (e.g., `*.txt`, `/path/foo`).
 
 ### Unwatch files and folders
 
 ```bash
-archive-agent unwatch <PATH>
+archive-agent unwatch <PATTERN>
 ```
 
-You can specify more than one path.
+You can specify more than one pattern or path (e.g., `*.txt`, `/path/foo`).
 
 Unwatch a file to exclude it from a watched folder.
 
@@ -123,13 +123,21 @@ archive-agent commit
 
 Detects changes, updates watchlist, and syncs Qdrant database (adds, updates, or removes entries).
 
+### Search your files and folders
+
+```bash
+archive-agent search "Which files mention donuts?"
+```
+
+Lists paths matching the question.
+
 ### Query your files and folders
 
 ```bash
 archive-agent query "Which files mention donuts?"
 ```
 
-**TODO:** Screenshot of example output.
+Answers your question using RAG.
 
 ---
 
@@ -147,7 +155,6 @@ Your **Archive Agent** settings are stored in `~/.archive-agent/settings/`.
 Your Qdrant database is stored in `~/.archive-agent/qdrant_storage/`.
 
 Visit your [Qdrant dashboard](http://localhost:6333/dashboard#/collections) to manage collections and snapshots.
-
 
 ---
 
