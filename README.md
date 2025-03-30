@@ -51,7 +51,7 @@ chmod +x *.sh
 echo "alias archive-agent='$(pwd)/archive-agent.sh'" >> ~/.bashrc && source ~/.bashrc
 ```
 
-Creates a global `archive-agent` command via shell script.
+This creates a global `archive-agent` command via shell script.
 
 ---
 
@@ -139,7 +139,7 @@ archive-agent query "Which files mention donuts?"
 
 Your **Archive Agent** settings are stored in `~/.archive-agent/settings/`. 
 
-- `config.json`: Your base configuration; customizable if you know what you're doing.
+- `config.json`: Your configuration; customizable if you know what you're doing.
 - `watchlist.json`: Your watchlist; managed via the `watch` / `unwatch` commands.
 
 ### Qdrant database
