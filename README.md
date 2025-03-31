@@ -2,7 +2,7 @@
 
 **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**
 
-**Archive Agent** tracks your files and folders, syncs changes, and powers smart queries.  
+**Archive Agent** tracks your files, syncs changes, and powers smart queries.  
 
 ![Archive Agent Logo](archive_agent/assets/Archive-Agent-400x300.png)
 
@@ -41,7 +41,7 @@ This will persist the export for the current user, so you don't have to execute 
 
 ## Install Archive Agent
 
-Install **Archive Agent** wherever you choose:
+Install **Archive Agent** wherever you choose, creating a global `archive-agent` command:
 
 ```bash
 git clone https://github.com/shredEngineer/Archive-Agent
@@ -50,8 +50,6 @@ poetry install
 chmod +x *.sh
 echo "alias archive-agent='$(pwd)/archive-agent.sh'" >> ~/.bashrc && source ~/.bashrc
 ```
-
-This creates a global `archive-agent` command via shell script.
 
 ---
 
@@ -63,15 +61,23 @@ This creates a global `archive-agent` command via shell script.
 sudo usermod -aG docker $USER
 ```
 
-Then launch Qdrant with persistent storage and auto-restart, downloading the image on the first run:
+Then launch Qdrant with persistent storage and auto-restart (downloads the image on the first run):
 
 ```bash
 ./ensure-qdrant.sh
 ```
 
+To stop the Qdrant Docker image, run:
+
+```bash
+docker stop archive-agent-qdrant-server
+```
+
 ---
 
 ## Run Archive Agent
+
+Default settings are created on the first run. See *Storage* section below.
 
 ### Usage info
 
@@ -79,51 +85,51 @@ Then launch Qdrant with persistent storage and auto-restart, downloading the ima
 archive-agent
 ```
 
-Displays available commands.
+Displays usage info.
 
-### Initialize settings
+### Watch patterns
 
-```bash
-archive-agent init
-```
-
-Creates default `config.json` and `watchlist.json`.
-
-### Watch files and folders
+Specify one or more patterns to be watched:
 
 ```bash
-archive-agent watch <PATTERN>
+archive-agent watch ~/Documents/*.txt
 ```
 
-You can specify more than one pattern or path (e.g., `*.txt`, `/path/foo`).
+(Run `archive-agent commit` to apply changes.) 
 
-### Unwatch files and folders
+### Unwatch patterns
+
+Specify one or more patterns to be unwatched:
 
 ```bash
-archive-agent unwatch <PATTERN>
+archive-agent unwatch ~/Documents/*.txt
 ```
 
-You can specify more than one pattern or path (e.g., `*.txt`, `/path/foo`).
+(Run `archive-agent commit` to apply changes.)
 
-Unwatch a file to exclude it from a watched folder.
-
-### List your files and folders
+### List watched patterns
 
 ```bash
 archive-agent list
 ```
 
-Displays list of watched files and folders.
+Displays watched and unwatched patterns.
 
-### Commit your files and folders
+### Commit files to database
 
 ```bash
 archive-agent commit
 ```
 
-Detects changes, updates watchlist, and syncs Qdrant database (adds, updates, or removes entries).
+Resolves patterns, detects changes, and syncs Qdrant database.
 
-### Search your files and folders
+Changes are triggered by:
+- File added
+- File removed
+- File size changed
+- File date changed
+
+### Search your files
 
 ```bash
 archive-agent search "Which files mention donuts?"
@@ -131,7 +137,7 @@ archive-agent search "Which files mention donuts?"
 
 Lists paths matching the question.
 
-### Query your files and folders
+### Query your files
 
 ```bash
 archive-agent query "Which files mention donuts?"
@@ -145,14 +151,16 @@ Answers your question using RAG.
 
 ### Archive Agent settings
 
-Your **Archive Agent** settings are stored in `~/.archive-agent/settings/`. 
+**Archive Agent** settings are stored in `~/.archive-agent-settings/`. 
 
-- `config.json`: Your configuration; customizable if you know what you're doing.
-- `watchlist.json`: Your watchlist; managed via the `watch` / `unwatch` commands.
+- `config.json` can be customized if you know what you're doing.
+- `watchlist.json` is managed via the `watch` / `unwatch` / `commit` commands.
 
 ### Qdrant database
 
-Your Qdrant database is stored in `~/.archive-agent/qdrant_storage/`.
+Qdrant database is stored in `~/.archive-agent-qdrant-storage/`.
+
+**NOTE:** This folder is created by the Qdrant Docker image running as root.
 
 Visit your [Qdrant dashboard](http://localhost:6333/dashboard#/collections) to manage collections and snapshots.
 
