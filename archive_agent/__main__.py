@@ -1,8 +1,9 @@
-# Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
-# This file is part of Archive Agent. See LICENSE for details.
+#  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
+#  This file is part of Archive Agent. See LICENSE for details.
 
 import typer
 import logging
+from pathlib import Path
 from typing import List
 
 from archive_agent.config.ConfigManager import ConfigManager
@@ -16,65 +17,129 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+settings_path = Path.home() / ".archive-agent-settings"
+profile_path = settings_path / "default"
+
+config = ConfigManager(profile_path)
+watchlist = WatchlistManager(profile_path)
+
+
 app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
-    help="Archive Agent track your files, syncs changes, and powers smart queries.",
+    help="Archive Agent tracks your files, syncs changes, and powers smart queries.",
 )
 
 
-config = ConfigManager()
-watchlist = WatchlistManager()
+# noinspection PyShadowingNames
+@app.command()
+def include(patterns: List[str] = typer.Argument(None)) -> None:
+    """
+    Add included pattern(s).
+    """
+    if not patterns:
+        print()
+        pattern = typer.prompt("Include pattern")
+        patterns = [pattern]
+
+    for pattern in patterns:
+        watchlist.include(pattern)
+
+
+# noinspection PyShadowingNames
+@app.command()
+def exclude(patterns: List[str] = typer.Argument(None)) -> None:
+    """
+    Add excluded pattern(s).
+    """
+    if not patterns:
+        print()
+        pattern = typer.prompt("Exclude pattern")
+        patterns = [pattern]
+
+    for pattern in patterns:
+        watchlist.exclude(pattern)
+
+
+# noinspection PyShadowingNames
+@app.command()
+def remove(patterns: List[str] = typer.Argument(None)) -> None:
+    """
+    Remove previously included / excluded pattern(s).
+    """
+    if not patterns:
+        print()
+        pattern = typer.prompt("Remove pattern")
+        patterns = [pattern]
+
+    for pattern in patterns:
+        watchlist.remove(pattern)
 
 
 @app.command()
-def watch(pattern: str, additional_patterns: List[str] = typer.Argument(None)) -> None:
+def patterns() -> None:
     """
-    Specify one or more patterns to be watched.
+    Show the list of included / excluded patterns.
     """
-    patterns = [pattern] + (additional_patterns or [])
-    raise NotImplementedError
+    watchlist.patterns()
 
 
 @app.command()
-def unwatch(pattern: str, additional_patterns: List[str] = typer.Argument(None)) -> None:
+def track() -> None:
     """
-    Specify one or more patterns to be unwatched.
+    Resolve all patterns and track changed files.
     """
-    patterns = [pattern] + (additional_patterns or [])
-    raise NotImplementedError
+    watchlist.track()
 
 
 # noinspection PyShadowingBuiltins
 @app.command()
 def list() -> None:
     """
-    Displays watched and unwatched patterns.
+    Show the full list of tracked files.
     """
-    raise NotImplementedError
+    watchlist.list()
+
+
+@app.command()
+def diff() -> None:
+    """
+    Show the list of changed files.
+    """
+    watchlist.diff()
 
 
 @app.command()
 def commit() -> None:
     """
-    Resolves patterns, detects changes, and syncs Qdrant database.
+    Sync changed files with the Qdrant database.
     """
     raise NotImplementedError
 
 
 @app.command()
-def search(question: str) -> None:
+def search(question: str = typer.Argument(None)) -> None:
     """
-    Lists paths matching the question.
+    List files matching the question.
     """
+    if question:
+        pass
+    else:
+        print()
+        question = typer.prompt("Type your question")
     raise NotImplementedError
 
 
 @app.command()
-def query(question: str) -> None:
+def query(question: str = typer.Argument(None)) -> None:
     """
-    Answers your question using RAG.
+    Get answer to question using RAG.
     """
+    if question:
+        pass
+    else:
+        print()
+        question = typer.prompt("Type your question")
     raise NotImplementedError
 
 

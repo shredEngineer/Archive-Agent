@@ -1,75 +1,231 @@
-# Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
-# This file is part of Archive Agent. See LICENSE for details.
+#  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
+#  This file is part of Archive Agent. See LICENSE for details.
 
-import typer
 import logging
-import json
-import shutil
+import os
 from pathlib import Path
-from typing import Any
+
+from archive_agent.util.pattern import validate_pattern, resolve_pattern
+from archive_agent.util import StorageManager
 
 logger = logging.getLogger(__name__)
 
 
-class WatchlistManager:
+class WatchlistManager(StorageManager):
     """
     Watchlist manager.
     """
 
     DEFAULT_WATCHLIST = {
-        "watched": [],
-        "unwatched": [],
-        "state": [],
+        'included': [],
+        'excluded': [],
+        'tracked': {},
     }
 
-    def __init__(self) -> None:
+    DIFF_NONE = 'None'
+    DIFF_ADDED = 'added'
+    DIFF_REMOVED = 'removed'
+    DIFF_CHANGED = 'changed'
+
+    def __init__(self, profile_path: Path) -> None:
         """
         Initialize watchlist manager.
+        :param profile_path: Profile path.
         """
-        self.watchlist_path = Path.home() / ".archive-agent-settings" / "watchlist.json"
-        self.watchlist: dict[str, Any] = {}
-        self.load_or_create()
+        StorageManager.__init__(self, profile_path / "watchlist.json", self.DEFAULT_WATCHLIST)
 
-    def load_or_create(self) -> None:
+    def validate(self) -> bool:
         """
-        Load or create watchlist.
+        Validate data.
+        :return: True if data is valid, False otherwise.
         """
-        try:
-            if self.watchlist_path.exists():
-                self.load()
-            else:
-                self.create()
-        except Exception as e:
-            logger.error(f"Failed to load watchlist: {e}")
-            raise typer.Exit(code=1)
+        if set(self.data['included']) & set(self.data['excluded']):
+            logger.error("Included and excluded patterns are overlapping")
+            return False
+        return True
 
-    def create(self) -> None:
+    def include(self, pattern) -> None:
         """
-        Create watchlist.
+        Add included pattern.
+        :param pattern: Pattern.
         """
-        self.watchlist = self.DEFAULT_WATCHLIST
+        pattern = validate_pattern(pattern)
+
+        if pattern in self.data['included']:
+            logger.info(f"Already included pattern:")
+            logger.info(f" - {pattern}")
+
+        elif pattern in self.data['excluded']:
+            logger.info(f"Included previously excluded pattern:")
+            logger.info(f" - {pattern}")
+            self.data['excluded'].remove(pattern)
+            self.data['included'] = list(set(self.data['included']) | {pattern})
+            self.save()
+
+        else:
+            logger.info(f"New included pattern:")
+            logger.info(f" - {pattern}")
+            self.data['included'] = list(set(self.data['included']) | {pattern})
+            self.save()
+
+    def exclude(self, pattern) -> None:
+        """
+        Add excluded pattern.
+        :param pattern: Pattern.
+        """
+        pattern = validate_pattern(pattern)
+
+        if pattern in self.data['excluded']:
+            logger.info(f"Already excluded pattern:")
+            logger.info(f" - {pattern}")
+
+        elif pattern in self.data['included']:
+            logger.info(f"Excluded previously included pattern:")
+            logger.info(f" - {pattern}")
+            self.data['included'].remove(pattern)
+            self.data['excluded'] = list(set(self.data['excluded']) | {pattern})
+            self.save()
+
+        else:
+            logger.info(f"New excluded pattern:")
+            logger.info(f" - {pattern}")
+            self.data['excluded'] = list(set(self.data['excluded']) | {pattern})
+            self.save()
+
+    def remove(self, pattern) -> None:
+        """
+        Remove previously included / excluded pattern.
+        :param pattern: Pattern.
+        """
+        pattern = validate_pattern(pattern)
+
+        if pattern in self.data['included']:
+            logger.info(f"Removed included pattern:")
+            logger.info(f" - {pattern}")
+            self.data['included'].remove(pattern)
+            self.save()
+
+        elif pattern in self.data['excluded']:
+            logger.info(f"Removed excluded pattern:")
+            logger.info(f" - {pattern}")
+            self.data['excluded'].remove(pattern)
+            self.save()
+
+        else:
+            logger.warning(f"No existing rule for pattern:")
+            logger.info(f" - {pattern}")
+
+    def patterns(self) -> None:
+        """
+        Show the list of included / excluded patterns.
+        """
+        if len(self.data['included']) > 0:
+            logger.info(f"({len(self.data['included'])}) included pattern(s):")
+            for included_pattern in self.data['included']:
+                logger.info(f" - {included_pattern}")
+        else:
+            logger.info("(0) included pattern(s)")
+
+        if len(self.data['excluded']) > 0:
+            logger.info(f"({len(self.data['excluded'])}) excluded pattern(s):")
+            for excluded_pattern in self.data['excluded']:
+                logger.info(f" - {excluded_pattern}")
+        else:
+            logger.info("(0) excluded pattern(s)")
+
+    def track(self):
+        """
+        Resolve all patterns and track changed files.
+        """
+        logger.info(f"Resolving ({len(self.data['included'])}) included / "
+                    f"({len(self.data['excluded'])}) excluded pattern(s):")
+
+        included_files = []
+        for included_pattern in self.data['included']:
+            included_files += resolve_pattern(included_pattern)
+        included_files = list(set(included_files))
+        logger.info(f" - Matched ({len(included_files)}) unique included file(s)")
+
+        excluded_files = []
+        for excluded_pattern in self.data['excluded']:
+            excluded_files += resolve_pattern(excluded_pattern)
+        excluded_files = list(set(excluded_files))
+        logger.info(f" - Matched ({len(included_files)}) unique excluded file(s)")
+
+        tracked_files_old = self.data['tracked'].keys()
+        tracked_files_new = sorted([file for file in included_files if file not in excluded_files])
+
+        logger.info(f"Tracking ({len(tracked_files_new)}) file(s):")
+
+        added_files = [file for file in tracked_files_new if file not in tracked_files_old]
+        removed_files = [file for file in tracked_files_old if file not in tracked_files_new]
+
+        possibly_changed_files = [file for file in tracked_files_new if file not in added_files + removed_files]
+
+        tracked_dict_old = self.data['tracked']
+        tracked_dict_new = {
+            file: {
+                'size': os.path.getsize(file),
+                'mtime': os.path.getmtime(file),
+                'diff': self.DIFF_NONE,
+            }
+            for file in tracked_files_new
+        }
+
+        changed_files = [file for file in possibly_changed_files if tracked_dict_new[file] != tracked_dict_old[file]]
+
+        for file in added_files:
+            tracked_dict_new[file]['diff'] = self.DIFF_ADDED
+
+        for file in removed_files:
+            tracked_dict_new[file]['diff'] = self.DIFF_REMOVED
+
+        for file in changed_files:
+            tracked_dict_new[file]['diff'] = self.DIFF_CHANGED
+
+        logger.info(f" - ({len(added_files)}) added file(s)")
+        logger.info(f" - ({len(removed_files)}) removed file(s)")
+        logger.info(f" - ({len(changed_files)}) changed file(s)")
+
+        self.data['tracked'] = tracked_dict_new
         self.save()
-        logger.info("Created default watchlist")
 
-    def load(self) -> None:
+    def list(self) -> None:
         """
-        Load watchlist.
+        Show the full list of tracked files.
         """
-        with open(self.watchlist_path, "r", encoding="utf-8") as f:
-            self.watchlist = json.load(f)
-        missing_keys = self.DEFAULT_WATCHLIST.keys() - self.watchlist.keys()
-        if missing_keys:
-            raise RuntimeError(f"Missing keys in watchlist: {missing_keys}")
-        logger.debug("Loaded existing watchlist")
+        if len(self.data['tracked']) > 0:
+            logger.info(f"({len(self.data['included'])}) tracked files(s):")
+            for file in self.data['tracked'].keys():
+                logger.info(f" - {file}")
+        else:
+            logger.info("(0) tracked file(s)")
 
-    def save(self) -> None:
+    def diff(self) -> None:
         """
-        Save watchlist to disk in atomic write.
+        Show the list of changed files.
         """
-        self.watchlist_path.parent.mkdir(parents=True, exist_ok=True)
-        temp_path = self.watchlist_path.with_suffix(".tmp")
-        with open(temp_path, "w", encoding="utf-8") as f:
-            # noinspection PyTypeChecker
-            json.dump(self.watchlist, f, indent=4)
-        shutil.move(temp_path, self.watchlist_path)
-        logger.debug("Saved watchlist")
+        added_files = [file for file, meta in self.data['tracked'].items() if meta['diff'] == self.DIFF_ADDED]
+        removed_files = [file for file, meta in self.data['tracked'].items() if meta['diff'] == self.DIFF_REMOVED]
+        changed_files = [file for file, meta in self.data['tracked'].items() if meta['diff'] == self.DIFF_CHANGED]
+
+        if len(added_files) > 0:
+            logger.info(f"({len(added_files)}) added files(s):")
+            for file in added_files:
+                logger.info(f" - {file}")
+        else:
+            logger.info("(0) added file(s)")
+
+        if len(removed_files) > 0:
+            logger.info(f"({len(removed_files)}) removed files(s):")
+            for file in removed_files:
+                logger.info(f" - {file}")
+        else:
+            logger.info("(0) removed file(s)")
+
+        if len(changed_files) > 0:
+            logger.info(f"({len(changed_files)}) changed files(s):")
+            for file in changed_files:
+                logger.info(f" - {file}")
+        else:
+            logger.info("(0) changed file(s)")
