@@ -84,8 +84,8 @@ The default settings profile is created on the first run. (See [Storage](#storag
 
 **Archive Agent** uses *patterns* to select your files:
 
-- Patterns can be actual filenames.
-- Patterns can be paths containing wildcards that resolve to actual filenames.
+- Patterns can be actual file paths.
+- Patterns can be paths containing wildcards that resolve to actual file paths.
 - Patterns must be specified as (or resolve to) *absolute* paths, e.g. `/home/user/Documents/*.txt` (or `~/Documents/*.txt`).
 - Patterns may use the wildcard `**` to match any files and zero or more directories, subdirectories and symbolic links to directories.
 
@@ -234,14 +234,35 @@ Visit your [Qdrant dashboard](http://localhost:6333/dashboard#/collections) to m
 
 ---
 
+## Testing
+
+To install local tokenizer, run this once:
+
+```bash
+poetry run python -m nltk.downloader punkt_tab
+```
+
+To run all tests, run this:
+
+```bash
+poetry run pytest
+```
+
+---
+
 ## TODO
 
 **Archive Agent** is fully functional right now.
 
 However, the following features could make it even better:
 
-- [ ] Switch profiles (use folder other than `default/`)
+- [ ] Add PDF-to-JPG step
+- [ ] Implement smart chunking through LLM instead of sentence tokenizer
 - [ ] Save RAG answers to file (could also be indexed, enables feedback loop)
+- [ ] Switch profiles (use folder other than `default/`)
+- [ ] Accumulate and persist OpenAI token usage
+- [ ] Add `status` command for watchlist, diff, Qdrant, and usage stats 
+- [ ] Add graphical user interface
 
 ---
 

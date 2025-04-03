@@ -1,9 +1,12 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
+import typer
 import logging
 import os
 from pathlib import Path
+from copy import deepcopy
+from typing import Dict, Any
 
 from archive_agent.util.pattern import validate_pattern, resolve_pattern
 from archive_agent.util import StorageManager
@@ -26,13 +29,14 @@ class WatchlistManager(StorageManager):
     DIFF_ADDED = 'added'
     DIFF_REMOVED = 'removed'
     DIFF_CHANGED = 'changed'
+    DIFF_OPTIONS = [DIFF_NONE, DIFF_ADDED, DIFF_REMOVED, DIFF_CHANGED]
 
     def __init__(self, profile_path: Path) -> None:
         """
         Initialize watchlist manager.
         :param profile_path: Profile path.
         """
-        StorageManager.__init__(self, profile_path / "watchlist.json", self.DEFAULT_WATCHLIST)
+        StorageManager.__init__(self, profile_path / "watchlist.json", deepcopy(self.DEFAULT_WATCHLIST))
 
     def validate(self) -> bool:
         """
@@ -40,8 +44,13 @@ class WatchlistManager(StorageManager):
         :return: True if data is valid, False otherwise.
         """
         if set(self.data['included']) & set(self.data['excluded']):
-            logger.error("Included and excluded patterns are overlapping")
+            logger.error("Overlapping included and excluded patterns")
             return False
+
+        if any(meta['diff'] not in self.DIFF_OPTIONS for meta in self.data['tracked'].values()):
+            logger.error("Invalid diff option encountered")
+            return False
+
         return True
 
     def include(self, pattern) -> None:
@@ -155,6 +164,8 @@ class WatchlistManager(StorageManager):
         tracked_files_old = self.data['tracked'].keys()
         tracked_files_new = sorted([file for file in included_files if file not in excluded_files])
 
+        logger.info(f" - Ignoring ({len(included_files) - len(tracked_files_new)}) file(s)")
+
         logger.info(f"Tracking ({len(tracked_files_new)}) file(s):")
 
         added_files = [file for file in tracked_files_new if file not in tracked_files_old]
@@ -178,7 +189,11 @@ class WatchlistManager(StorageManager):
             tracked_dict_new[file]['diff'] = self.DIFF_ADDED
 
         for file in removed_files:
-            tracked_dict_new[file]['diff'] = self.DIFF_REMOVED
+            tracked_dict_new[file] = {
+                'size': 0,
+                'mtime': 0,
+                'diff': self.DIFF_REMOVED,
+            }
 
         for file in changed_files:
             tracked_dict_new[file]['diff'] = self.DIFF_CHANGED
@@ -229,3 +244,35 @@ class WatchlistManager(StorageManager):
                 logger.info(f" - {file}")
         else:
             logger.info("(0) changed file(s)")
+
+    def diff_get_queue(self) -> Dict[str, Any]:
+        """
+        Get diff queue.
+        :return: Subset of tracked files with unresolved diff.
+        """
+        return {
+            file_path: meta
+            for file_path, meta in self.data['tracked'].items()
+            if meta['diff'] != self.DIFF_NONE
+        }
+
+    def diff_mark_resolved(self, file_path) -> None:
+        """
+        Mark file in diff as resolved.
+        If the file was deleted, untrack it completely.
+        :param file_path: File path.
+        """
+        if file_path not in self.data['tracked']:
+            logger.error(f"Untracked file: '{file_path}'")
+            raise typer.Exit(code=1)
+
+        if self.data['tracked'][file_path]['diff'] == self.DIFF_NONE:
+            logger.error(f"File already marked as resolved: '{file_path}'")
+            raise typer.Exit(code=1)
+
+        if self.data['tracked'][file_path]['diff'] == self.DIFF_REMOVED:
+            del self.data['tracked'][file_path]
+        else:
+            self.data['tracked'][file_path]['diff'] = self.DIFF_NONE
+
+        self.save()

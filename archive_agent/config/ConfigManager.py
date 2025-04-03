@@ -3,6 +3,7 @@
 
 import logging
 from pathlib import Path
+from copy import deepcopy
 
 from archive_agent.util import StorageManager
 
@@ -14,11 +15,21 @@ class ConfigManager(StorageManager):
     Config manager.
     """
 
+    OPENAI_MODEL_EMBED = 'openai_model_embed'
+    OPENAI_MODEL_QUERY = 'openai_model_query'
+    OPENAI_MODEL_VISION = 'openai_model_vision'
+
+    QDRANT_SERVER_URL = 'qdrant_server_url'
+    QDRANT_COLLECTION = 'qdrant_collection'
+    QDRANT_VECTOR_SIZE = 'qdrant_vector_size'
+
     DEFAULT_CONFIG = {
-        'openai_model_embed': "text-embedding-3-small",
-        'openai_model_query': "gpt-4o-2024-08-06",
-        'qdrant_collection': "archive-agent",
-        'qdrant_server_url': "http://localhost:6333"
+        OPENAI_MODEL_EMBED: "text-embedding-3-small",
+        OPENAI_MODEL_QUERY: "gpt-4o-2024-08-06",
+        OPENAI_MODEL_VISION: "gpt-4o-2024-08-06",
+        QDRANT_SERVER_URL: "http://localhost:6333",
+        QDRANT_COLLECTION: "archive-agent",
+        QDRANT_VECTOR_SIZE: 1536,
     }
 
     def __init__(self, profile_path: Path) -> None:
@@ -26,7 +37,7 @@ class ConfigManager(StorageManager):
         Initialize config manager.
         :param profile_path: Profile path.
         """
-        StorageManager.__init__(self, profile_path / "config.json", self.DEFAULT_CONFIG)
+        StorageManager.__init__(self, profile_path / "config.json", deepcopy(self.DEFAULT_CONFIG))
 
     def validate(self) -> bool:
         """

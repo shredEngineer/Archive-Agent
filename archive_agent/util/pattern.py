@@ -12,15 +12,15 @@ logger = logging.getLogger(__name__)
 
 def resolve_pattern(pattern: str) -> List[str]:
     """
-    Resolve file system search pattern to absolute filenames.
+    Resolve file system search pattern to absolute file paths.
     :param pattern: Pattern.
-    :return: List of absolute filenames.
+    :return: List of absolute file paths.
     """
-    return [
-        os.path.abspath(path)
-        for path in glob.glob(pattern, recursive=True)
-        if os.path.isfile(path)
-    ]
+    return sorted([
+        os.path.abspath(file_path)
+        for file_path in glob.glob(pattern, recursive=True)
+        if os.path.isfile(file_path)
+    ])
 
 
 def validate_pattern(pattern: str) -> str:
