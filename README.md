@@ -255,6 +255,7 @@ The default settings profile is located in `default/`:
   - `qdrant_vector_size`: Qdrant vector size
   - `qdrant_score_min`: Minimum score of retrieved chunks (`0`...`1`)
   - `qdrant_chunks_max`: Maximum number of retrieved chunks
+  - `chunk_sentences_max`: Maximum number of sentences per chunk
 
 - `watchlist.json`:
   - Managed via the `include` / `exclude` / `remove` / `track` / `commit` commands.
