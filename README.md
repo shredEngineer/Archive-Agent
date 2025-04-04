@@ -289,6 +289,9 @@ poetry run pytest
 
 **Archive Agent** is fully functional right now and development is continuing. 
 
+Performance:
+- [ ] Implement [OpenAI API request parallel processor](https://github.com/openai/openai-cookbook/blob/main/examples/api_request_parallel_processor.py)
+
 Related to section [How files are processed](#how-files-are-processed):
 - [ ] Convert `.pdf` to `.jpg` internally and use vision
 - [ ] Convert `.doc`, `.docx`, `.odt`, `.rtf` to text 

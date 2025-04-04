@@ -8,11 +8,12 @@ from openai import OpenAI
 
 from archive_agent.util.image import image_from_file, image_resize_safe, image_to_base64
 from archive_agent.util import CliManager
+from archive_agent.util import RetryManager
 
 logger = logging.getLogger(__name__)
 
 
-class OpenAiManager:
+class OpenAiManager(RetryManager):
     """
     OpenAI manager.
     """
@@ -60,6 +61,15 @@ class OpenAiManager:
 
         self.total_tokens = 0
 
+        RetryManager.__init__(
+            self,
+            endpoint_predelay=0,
+            endpoint_delay=5,
+            endpoint_timeout=40,
+            endpoint_exp_backoff=2,
+            endpoint_retries=10,
+        )
+
     def usage(self) -> None:
         """
         Show usage.
@@ -78,7 +88,7 @@ class OpenAiManager:
                 model=self.model_embed,
             )
 
-        response = self.cli.format_openai_embed(callback, text)
+        response = self.cli.format_openai_embed(lambda: self.retry(callback), text)
         self.total_tokens += response.usage.total_tokens
         return response.data[0].embedding
 
@@ -107,7 +117,7 @@ class OpenAiManager:
                 ],
             )
 
-        response = self.cli.format_openai_query(callback, prompt)
+        response = self.cli.format_openai_query(lambda: self.retry(callback), prompt)
         self.total_tokens += response.usage.total_tokens
         return response.output_text
 
@@ -117,8 +127,9 @@ class OpenAiManager:
         :param file_path: File path.
         :return: Image converted to text.
         """
+        image_base64 = image_to_base64(image_resize_safe(image_from_file(file_path)))
+
         def callback():
-            image_base64 = image_to_base64(image_resize_safe(image_from_file(file_path)))
             return self.client.responses.create(
                 model=self.model_vision,
                 input=[
@@ -138,6 +149,6 @@ class OpenAiManager:
                 ],
             )
 
-        response = self.cli.format_openai_vision(callback)
+        response = self.cli.format_openai_vision(lambda: self.retry(callback))
         self.total_tokens += response.usage.total_tokens
         return response.output_text

@@ -33,7 +33,7 @@ class CliManager:
         logger.info(f" - Embedding...")
         print(Panel(f"[white]{chunk}"))
         response = callback()
-        logger.info(f"    - Used ({response.usage.total_tokens}) token(s)")
+        logger.info(f" - Used ({response.usage.total_tokens}) token(s)")
         return response
 
     @staticmethod
@@ -48,7 +48,7 @@ class CliManager:
         print(Panel(f"[red]{prompt}"))
         response = callback()
         print(Panel(f"[green]{response.output_text}"))
-        logger.info(f"    - Used ({response.usage.total_tokens}) token(s)")
+        logger.info(f" - Used ({response.usage.total_tokens}) token(s)")
         return response
 
     @staticmethod
@@ -61,7 +61,7 @@ class CliManager:
         logger.info(f" - Image vision...")
         response = callback()
         print(Panel(f"[green]{response.output_text}"))
-        logger.info(f"    - Used ({response.usage.total_tokens}) token(s)")
+        logger.info(f" - Used ({response.usage.total_tokens}) token(s)")
         return response
 
     @staticmethod
@@ -72,7 +72,7 @@ class CliManager:
         """
         for point in points:
             score_percent = point.score * 100
-            logger.info(f"   - ({score_percent:.2f} %) matching chunk in file: '{point.payload['file_path']}':")
+            logger.info(f" - ({score_percent:.2f} %) matching chunk in file: '{point.payload['file_path']}':")
             print(Panel(f"[yellow]{point.payload['chunk']}"))
 
         logger.warning(f" - Found ({len(points)}) matching chunks")
