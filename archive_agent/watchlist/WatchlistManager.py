@@ -201,6 +201,7 @@ class WatchlistManager(StorageManager):
         logger.info(f" - ({len(added_files)}) added file(s)")
         logger.info(f" - ({len(removed_files)}) removed file(s)")
         logger.info(f" - ({len(changed_files)}) changed file(s)")
+        logger.info(f" - ({len(tracked_files_new) - len(changed_files)}) unchanged file(s)")
 
         self.data['tracked'] = tracked_dict_new
         self.save()
@@ -216,45 +217,42 @@ class WatchlistManager(StorageManager):
         else:
             logger.info("(0) tracked file(s)")
 
+    def diff_filter(self, diff_option: str) -> Dict[str, Dict[str, Any]]:
+        """
+        Filter tracked files for diff option.
+        :param diff_option: Diff option to filter for.
+        :return: Filtered files.
+        """
+        return {file: meta for file, meta in self.data['tracked'].items() if meta['diff'] == diff_option}
+
     def diff(self) -> None:
         """
         Show the list of changed files.
         """
-        added_files = [file for file, meta in self.data['tracked'].items() if meta['diff'] == self.DIFF_ADDED]
-        removed_files = [file for file, meta in self.data['tracked'].items() if meta['diff'] == self.DIFF_REMOVED]
-        changed_files = [file for file, meta in self.data['tracked'].items() if meta['diff'] == self.DIFF_CHANGED]
+        added_files = self.diff_filter(self.DIFF_ADDED)
+        changed_files = self.diff_filter(self.DIFF_CHANGED)
+        removed_files = self.diff_filter(self.DIFF_REMOVED)
 
         if len(added_files) > 0:
             logger.info(f"({len(added_files)}) added files(s):")
-            for file in added_files:
+            for file in added_files.keys():
                 logger.info(f" - {file}")
         else:
             logger.info("(0) added file(s)")
 
-        if len(removed_files) > 0:
-            logger.info(f"({len(removed_files)}) removed files(s):")
-            for file in removed_files:
-                logger.info(f" - {file}")
-        else:
-            logger.info("(0) removed file(s)")
-
         if len(changed_files) > 0:
             logger.info(f"({len(changed_files)}) changed files(s):")
-            for file in changed_files:
+            for file in changed_files.keys():
                 logger.info(f" - {file}")
         else:
             logger.info("(0) changed file(s)")
 
-    def diff_get_queue(self) -> Dict[str, Any]:
-        """
-        Get diff queue.
-        :return: Subset of tracked files with unresolved diff.
-        """
-        return {
-            file_path: meta
-            for file_path, meta in self.data['tracked'].items()
-            if meta['diff'] != self.DIFF_NONE
-        }
+        if len(removed_files) > 0:
+            logger.info(f"({len(removed_files)}) removed files(s):")
+            for file in removed_files.keys():
+                logger.info(f" - {file}")
+        else:
+            logger.info("(0) removed file(s)")
 
     def diff_mark_resolved(self, file_path) -> None:
         """

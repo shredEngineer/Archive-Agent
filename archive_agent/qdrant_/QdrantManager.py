@@ -1,8 +1,6 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-from rich import print
-from rich.panel import Panel
 import logging
 from typing import List
 
@@ -20,6 +18,7 @@ from qdrant_client.models import (
 from archive_agent.openai_ import OpenAiManager
 from archive_agent.data import ChunkManager
 from archive_agent.data import FileData
+from archive_agent.util import CliManager
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +32,7 @@ class QdrantManager:
 
     def __init__(
         self,
+        cli: CliManager,
         openai: OpenAiManager,
         chunker: ChunkManager,
         server_url: str,
@@ -43,6 +43,7 @@ class QdrantManager:
     ):
         """
         Initialize Qdrant manager.
+        :param cli: CLI manager.
         :param openai: OpenAI manager.
         :param chunker: Chunk manager.
         :param server_url: Server URL.
@@ -51,6 +52,7 @@ class QdrantManager:
         :param score_min: Minimum score of retrieved chunks (`0`...`1`).
         :param chunks_max: Maximum number of retrieved chunks
         """
+        self.cli = cli
         self.openai = openai
         self.chunker = chunker
         self.qdrant = QdrantClient(url=server_url)
@@ -66,13 +68,15 @@ class QdrantManager:
                 vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
             )
 
-    def add(self, file_path: str, file_mtime: float) -> None:
+    def add(self, file_path: str, file_mtime: float, quiet: bool = False) -> None:
         """
         Add file to Qdrant collection.
         :param file_path: File path.
         :param file_mtime: File modification time.
+        :param quiet: Quiet output if True.
         """
-        logger.info(f"Adding file: '{file_path}'")
+        if not quiet:
+            logger.info(f" - Adding file: '{file_path}'")
 
         data = FileData(openai=self.openai, chunker=self.chunker, file_path=file_path, file_mtime=file_mtime)
         data.process()
@@ -81,12 +85,14 @@ class QdrantManager:
 
         logger.info(f" - ({len(data.points)}) vectors added")
 
-    def remove(self, file_path: str) -> None:
+    def remove(self, file_path: str, quiet: bool = False) -> None:
         """
         Remove file from Qdrant collection.
         :param file_path: File path.
+        :param quiet: Quiet output if True.
         """
-        logger.info(f"Removing file: '{file_path}'")
+        if not quiet:
+            logger.info(f" - Removing file: '{file_path}'")
 
         self.qdrant.delete(
             collection_name=self.collection,
@@ -108,22 +114,18 @@ class QdrantManager:
         :param file_path: File path.
         :param file_mtime: File modification time.
         """
-        logger.info(f"Changing file (removing and adding): '{file_path}'")
+        logger.info(f" - Changing file: '{file_path}'")
 
-        self.remove(file_path)
-        self.add(file_path, file_mtime)
+        self.remove(file_path, quiet=True)
+        self.add(file_path, file_mtime, quiet=True)
 
-    def search(self, question: str) -> None:
+    def search(self, question: str) -> List[ScoredPoint]:
         """
-        List files matching the question.
+        Get points matching the question.
         :param question: Question.
+        :return: Points.
         """
-        logger.info(f"Searching:")
-        print(Panel(f"[red]{question}"))
-
-        logger.info(f" - Embedding question...")
-        total_tokens, vector = self.openai.embed(question)
-        logger.info(f"   - Used ({total_tokens}) token(s)")
+        vector = self.openai.embed(question)
 
         response = self.qdrant.query_points(
             collection_name=self.collection,
@@ -133,19 +135,16 @@ class QdrantManager:
             with_payload=True,
         )
 
-        self.list_chunks(response.points)
+        self.cli.format_points(response.points)
+        return response.points
 
-    def query(self, question: str) -> None:
+    def query(self, question: str) -> str:
         """
         Get answer to question using RAG.
         :param question: Question.
+        :return: Answer.
         """
-        logger.info(f"Querying:")
-        print(Panel(f"[red]{question}"))
-
-        logger.info(f" - Embedding question...")
-        total_tokens, vector = self.openai.embed(question)
-        logger.info(f"   - Used ({total_tokens}) token(s)")
+        vector = self.openai.embed(question)
 
         response = self.qdrant.query_points(
             collection_name=self.collection,
@@ -155,31 +154,15 @@ class QdrantManager:
             with_payload=True,
         )
 
-        self.list_chunks(response.points)
+        self.cli.format_points(response.points)
 
-        context = []
-        for point in response.points:
-            context.append(
-                "\n\n".join([
-                    f"{point.payload['file_path']}:",
-                    f"{point.payload['chunk']}",
-                ])
-            )
-        context = "\n\n\n\n".join(context)
+        context = "\n\n\n\n".join([
+            "\n\n".join([
+                f"<<<{point.payload['file_path']}>>>",
+                f"{point.payload['chunk']}\n",
+            ])
+            for point in response.points
+        ])
 
         answer = self.openai.query(question, context)
-
-        logger.info(f" - Answer:")
-        print(Panel(f"[green]{answer}"))
-
-    @staticmethod
-    def list_chunks(points: List[ScoredPoint]) -> None:
-        """
-        List chunks of retreived points.
-        :param points: Retrieved points.
-        """
-        for point in points:
-            match_percent = point.score * 100
-            logger.info(f" - ({match_percent:.2f} %) matching chunk for file: '{point.payload['file_path']}':")
-            answer = point.payload['chunk']
-            print(Panel(f"[orange3]{answer}"))
+        return answer

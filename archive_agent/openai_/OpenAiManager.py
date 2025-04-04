@@ -2,13 +2,12 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import logging
-from rich import print
-from rich.panel import Panel
 from typing import List
 
 from openai import OpenAI
 
 from archive_agent.util.image import image_from_file, image_resize_safe, image_to_base64
+from archive_agent.util import CliManager
 
 logger = logging.getLogger(__name__)
 
@@ -18,33 +17,70 @@ class OpenAiManager:
     OpenAI manager.
     """
 
-    PROMPT_VISION = "What's in this image? Extract and output every detail."
+    @staticmethod
+    def get_prompt_vision():
+        return "\n".join([
+            f"Extract all text from the image: Transcribe verbatim, don't describe.",
+            f"Only describe graphics or drawings in detail.",
+            f"Output the answer as a single paragraph without newlines.",
+        ])
 
-    def __init__(self, model_embed: str, model_query: str, model_vision: str):
+    @staticmethod
+    def get_prompt_query(question: str, context: str):
+        return "\n".join([
+            f"Act as a RAG agent: Use ONLY the context to answer the question.",
+            f"Respect the context: Do NOT use your internal knowledge to answer.",
+            f"Answer in great detail, considering ALL relevant aspects of the given context.",
+            f"Do NOT include fillers like \"According to the provided context, ...\".",
+            f"Strictly structure the answer like this:",
+            f"- Paragraph rephrasing the original question, guessing the intent from the context.",
+            f"- List of all possible answers to the question, extensively considering the context.",
+            f"- Paragraph summarizing and concluding the answer. Do NOT include fillers like \"Summarizing, ...\"",
+            f"If the context does not allow any answers at all, ONLY output the token \"[NO FURTHER CONTEXT FOUND]\".",
+            f"\n\n",
+            f"Context:\n\"\"\"\n{context}\n\"\"\"\n\n",
+            f"Question:\n\"\"\"\n{question}\n\"\"\"\n\n",
+            f"Answer:",
+        ])
+
+    def __init__(self, cli: CliManager, model_embed: str, model_query: str, model_vision: str):
         """
         Initialize OpenAI manager.
+        :param cli: CLI manager.
         :param model_embed: Model for embeddings.
         :param model_query: Model for queries.
         :param model_vision: Model for vision.
         """
+        self.cli = cli
         self.model_embed = model_embed
         self.model_query = model_query
         self.model_vision = model_vision
 
         self.client = OpenAI()
 
-    def embed(self, text: str) -> (int, List[float]):
+        self.total_tokens = 0
+
+    def usage(self) -> None:
+        """
+        Show usage.
+        """
+        logger.info(f"Used ({self.total_tokens}) token(s) in total")
+
+    def embed(self, text: str) -> List[float]:
         """
         Embed text.
         :param text: Text.
-        :return: (Total tokens, Embedding vector).
+        :return: Embedding vector.
         """
-        response = self.client.embeddings.create(
-            input=text,
-            model=self.model_embed,
-        )
+        def callback():
+            return self.client.embeddings.create(
+                input=text,
+                model=self.model_embed,
+            )
 
-        return response.usage.total_tokens, response.data[0].embedding
+        response = self.cli.format_openai_embed(callback, text)
+        self.total_tokens += response.usage.total_tokens
+        return response.data[0].embedding
 
     def query(self, question: str, context: str) -> str:
         """
@@ -53,40 +89,26 @@ class OpenAiManager:
         :param context: RAG context.
         :return: Answer.
         """
-        prompt = (
-            f"Use the following context to accurately answer the question."
-            f"If the context does not contain sufficient information, indicate that clearly instead of guessing."
-            f""
-            f"Context:"
-            f"\"\"\""
-            f"{context}"
-            f"\"\"\""
-            f""
-            f"Question:"
-            f"\"\"\""
-            f"{question}"
-            f"\"\"\""
-            f""
-            f"Answer:"
-        )
+        prompt = self.get_prompt_query(question, context)
 
-        response = self.client.responses.create(
-            model=self.model_query,
-            input=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": prompt
-                        },
-                    ],
-                },
-            ],
-        )
+        def callback():
+            return self.client.responses.create(
+                model=self.model_query,
+                input=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "input_text",
+                                "text": prompt,
+                            },
+                        ],
+                    },
+                ],
+            )
 
-        logger.info(f"   - Used ({response.usage.total_tokens}) token(s)")
-
+        response = self.cli.format_openai_query(callback, prompt)
+        self.total_tokens += response.usage.total_tokens
         return response.output_text
 
     def vision(self, file_path: str) -> str:
@@ -95,31 +117,27 @@ class OpenAiManager:
         :param file_path: File path.
         :return: Image converted to text.
         """
-        logger.info(f" - Image vision...")
+        def callback():
+            image_base64 = image_to_base64(image_resize_safe(image_from_file(file_path)))
+            return self.client.responses.create(
+                model=self.model_vision,
+                input=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "input_text",
+                                "text": self.get_prompt_vision()
+                            },
+                            {
+                                "type": "input_image",
+                                "image_url": f"data:image/jpeg;base64,{image_base64}",
+                            },
+                        ],
+                    },
+                ],
+            )
 
-        image_base64 = image_to_base64(image_resize_safe(image_from_file(file_path)))
-
-        response = self.client.responses.create(
-            model=self.model_vision,
-            input=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": self.PROMPT_VISION
-                        },
-                        {
-                            "type": "input_image",
-                            "image_url": f"data:image/jpeg;base64,{image_base64}",
-                        },
-                    ],
-                },
-            ],
-        )
-
-        print(Panel(f"[orange3]{response.output_text}"))
-
-        logger.info(f"   - Used ({response.usage.total_tokens}) token(s)")
-
+        response = self.cli.format_openai_vision(callback)
+        self.total_tokens += response.usage.total_tokens
         return response.output_text

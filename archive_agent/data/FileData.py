@@ -8,10 +8,10 @@ from typing import List
 
 from qdrant_client.models import PointStruct
 
-from archive_agent.data import ChunkManager
 from archive_agent.openai_ import OpenAiManager
 from archive_agent.util.image import is_image
 from archive_agent.util.text import is_text, load_as_utf8
+from archive_agent.data import ChunkManager
 
 logger = logging.getLogger(__name__)
 
@@ -23,19 +23,21 @@ class FileData:
 
     def __init__(
         self,
-        openai: OpenAiManager,
         chunker: ChunkManager,
+        openai: OpenAiManager,
         file_path: str,
         file_mtime: float,
     ):
         """
         Initialize file data.
         :param chunker: Chunk manager.
+        :param openai: OpenAI manager.
         :param file_path: File path.
         :param file_mtime: File modification time.
         """
-        self.openai = openai
         self.chunker = chunker
+        self.openai = openai
+
         self.file_path = file_path
         self.file_mtime = file_mtime
 
@@ -51,8 +53,10 @@ class FileData:
         """
         if is_image(file_path):
             return True
+
         elif is_text(file_path):
             return True
+
         else:
             return False
 
@@ -63,8 +67,10 @@ class FileData:
         """
         if is_image(self.file_path):
             return self.openai.vision(self.file_path)
+
         elif is_text(self.file_path):
             return load_as_utf8(self.file_path)
+
         else:
             logger.error(f"Cannot process file: '{self.file_path}'")
             raise typer.Exit(code=1)
@@ -75,26 +81,23 @@ class FileData:
         """
         self.text = self.decode()
 
-        chunks = self.chunker.get_chunks(self.text)
+        chunks = self.chunker.process(self.text)
 
         for chunk_index, chunk in enumerate(chunks):
+            logger.info(f" - Processing chunk ({chunk_index + 1}) / ({len(chunks)}) of file: '{self.file_path}'")
 
-            logger.info(f" - Embedding file chunk ({chunk_index + 1}) / ({len(chunks)})...")
-            total_tokens, vector = self.openai.embed(chunk)
-            logger.info(f"   - Used ({total_tokens}) token(s)")
-
-            payload = {
-                'file_path': self.file_path,
-                'file_mtime': self.file_mtime,
-                'chunk_index': chunk_index,
-                'chunks_total': len(chunks),
-                'chunk': chunk,
-            }
+            vector = self.openai.embed(chunk)
 
             self.points.append(
                 PointStruct(
                     id=str(uuid.uuid4()),
                     vector=vector,
-                    payload=payload,
+                    payload={
+                        'file_path': self.file_path,
+                        'file_mtime': self.file_mtime,
+                        'chunk_index': chunk_index,
+                        'chunks_total': len(chunks),
+                        'chunk': chunk,
+                    },
                 )
             )

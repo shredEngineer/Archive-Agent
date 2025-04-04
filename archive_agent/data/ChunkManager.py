@@ -32,9 +32,9 @@ class ChunkManager:
 
         ensure_nltk_punkt()
 
-    def get_chunks(self, text: str) -> List[str]:
+    def process(self, text: str) -> List[str]:
         """
-        Split text into chunks of multiple sentences.
+        Process text into multiple chunks of a maximum number of sentences.
         :param text: Text.
         :return: List of chunks.
         """

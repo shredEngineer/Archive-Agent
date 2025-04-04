@@ -1,6 +1,6 @@
 [project]
 name = "archive-agent"
-version = "0.1.0"
+version = "1.0.0"
 description = "Archive Agent: Smart Indexer with RAG Engine"
 authors = [
     {name = "Dr.-Ing. Paul Wilhelm", email = "paul@wilhelm.dev"}
@@ -13,8 +13,8 @@ dependencies = [
     "typer (>=0.15.2,<0.16.0)",
     "pillow (>=11.1.0,<12.0.0)",
     "charset-normalizer (>=3.4.1,<4.0.0)",
-    "nltk (>=3.8.2,<4.0.0)",
-    "rich (>=14.0.0,<15.0.0)"
+    "rich (>=14.0.0,<15.0.0)",
+    "nltk (>=3.9.1,<4.0.0)"
 ]
 
 

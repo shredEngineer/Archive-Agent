@@ -255,7 +255,6 @@ The default settings profile is located in `default/`:
   - `qdrant_vector_size`: Qdrant vector size
   - `qdrant_score_min`: Minimum score of retrieved chunks (`0`...`1`)
   - `qdrant_chunks_max`: Maximum number of retrieved chunks
-  - `chunk_sentences_max`: Maximum number of sentences per chunk
 
 - `watchlist.json`:
   - Managed via the `include` / `exclude` / `remove` / `track` / `commit` commands.
@@ -288,17 +287,18 @@ poetry run pytest
 
 ## TODO
 
-**Archive Agent** is fully functional right now.
+**Archive Agent** is fully functional right now and development is continuing. 
 
-However, the following features could make it even better:
+Related to section [How files are processed](#how-files-are-processed):
+- [ ] Convert PDF to JPG pages, for each page use vision
 
-- [ ] Add PDF-to-JPG step; update [How files are processed](#how-files-are-processed) section
-- [ ] Implement smart chunking through LLM instead of sentence tokenizer
+Related to section [Storage](#storage):
 - [ ] Save RAG answers to file (could also be indexed, enables feedback loop)
 - [ ] Switch profiles (use folder other than `default/`)
-- [ ] Accumulate and persist OpenAI token usage
-- [ ] Add `status` command for watchlist, diff, Qdrant, and usage stats 
-- [ ] Add graphical user interface
+
+General:
+- [ ] Improve test coverage
+- [ ] Beautify CLI
 
 ---
 
