@@ -294,7 +294,8 @@ Robustness:
 - [ ] Handle Qdrant API request errors
 
 Related to section [How files are processed](#how-files-are-processed):
-- [ ] Convert PDF to JPG pages, for each page use vision
+- [ ] Convert `.pdf` to `.jpg` internally and use vision
+- [ ] Convert `.doc`, `.docx`, `.odt`, `.rtf` to text 
 
 Related to section [Storage](#storage):
 - [ ] Save RAG answers to file (could also be indexed, enables feedback loop)
