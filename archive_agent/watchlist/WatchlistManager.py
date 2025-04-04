@@ -159,7 +159,7 @@ class WatchlistManager(StorageManager):
         for excluded_pattern in self.data['excluded']:
             excluded_files += resolve_pattern(excluded_pattern)
         excluded_files = list(set(excluded_files))
-        logger.info(f" - Matched ({len(included_files)}) unique excluded file(s)")
+        logger.info(f" - Matched ({len(excluded_files)}) unique excluded file(s)")
 
         tracked_files_old = self.data['tracked'].keys()
         tracked_files_new = sorted([file for file in included_files if file not in excluded_files])
