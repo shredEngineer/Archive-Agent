@@ -68,28 +68,37 @@ class QdrantManager:
                 vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
             )
 
-    def add(self, file_path: str, file_mtime: float, quiet: bool = False) -> None:
+    def add(self, file_path: str, file_mtime: float, quiet: bool = False) -> bool:
         """
         Add file to Qdrant collection.
         :param file_path: File path.
         :param file_mtime: File modification time.
         :param quiet: Quiet output if True.
+        :return: True if successful, False otherwise. 
         """
         if not quiet:
             logger.info(f" - Adding file: '{file_path}'")
 
         data = FileData(openai=self.openai, chunker=self.chunker, file_path=file_path, file_mtime=file_mtime)
         data.process()
+        
+        if len(data.points) == 0:
+            logger.error(f"Failed to process file data")
+            return False
 
         self.qdrant.upsert(collection_name=self.collection, points=data.points)
+        # TODO: Evaluate Qdrant response for error.
 
         logger.info(f" - ({len(data.points)}) vectors added")
 
-    def remove(self, file_path: str, quiet: bool = False) -> None:
+        return True
+
+    def remove(self, file_path: str, quiet: bool = False) -> bool:
         """
         Remove file from Qdrant collection.
         :param file_path: File path.
         :param quiet: Quiet output if True.
+        :return: True if successful, False otherwise.
         """
         if not quiet:
             logger.info(f" - Removing file: '{file_path}'")
@@ -107,17 +116,28 @@ class QdrantManager:
                 )
             ),
         )
+        # TODO: Handle Qdrant API request errors
 
-    def change(self, file_path: str, file_mtime: float) -> None:
+        return True
+
+    def change(self, file_path: str, file_mtime: float) -> bool:
         """
         Change file in Qdrant collection.
         :param file_path: File path.
         :param file_mtime: File modification time.
+        :return: True if successful, False otherwise.
         """
         logger.info(f" - Changing file: '{file_path}'")
 
-        self.remove(file_path, quiet=True)
-        self.add(file_path, file_mtime, quiet=True)
+        successful_remove = self.remove(file_path, quiet=True)
+        if not successful_remove:
+            return False
+
+        successful_add = self.add(file_path, file_mtime, quiet=True)
+        if not successful_add:
+            return False
+        
+        return True 
 
     def search(self, question: str) -> List[ScoredPoint]:
         """
@@ -134,6 +154,7 @@ class QdrantManager:
             limit=self.chunks_max,
             with_payload=True,
         )
+        # TODO: Handle Qdrant API request errors
 
         self.cli.format_points(response.points)
         return response.points
@@ -153,6 +174,7 @@ class QdrantManager:
             limit=self.chunks_max,
             with_payload=True,
         )
+        # TODO: Handle Qdrant API request errors
 
         self.cli.format_points(response.points)
 

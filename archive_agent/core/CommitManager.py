@@ -53,18 +53,23 @@ class CommitManager:
             for file_path, meta in tracked_unprocessable.items():
                 logger.warning(f" - Unprocessable file: '{file_path}'")
                 if meta['diff'] == self.watchlist.DIFF_REMOVED:
-                    self.qdrant.remove(file_path)
+                    _success = self.qdrant.remove(file_path)
                     self.watchlist.diff_mark_resolved(file_path)
 
             for file_path, meta in tracked_processable.items():
                 match diff_option:
                     case self.watchlist.DIFF_ADDED:
-                        self.qdrant.add(file_path, meta['mtime'])
+                        if self.qdrant.add(file_path, meta['mtime']):
+                            self.watchlist.diff_mark_resolved(file_path)
+
                     case self.watchlist.DIFF_CHANGED:
-                        self.qdrant.change(file_path, meta['mtime'])
+                        if self.qdrant.change(file_path, meta['mtime']):
+                            self.watchlist.diff_mark_resolved(file_path)
+
                     case self.watchlist.DIFF_REMOVED:
-                        self.qdrant.remove(file_path)
+                        if self.qdrant.remove(file_path):
+                            self.watchlist.diff_mark_resolved(file_path)
+
                     case _:
                         logger.error(f"Invalid diff option: '{diff_option}'")
                         raise typer.Exit(code=1)
-                self.watchlist.diff_mark_resolved(file_path)
