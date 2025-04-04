@@ -289,10 +289,6 @@ poetry run pytest
 
 **Archive Agent** is fully functional right now and development is continuing. 
 
-Robustness:
-- [ ] Retry logic for OpenAI calls
-- [ ] Handle Qdrant API request errors
-
 Related to section [How files are processed](#how-files-are-processed):
 - [ ] Convert `.pdf` to `.jpg` internally and use vision
 - [ ] Convert `.doc`, `.docx`, `.odt`, `.rtf` to text 
