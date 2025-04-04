@@ -36,7 +36,7 @@ class ConfigManager(StorageManager):
         QDRANT_VECTOR_SIZE: 1536,
         QDRANT_SCORE_MIN: .1,
         QDRANT_CHUNKS_MAX: 10,
-        CHUNK_SENTENCES_MAX: 15,
+        CHUNK_SENTENCES_MAX: 8,
     }
 
     def __init__(self, profile_path: Path) -> None:
