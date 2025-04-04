@@ -18,7 +18,7 @@ def is_image(file_path: str) -> bool:
     :param file_path: File path.
     :return: True if the file path has a valid image extension, False otherwise.
     """
-    image_extensions: Set[str] = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
+    image_extensions: Set[str] = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"}
     return any(file_path.lower().endswith(ext) for ext in image_extensions)
 
 

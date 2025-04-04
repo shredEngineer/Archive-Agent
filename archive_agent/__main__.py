@@ -9,8 +9,9 @@ from typing import List
 from archive_agent.config import ConfigManager
 from archive_agent.watchlist import WatchlistManager
 from archive_agent.openai_ import OpenAiManager
-from archive_agent.qdrant_ import QdrantManager
+from archive_agent.data import ChunkManager
 from archive_agent.data import FileData
+from archive_agent.qdrant_ import QdrantManager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,6 +19,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S"
 )
 logger = logging.getLogger(__name__)
+
 
 settings_path = Path.home() / ".archive-agent-settings"
 profile_path = settings_path / "default"
@@ -29,11 +31,18 @@ openai = OpenAiManager(
     model_query=config.data[config.OPENAI_MODEL_QUERY],
     model_vision=config.data[config.OPENAI_MODEL_VISION],
 )
+chunker = ChunkManager(
+    openai=openai,
+    sentences_max=config.data[config.CHUNK_SENTENCES_MAX],
+)
 qdrant = QdrantManager(
     openai=openai,
+    chunker=chunker,
     server_url=config.data[config.QDRANT_SERVER_URL],
     collection=config.data[config.QDRANT_COLLECTION],
     vector_size=config.data[config.QDRANT_VECTOR_SIZE],
+    score_min=config.data[config.QDRANT_SCORE_MIN],
+    chunks_max=config.data[config.QDRANT_CHUNKS_MAX],
 )
 
 
@@ -139,7 +148,7 @@ def commit() -> None:
                 if FileData.is_processable(file_path):
                     qdrant.add(file_path, meta['mtime'])
                 else:
-                    logger.warning(f"Cannot process file: '{file_path}'")
+                    logger.warning(f"Not processing unsupported file: '{file_path}'")
 
             case watchlist.DIFF_REMOVED:
                 qdrant.remove(file_path)
@@ -148,7 +157,7 @@ def commit() -> None:
                 if FileData.is_processable(file_path):
                     qdrant.change(file_path, meta['mtime'])
                 else:
-                    logger.warning(f"Cannot process file: '{file_path}'")
+                    logger.warning(f"Not processing unsupported file: '{file_path}'")
 
             case _:
                 logger.error(f"Invalid diff option: '{meta['diff']}'")

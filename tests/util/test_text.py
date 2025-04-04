@@ -1,8 +1,8 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import pytest
 import typer
+import pytest
 
 from archive_agent.util.text import ensure_nltk_punkt, is_text, load_as_utf8
 
@@ -15,10 +15,10 @@ def test_ensure_nltk_punkt_does_not_crash():
 
 
 @pytest.mark.parametrize("filename,expected", [
-    ("README.md", True),
     ("test.txt", True),
-    ("document.pdf", False),
-    ("script.py", False),
+    ("test.md", True),
+    ("test.jpg", False),
+    ("test.jpeg", False),
 ])
 def test_is_text_recognizes_extensions(filename, expected):
     assert is_text(filename) is expected

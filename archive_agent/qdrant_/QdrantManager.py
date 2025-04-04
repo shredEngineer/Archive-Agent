@@ -1,14 +1,24 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import logging
 from rich import print
 from rich.panel import Panel
+import logging
+from typing import List
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import VectorParams, Distance, Filter, FilterSelector, FieldCondition, MatchValue
+from qdrant_client.models import (
+    VectorParams,
+    Distance,
+    Filter,
+    FilterSelector,
+    FieldCondition,
+    MatchValue,
+    ScoredPoint,
+)
 
 from archive_agent.openai_ import OpenAiManager
+from archive_agent.data import ChunkManager
 from archive_agent.data import FileData
 
 logger = logging.getLogger(__name__)
@@ -21,22 +31,33 @@ class QdrantManager:
     Qdrant manager.
     """
 
-    SEARCH_LIMIT = 5
-    QUERY_LIMIT = 5
-
-    def __init__(self, openai: OpenAiManager, server_url: str, collection: str, vector_size: int):
+    def __init__(
+        self,
+        openai: OpenAiManager,
+        chunker: ChunkManager,
+        server_url: str,
+        collection: str,
+        vector_size: int,
+        score_min: float,
+        chunks_max: int,
+    ):
         """
         Initialize Qdrant manager.
         :param openai: OpenAI manager.
+        :param chunker: Chunk manager.
         :param server_url: Server URL.
         :param collection: Collection name.
         :param vector_size: Vector size.
+        :param score_min: Minimum score of retrieved chunks (`0`...`1`).
+        :param chunks_max: Maximum number of retrieved chunks
         """
         self.openai = openai
+        self.chunker = chunker
         self.qdrant = QdrantClient(url=server_url)
-
         self.collection = collection
         self.vector_size = vector_size
+        self.score_min = score_min
+        self.chunks_max = chunks_max
 
         if not self.qdrant.collection_exists(collection):
             logger.info(f"Creating new Qdrant collection: '{collection}'")
@@ -53,7 +74,7 @@ class QdrantManager:
         """
         logger.info(f"Adding file: '{file_path}'")
 
-        data = FileData(openai=self.openai, file_path=file_path, file_mtime=file_mtime)
+        data = FileData(openai=self.openai, chunker=self.chunker, file_path=file_path, file_mtime=file_mtime)
         data.process()
 
         self.qdrant.upsert(collection_name=self.collection, points=data.points)
@@ -101,22 +122,18 @@ class QdrantManager:
         print(Panel(f"[red]{question}"))
 
         logger.info(f" - Embedding question...")
-
         total_tokens, vector = self.openai.embed(question)
-
         logger.info(f"   - Used ({total_tokens}) token(s)")
 
         response = self.qdrant.query_points(
             collection_name=self.collection,
             query=vector,
-            limit=self.QUERY_LIMIT,
+            score_threshold=self.score_min,
+            limit=self.chunks_max,
             with_payload=True,
         )
 
-        for point in response.points:
-            logger.info(f" - Matching chunk for file: '{point.payload['file_path']}':")
-            answer = point.payload['chunk']
-            print(Panel(f"[green]{answer}"))
+        self.list_chunks(response.points)
 
     def query(self, question: str) -> None:
         """
@@ -127,20 +144,20 @@ class QdrantManager:
         print(Panel(f"[red]{question}"))
 
         logger.info(f" - Embedding question...")
-
         total_tokens, vector = self.openai.embed(question)
-
         logger.info(f"   - Used ({total_tokens}) token(s)")
 
         response = self.qdrant.query_points(
             collection_name=self.collection,
             query=vector,
-            limit=self.QUERY_LIMIT,
+            score_threshold=self.score_min,
+            limit=self.chunks_max,
             with_payload=True,
         )
 
-        context = []
+        self.list_chunks(response.points)
 
+        context = []
         for point in response.points:
             context.append(
                 "\n\n".join([
@@ -148,16 +165,21 @@ class QdrantManager:
                     f"{point.payload['chunk']}",
                 ])
             )
-
-        for point in response.points:
-            match_percent = point.score * 100
-            logger.info(f" - ({match_percent:.2f} %) matching chunk in file: '{point.payload['file_path']}':")
-            answer = point.payload['chunk']
-            print(Panel(f"[orange3]{answer}"))
-
         context = "\n\n\n\n".join(context)
 
         answer = self.openai.query(question, context)
 
         logger.info(f" - Answer:")
         print(Panel(f"[green]{answer}"))
+
+    @staticmethod
+    def list_chunks(points: List[ScoredPoint]) -> None:
+        """
+        List chunks of retreived points.
+        :param points: Retrieved points.
+        """
+        for point in points:
+            match_percent = point.score * 100
+            logger.info(f" - ({match_percent:.2f} %) matching chunk for file: '{point.payload['file_path']}':")
+            answer = point.payload['chunk']
+            print(Panel(f"[orange3]{answer}"))

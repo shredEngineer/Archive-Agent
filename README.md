@@ -80,14 +80,43 @@ docker stop archive-agent-qdrant-server
 
 The default settings profile is created on the first run. (See [Storage](#storage) section.)
 
-### How patterns work with Archive Agent
+### How files are processed
+
+**Archive Agent** currently supports these file types:
+- Text: `.txt`, `.md`
+- Image: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
+
+**Archive Agent** decodes everything to text like this:
+- Text files are decoded to UTF-8, regardless of original encoding.
+- Image files are decoded to text using OpenAI vision.
+
+**NOTE:** Unsupported files are tracked but not processed.
+
+**Archive Agent** processes decoded text like this:
+- Each decoded text is split into smaller chunks.
+- Each chunk is turned into a vector using OpenAI embeddings.
+- Each vector is turned into a *point* with file metadata.
+- Each *point* is stored in the Qdrant database.
+
+### How chunks are retrieved
+
+**Archive Agent** retrieves chunks related to your question like this:
+- The question is turned into a vector using OpenAI embeddings.
+- Points with similar vectors are retrieved from the Qdrant database.
+- Chunks of points with sufficient score are returned.
+
+**Archive Agent** answers your question using retrieved chunks like this:
+- The LLM receives the retrieved chunks as context to the question.
+- The LLM's answer is returned.
+
+### How files are selected for tracking
 
 **Archive Agent** uses *patterns* to select your files:
 
 - Patterns can be actual file paths.
 - Patterns can be paths containing wildcards that resolve to actual file paths.
 - Patterns must be specified as (or resolve to) *absolute* paths, e.g. `/home/user/Documents/*.txt` (or `~/Documents/*.txt`).
-- Patterns may use the wildcard `**` to match any files and zero or more directories, subdirectories and symbolic links to directories.
+- Patterns may use the wildcard `**` to match any files and zero or more directories, subdirectories, and symbolic links to directories.
 
 There are *included patterns* and *excluded patterns*:
 
@@ -109,8 +138,12 @@ archive-agent
 To add one or more included patterns, run this:
 
 ```bash
-archive-agent include ~/Documents/*.txt
+archive-agent include "~/Documents/*.txt"
 ```
+
+**NOTE:** **Always use quotes** to prevent your shell's wildcard expansion.
+
+(Skip the pattern argument to get an interactive prompt.)
 
 ### Add excluded patterns
 
@@ -120,9 +153,9 @@ To add one or more excluded patterns, run this:
 archive-agent exclude "~/Documents/*.txt"
 ```
 
-**NOTE:** Always enclose each pattern argument in quotes, preventing your shell from expanding them prematurely.
+**NOTE:** **Always use quotes** to prevent your shell's wildcard expansion.
 
-**NOTE:** To get an interactive prompt, skip the pattern argument.
+(Skip the pattern argument to get an interactive prompt.)
 
 ### Remove included / excluded patterns
 
@@ -132,9 +165,9 @@ To remove one or more previously included / excluded patterns, run this:
 archive-agent remove "~/Documents/*.txt"
 ```
 
-**NOTE:** Always enclose each pattern argument in quotes, preventing your shell from expanding them prematurely.
+**NOTE:** **Always use quotes** to prevent your shell's wildcard expansion.
 
-**NOTE:** To get an interactive prompt, skip the pattern argument.
+(Skip the pattern argument to get an interactive prompt.)
 
 ### List included / excluded patterns
 
@@ -177,7 +210,6 @@ archive-agent commit
 ```
 
 **NOTE:** Changes are triggered by:
-
 - File added
 - File removed
 - File changed:
@@ -192,7 +224,7 @@ archive-agent search "Which files mention donuts?"
 
 Lists files matching the question.
 
-**NOTE:** To get an interactive prompt, skip the question argument.
+(Skip the question argument to get an interactive prompt.)
 
 ### Query your files
 
@@ -202,7 +234,7 @@ archive-agent query "Which files mention donuts?"
 
 Answers your question using RAG.
 
-**NOTE:** To get an interactive prompt, skip the question argument.
+(Skip the question argument to get an interactive prompt.)
 
 ---
 
@@ -217,9 +249,13 @@ The default settings profile is located in `default/`:
 - `config.json`:
   - `openai_model_embed`: OpenAI model for embedding
   - `openai_model_query`: OpenAI model for query
+  - `openai_model_vision`: OpenAI model for vision
   - `qdrant_collection`: Qdrant collection name
   - `qdrant_server_url`: Qdrant server URL
-
+  - `qdrant_vector_size`: Qdrant vector size
+  - `qdrant_score_min`: Minimum score of retrieved chunks (`0`...`1`)
+  - `qdrant_chunks_max`: Maximum number of retrieved chunks
+  - `chunk_sentences_max`: Maximum number of sentences per chunk
 
 - `watchlist.json`:
   - Managed via the `include` / `exclude` / `remove` / `track` / `commit` commands.
@@ -256,7 +292,7 @@ poetry run pytest
 
 However, the following features could make it even better:
 
-- [ ] Add PDF-to-JPG step
+- [ ] Add PDF-to-JPG step; update [How files are processed](#how-files-are-processed) section
 - [ ] Implement smart chunking through LLM instead of sentence tokenizer
 - [ ] Save RAG answers to file (could also be indexed, enables feedback loop)
 - [ ] Switch profiles (use folder other than `default/`)

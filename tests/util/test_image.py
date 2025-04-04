@@ -16,13 +16,14 @@ from archive_agent.util.image import (
 
 
 @pytest.mark.parametrize("filename,expected", [
-    ("photo.jpg", True),
-    ("image.PNG", True),
-    ("document.pdf", False),
-    ("script.py", False),
-    ("icon.JPeG", True),
-    ("logo.webp", True),
-    ("archive.tar.gz", False),
+    ("test.txt", False),
+    ("test.md", False),
+    ("test.jpg", True),
+    ("test.jpeg", True),
+    ("test.png", True),
+    ("test.gif", True),
+    ("test.webp", True),
+    ("test.bmp", True),
 ])
 def test_is_image_recognizes_extensions(filename, expected):
     assert is_image(filename) is expected
