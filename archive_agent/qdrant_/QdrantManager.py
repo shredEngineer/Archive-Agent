@@ -97,7 +97,7 @@ class QdrantManager:
             logger.error(f"Qdrant add failed: '{e}'")
             return False
 
-        logger.info(f" - ({len(data.points)}) vectors added")
+        logger.info(f" - ({len(data.points)}) vector(s) added")
         return True
 
     def remove(self, file_path: str, quiet: bool = False) -> bool:
