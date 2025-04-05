@@ -19,14 +19,6 @@ class OpenAiManager(RetryManager):
     """
 
     @staticmethod
-    def get_prompt_vision():
-        return "\n".join([
-            f"Extract all text from the image: Transcribe verbatim, don't describe.",
-            f"Only describe graphics or drawings in detail.",
-            f"Output the answer as a single paragraph without newlines.",
-        ])
-
-    @staticmethod
     def get_prompt_query(question: str, context: str):
         return "\n".join([
             f"Act as a RAG agent: Use ONLY the context to answer the question.",
@@ -37,11 +29,20 @@ class OpenAiManager(RetryManager):
             f"- Paragraph rephrasing the original question, guessing the intent from the context.",
             f"- List of all possible answers to the question, extensively considering the context.",
             f"- Paragraph summarizing and concluding the answer. Do NOT include fillers like \"Summarizing, ...\"",
+            f"- List of all `file://` associated with snippets considered from the context, formatted markdown URLs."
             f"If the context does not allow any answers at all, ONLY output the token \"[NO FURTHER CONTEXT FOUND]\".",
             f"\n\n",
             f"Context:\n\"\"\"\n{context}\n\"\"\"\n\n",
             f"Question:\n\"\"\"\n{question}\n\"\"\"\n\n",
             f"Answer:",
+        ])
+
+    @staticmethod
+    def get_prompt_vision():
+        return "\n".join([
+            f"Extract all text from the image: Transcribe verbatim, don't describe.",
+            f"Only describe graphics or drawings in detail.",
+            f"Output the answer as a single paragraph without newlines.",
         ])
 
     def __init__(self, cli: CliManager, model_embed: str, model_query: str, model_vision: str):
@@ -63,11 +64,11 @@ class OpenAiManager(RetryManager):
 
         RetryManager.__init__(
             self,
-            endpoint_predelay=0,
-            endpoint_delay=5,
-            endpoint_timeout=40,
-            endpoint_exp_backoff=2,
-            endpoint_retries=10,
+            predelay=0,
+            delay_min=0,
+            delay_max=60,
+            backoff_exponent=2,
+            retries=10,
         )
 
     def usage(self) -> None:

@@ -6,6 +6,9 @@ import time
 import requests
 import traceback
 import logging
+from typing import Callable, Optional, Any, Dict
+
+import openai
 
 logger = logging.getLogger(__name__)
 
@@ -13,85 +16,98 @@ logger = logging.getLogger(__name__)
 class RetryManager:
     """
     Retry manager.
+
+    Catches common exceptions from OpenAI and requests.
     """
 
     def __init__(
             self,
-            endpoint_predelay=0,
-            endpoint_delay=0,
-            endpoint_timeout=0,
-            endpoint_exp_backoff=0,
-            endpoint_retries=1,
+            predelay: float = 0,
+            delay_min: float = 0,
+            delay_max: float = 0,
+            backoff_exponent: float = 0,
+            retries: int = 1,
     ):
         """
         Initialize retry manager.
-        :param endpoint_predelay: Endpoint predelay (in seconds).
-        :param endpoint_delay: Endpoint delay (in seconds).
-        :param endpoint_timeout: Endpoint timeout (in seconds).
-        :param endpoint_exp_backoff: Endpoint exponential backoff factor.
-        :param endpoint_retries: Endpoint retries.
+
+        :param predelay: Initial fixed delay before first attempt (in seconds).
+        :param delay_min: Initial delay between attempts (in seconds).
+                          If set to 0, backoff starts at 1.0 second.
+        :param delay_max: Maximum backoff delay (in seconds).
+        :param backoff_exponent: Exponential backoff multiplier.
+        :param retries: Maximum number of attempts.
         """
-        self.endpoint_predelay = endpoint_predelay
-        self.endpoint_delay = endpoint_delay
-        self.endpoint_timeout = endpoint_timeout
-        self.endpoint_exp_backoff = endpoint_exp_backoff
-        self.endpoint_retries = endpoint_retries
+        self.predelay = predelay
+        self.delay_min = delay_min
+        self.delay_max = delay_max
+        self.backoff_exponent = backoff_exponent
+        self.retries = retries
 
-        self.exp_backoff = self.endpoint_delay
-        self.fail_budget = self.endpoint_retries
+        self.backoff_delay = self.delay_min or 1.0
+        self.fail_budget = self.retries
 
-    def reset_backoff(self):
-        self.exp_backoff = self.endpoint_delay
-        self.fail_budget = self.endpoint_retries
+    def reset_backoff(self) -> None:
+        """
+        Reset internal backoff timer and attempt counter.
 
-    def predelay(self):
-        if self.endpoint_predelay > 0:
-            logger.debug(f"Waiting for {self.endpoint_predelay} seconds (fixed predelay) …")
-            time.sleep(self.endpoint_predelay)
+        If delay_min is 0, backoff delay resets to 1.0 second.
+        """
+        self.backoff_delay = self.delay_min or 1.0
+        self.fail_budget = self.retries
 
-    def delay(self):
-        logger.warning(f"Waiting for {self.exp_backoff} seconds (exponential backoff) …")
-        time.sleep(self.exp_backoff)
-        self.exp_backoff *= self.endpoint_exp_backoff
+    def apply_predelay(self) -> None:
+        """
+        Apply fixed delay before the first attempt.
+        """
+        if self.predelay > 0:
+            logger.debug(f"Waiting for {self.predelay} seconds (fixed predelay) …")
+            time.sleep(self.predelay)
+
+    def apply_delay(self) -> None:
+        """
+        Apply exponential backoff delay between attempts.
+        """
+        logger.warning(f"Waiting for {self.backoff_delay} seconds (exponential backoff) …")
+        time.sleep(self.backoff_delay)
+        self.backoff_delay = min(self.backoff_delay * self.backoff_exponent, self.delay_max)
         self.fail_budget -= 1
 
-    def retry(self, func, kwargs=None):
+    def retry(self, func: Callable[..., Any], kwargs: Optional[Dict[str, Any]] = None) -> Any:
+        """
+        Attempt to call the given function until it completes without raising an exception,
+        or the maximum number of attempts is reached.
+
+        :param func: Callable to execute with retries.
+        :param kwargs: Optional keyword arguments passed to the callable.
+        :return: The result returned by the callable.
+        :raises typer.Exit: If all attempts raise exceptions or a non-recoverable exception occurs.
+        """
         if kwargs is None:
             kwargs = dict()
-        self.predelay()
+
+        self.apply_predelay()
 
         while self.fail_budget > 0:
-            result = None
-
             try:
                 result = func(**kwargs)
-
-            except AssertionError as e:
-                logger.error(f"AssertionError – not recoverable: {e}")
-                raise typer.Exit(code=1)
-
-            except (
-                    RuntimeError,
-                    requests.exceptions.ReadTimeout,
-            ) as e:
-                if self.fail_budget > 0:
-                    traceback.print_stack()
-                    attempt = 1 + self.endpoint_retries - self.fail_budget
-                    logger.warning(f"Recovering from attempt {attempt} of {self.endpoint_retries}: {e}")
-                    self.delay()
-
-                else:
-                    logger.error(f"Network failed too many times – not recoverable: {e}")
-                    raise typer.Exit(code=1)
-
-            except Exception as e:
-                logger.error(f"Uncaught Exception `{type(e).__name__}`: {e}")
-                raise typer.Exit(code=1)
-
-            if result is not None:
                 self.reset_backoff()
                 return result
 
-        # TODO: Fix arriving here
-        logger.error(f"This should NEVER happen – not recoverable")
+            except (
+                    openai.Timeout,
+                    openai.APIError,
+                    openai.RateLimitError,
+                    requests.exceptions.ReadTimeout,
+            ) as e:
+                traceback.print_stack()
+                attempt = self.retries - self.fail_budget + 1
+                logger.warning(f"Attempt {attempt} of {self.retries} failed: {e}")
+                self.apply_delay()
+
+            except Exception as e:
+                logger.exception(f"Uncaught Exception `{type(e).__name__}`: {e}")
+                raise typer.Exit(code=1)
+
+        logger.error("All attempts failed – not recoverable")
         raise typer.Exit(code=1)

@@ -1,10 +1,12 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
+import typer
 import logging
 from typing import List
 
 from qdrant_client import QdrantClient
+from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.models import (
     VectorParams,
     Distance,
@@ -19,6 +21,7 @@ from archive_agent.openai_ import OpenAiManager
 from archive_agent.data import ChunkManager
 from archive_agent.data import FileData
 from archive_agent.util import CliManager
+from archive_agent.util.format import format_time
 
 logger = logging.getLogger(__name__)
 
@@ -86,11 +89,13 @@ class QdrantManager:
             logger.error(f"Failed to process file data")
             return False
 
-        self.qdrant.upsert(collection_name=self.collection, points=data.points)
-        # TODO: Evaluate Qdrant response for error.
+        try:
+            self.qdrant.upsert(collection_name=self.collection, points=data.points)
+        except UnexpectedResponse as e:
+            logger.error(f"Qdrant add failed: '{e}'")
+            return False
 
         logger.info(f" - ({len(data.points)}) vectors added")
-
         return True
 
     def remove(self, file_path: str, quiet: bool = False) -> bool:
@@ -101,22 +106,51 @@ class QdrantManager:
         :return: True if successful, False otherwise.
         """
         if not quiet:
-            logger.info(f" - Removing file: '{file_path}'")
+            logger.info(f" - Counting chunks for file: '{file_path}'")
 
-        self.qdrant.delete(
-            collection_name=self.collection,
-            points_selector=FilterSelector(
-                filter=Filter(
+        try:
+            count_result = self.qdrant.count(
+                collection_name=self.collection,
+                count_filter=Filter(
                     must=[
                         FieldCondition(
                             key='file_path',
                             match=MatchValue(value=file_path),
-                        )
-                    ]
-                )
-            ),
-        )
-        # TODO: Handle Qdrant API request errors
+                        ),
+                    ],
+                ),
+                exact=True,
+            )
+            count = count_result.count
+        except UnexpectedResponse as e:
+            logger.error(f"Qdrant count failed: '{e}'")
+            return False
+
+        if count == 0:
+            if not quiet:
+                logger.info(f" - No chunks found for file: '{file_path}'")
+            return True
+
+        if not quiet:
+            logger.info(f" - Removing ({count}) chunks of file: '{file_path}'")
+
+        try:
+            self.qdrant.delete(
+                collection_name=self.collection,
+                points_selector=FilterSelector(
+                    filter=Filter(
+                        must=[
+                            FieldCondition(
+                                key='file_path',
+                                match=MatchValue(value=file_path),
+                            ),
+                        ],
+                    ),
+                ),
+            )
+        except UnexpectedResponse as e:
+            logger.error(f"Qdrant delete failed: '{e}'")
+            return False
 
         return True
 
@@ -147,14 +181,17 @@ class QdrantManager:
         """
         vector = self.openai.embed(question)
 
-        response = self.qdrant.query_points(
-            collection_name=self.collection,
-            query=vector,
-            score_threshold=self.score_min,
-            limit=self.chunks_max,
-            with_payload=True,
-        )
-        # TODO: Handle Qdrant API request errors
+        try:
+            response = self.qdrant.query_points(
+                collection_name=self.collection,
+                query=vector,
+                score_threshold=self.score_min,
+                limit=self.chunks_max,
+                with_payload=True,
+            )
+        except UnexpectedResponse as e:
+            logger.error(f"Qdrant query failed: '{e}'")
+            raise typer.Exit(code=1)
 
         self.cli.format_points(response.points)
         return response.points
@@ -167,20 +204,23 @@ class QdrantManager:
         """
         vector = self.openai.embed(question)
 
-        response = self.qdrant.query_points(
-            collection_name=self.collection,
-            query=vector,
-            score_threshold=self.score_min,
-            limit=self.chunks_max,
-            with_payload=True,
-        )
-        # TODO: Handle Qdrant API request errors
+        try:
+            response = self.qdrant.query_points(
+                collection_name=self.collection,
+                query=vector,
+                score_threshold=self.score_min,
+                limit=self.chunks_max,
+                with_payload=True,
+            )
+        except UnexpectedResponse as e:
+            logger.error(f"Qdrant query failed: '{e}'")
+            raise typer.Exit(code=1)
 
         self.cli.format_points(response.points)
 
         context = "\n\n\n\n".join([
             "\n\n".join([
-                f"<<<{point.payload['file_path']}>>>",
+                f"<<< file://{point.payload['file_path']} @ {format_time(point.payload['file_mtime'])} >>>",
                 f"{point.payload['chunk']}\n",
             ])
             for point in response.points

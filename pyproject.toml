@@ -1,12 +1,12 @@
 [project]
 name = "archive-agent"
-version = "1.0.0"
+version = "1.1.0"
 description = "Archive Agent: Smart Indexer with RAG Engine"
 authors = [
     {name = "Dr.-Ing. Paul Wilhelm", email = "paul@wilhelm.dev"}
 ]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "openai (>=1.69.0,<2.0.0)",
     "qdrant-client (>=1.13.3,<2.0.0)",
@@ -15,7 +15,8 @@ dependencies = [
     "charset-normalizer (>=3.4.1,<4.0.0)",
     "rich (>=14.0.0,<15.0.0)",
     "nltk (>=3.9.1,<4.0.0)",
-    "requests (>=2.32.3,<3.0.0)"
+    "requests (>=2.32.3,<3.0.0)",
+    "streamlit (>=1.44.1,<2.0.0)"
 ]
 
 
@@ -25,7 +26,7 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.poetry.scripts]
-archive-agent = "archive_agent.__main__:app"
+archive-agent = "archive_agent.__main__:context.app"
 
 
 [tool.poetry.group.dev.dependencies]

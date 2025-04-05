@@ -34,8 +34,8 @@ class ConfigManager(StorageManager):
         QDRANT_SERVER_URL: "http://localhost:6333",
         QDRANT_COLLECTION: "archive-agent",
         QDRANT_VECTOR_SIZE: 1536,
-        QDRANT_SCORE_MIN: .1,
-        QDRANT_CHUNKS_MAX: 10,
+        QDRANT_SCORE_MIN: .2,
+        QDRANT_CHUNKS_MAX: 8,
         CHUNK_SENTENCES_MAX: 8,
     }
 

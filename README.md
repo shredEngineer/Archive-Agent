@@ -1,4 +1,4 @@
-# Archive Agent
+# 🧠 Archive Agent
 
 **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**
 
@@ -9,12 +9,23 @@
 
 **Archive Agent** tracks your files, syncs changes, and powers smart queries.  
 
+- Supports command-line interface (CLI) using *Typer*
+- Supports graphical user interface (GUI) using *Streamlit*
+
+**Screenshot of CLI:**
+
+![](archive_agent/assets/Screenshot-CLI.png)
+
+**Screenshot of GUI:**
+
+![](archive_agent/assets/Screenshot-GUI.png)
+
 ---
 
-## Install Requirements
+## ⚙️ Install Requirements
 
 - [Docker](https://docs.docker.com/engine/install/) *(for running Qdrant server)*
-- [Python](https://www.python.org/downloads/) **>= 3.9** *(core runtime)*
+- [Python](https://www.python.org/downloads/) **>= 3.10** *(core runtime)*
 - [Poetry](https://python-poetry.org/docs/#installation) *(dependency management)*
 
 
@@ -22,7 +33,7 @@
 
 ---
 
-## Export OpenAI API key
+## ⚙️ Export OpenAI API key
 
 To export your [OpenAI API key](https://platform.openai.com/api-keys), replace `sk-...` with your actual key and run this once:
 
@@ -36,7 +47,7 @@ This will persist the export for the current user.
 
 ---
 
-## Install Archive Agent
+## ⚙️ Install Archive Agent
 
 To install **Archive Agent** in the current directory of your choice, run this once:
 
@@ -52,7 +63,7 @@ This will create a global `archive-agent` command for the current user.
 
 ---
 
-## Setup Qdrant server
+## ⚙️ Setup Qdrant server
 
 **IMPORTANT:** To manage Docker without root, run this once **and reboot**:
 
@@ -76,9 +87,9 @@ docker stop archive-agent-qdrant-server
 
 ---
 
-## Run Archive Agent
+## 🚀 Run Archive Agent
 
-The default settings profile is created on the first run. (See [Storage](#storage) section.)
+The default settings profile is created on the first run. (See [Storage](#-storage) section.)
 
 ### How files are processed
 
@@ -236,9 +247,21 @@ Answers your question using RAG.
 
 (Skip the question argument to get an interactive prompt.)
 
+### Launch Archive Agent GUI
+
+To launch the **Archive Agent** GUI in your browser, run this:
+
+```bash
+archive-agent gui
+```
+
+Press `CTRL+C` in the console to close the GUI server.
+
+**NOTE:** The GUI currently supports queries only.
+
 ---
 
-## Storage
+## 📁 Storage
 
 ### Archive Agent settings
 
@@ -270,7 +293,7 @@ Visit your [Qdrant dashboard](http://localhost:6333/dashboard#/collections) to m
 
 ---
 
-## Testing
+## 🐞 Testing
 
 To install local tokenizer, run this once:
 
@@ -286,28 +309,50 @@ poetry run pytest
 
 ---
 
-## TODO
+## 📖 Developer's guide
 
-**Archive Agent** is fully functional right now and development is continuing. 
-
-Performance:
-- [ ] Implement [OpenAI API request parallel processor](https://github.com/openai/openai-cookbook/blob/main/examples/api_request_parallel_processor.py)
-
-Related to section [How files are processed](#how-files-are-processed):
-- [ ] Convert `.pdf` to `.jpg` internally and use vision
-- [ ] Convert `.doc`, `.docx`, `.odt`, `.rtf` to text 
-
-Related to section [Storage](#storage):
-- [ ] Save RAG answers to file (could also be indexed, enables feedback loop)
-- [ ] Switch profiles (use folder other than `default/`)
-
-General:
-- [ ] Improve test coverage
-- [ ] Beautify CLI
+- The app context is initialized in [`archive_agent/core/ContextManager.py`](archive_agent/core/ContextManager.py)
+- The default config is defined in [`archive_agent/config/ConfigManager.py`](archive_agent/config/ConfigManager.py)  
+- The CLI commands are defined in [`archive_agent/__main__.py`](archive_agent/__main__.py)
+- The GUI is implemented in [`archive_agent/core/GuiManager.py`](archive_agent/core/GuiManager.py)
+- The OpenAI API prompts for querying and vision are defined in [`archive_agent/openai_/OpenAiManager.py`](archive_agent/openai_/OpenAiManager.py) 
 
 ---
 
-## License: GNU GPL v3.0
+## 🍀 Collaborators welcome
+
+**You are invited to contribute to this open source project!**
+
+**Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues) and [submit pull requests](https://github.com/shredEngineer/Archive-Agent/pulls) anytime.**
+
+---
+
+## 📝 ToDo
+
+**Archive Agent** is fully functional right now and development is continuing. 
+
+Related to section [Launch Archive Agent GUI](#launch-archive-agent-gui):
+- [ ] Extend GUI functionality
+
+Related to section [How files are processed](#how-files-are-processed):
+- [ ] `FileData`: Convert `.doc`, `.docx`, `.odt`, `.rtf` to text 
+- [ ] `FileData`: Convert `.pdf` to `.jpg` internally and use vision
+
+Related to section [Storage](#-storage):
+- [ ] Command: Switch profiles (use folder other than `default/`)
+- [ ] Save answers to "answers" bucket, give include pattern hint
+
+Train-of-Thought mechanism:
+- [ ] Add follow-up question to structured output, save to "questions" bucket
+- [ ] Command `auto [N]`: Query random question(s) from question bucket
+
+General improvements:
+- [ ] Implement [OpenAI API request parallel processor](https://github.com/openai/openai-cookbook/blob/main/examples/api_request_parallel_processor.py)
+- [ ] Improve test coverage
+
+---
+
+## 📜 License: GNU GPL v3.0
 
 Copyright © 2025 Dr.-Ing. Paul Wilhelm <[paul@wilhelm.dev](mailto:paul@wilhelm.dev)>
 
