@@ -61,14 +61,15 @@ class OpenAiManager(RetryManager):
             "Your main task is to extract all *visible text* with maximum accuracy — transcribe it verbatim, preserving",
             "punctuation, whitespace, casing, and symbols. Do not correct errors or clean up formatting.",
             "If the image is a screenshot, focus on the main foreground element — for example, the active window or",
-            "video frame (e.g. YouTube). Describe prominent UI elements, labels, or titles.",
-            "For diagrams, charts, or sketches, describe exactly what is shown: shapes, arrows, labels, axes, structure.",
-            "For natural photos or scenes with people, give a concise but accurate description of visible people, objects,",
-            "and surroundings.",
-            "Do not interpret meaning — just describe what is visually there.",
+            "video frame (e.g. YouTube). Describe prominent UI elements, labels, titles, or content within the window.",
+            "For diagrams, charts, or whiteboards, describe exactly what is visually shown: shapes, arrows, labels,",
+            "axes, structure, relationships.",
+            "For natural photos or scenes with people, provide a concise description of the people, objects, and",
+            "environment. Mention visible actions, clothing, settings, or emotions if they are clearly shown.",
+            "Do not interpret meaning or guess missing parts — only describe what is clearly visible.",
+            "You may output multiple paragraphs if needed to separate different parts of the image.",
             "Rejecting an image should almost never happen. Only reject if it is completely unreadable or corrupted.",
-            "Output everything as a single paragraph — no newlines, no markdown, no bullet points.",
-            "If you must reject, set `reject` to true and `answer` to an empty string — this should be rare."
+            "If rejecting, set `reject` to true and `answer` to an empty string — this case is extremely rare."
         ])
 
     def __init__(self, cli: CliManager, model_embed: str, model_query: str, model_vision: str, temp_query: float):
