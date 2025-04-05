@@ -20,7 +20,10 @@ class CliManager:
     CLI manager.
     """
 
-    VERBOSE: bool = False
+    VERBOSE_EMBED: bool = False
+    VERBOSE_QUERY: bool = False
+    VERBOSE_VISION: bool = True
+    VERBOSE_RETRIEVAL: bool = True
 
     def __init__(self):
         """
@@ -59,7 +62,7 @@ class CliManager:
         """
         logger.info(f" - Embedding...")
 
-        if CliManager.VERBOSE:
+        if CliManager.VERBOSE_EMBED:
             CliManager.format_chunk(chunk)
 
         response = callback()
@@ -78,12 +81,12 @@ class CliManager:
         """
         logger.info(f" - Querying...")
 
-        if CliManager.VERBOSE:
+        if CliManager.VERBOSE_QUERY:
             print(Panel(f"[red]{prompt}", title="Query", border_style="white"))
 
         response = callback()
 
-        if CliManager.VERBOSE:
+        if CliManager.VERBOSE_QUERY:
             CliManager.format_json(response.output_text)
 
         logger.info(f" - Used ({response.usage.total_tokens}) token(s)")
@@ -101,7 +104,7 @@ class CliManager:
 
         response = callback()
 
-        if CliManager.VERBOSE:
+        if CliManager.VERBOSE_VISION:
             CliManager.format_json(response.output_text)
 
         logger.info(f" - Used ({response.usage.total_tokens}) token(s)")
@@ -121,7 +124,7 @@ class CliManager:
                 f" @ {format_time(point.payload['file_mtime'])}:"
             )
 
-            if CliManager.VERBOSE:
+            if CliManager.VERBOSE_RETRIEVAL:
                 CliManager.format_chunk(point.payload['chunk'])
 
         logger.warning(f" - Found ({len(points)}) matching chunk(s)")

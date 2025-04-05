@@ -56,10 +56,18 @@ class OpenAiManager(RetryManager):
     @staticmethod
     def get_prompt_vision():
         return "\n".join([
-            f"Extract all text from the image: Transcribe verbatim, don't describe.",
-            f"Only describe graphics or drawings in detail.",
-            f"Output the answer as a single paragraph without newlines.",
-            f"Reject the image if it contains garbage or is unprocessable."
+            "You are a vision agent tasked with analyzing technical documents, code snippets, diagrams, and",
+            "whiteboard captures.",
+            "Your primary task is to extract all *visible text* with maximum accuracy — transcribe it verbatim,",
+            "including whitespace, line breaks, punctuation, casing, and symbols.",
+            "For code or structured text (e.g. tables, formulas), preserve formatting as much as possible.",
+            "Do not correct typos or 'beautify' the input.",
+            "For diagrams, sketches, and charts, describe only what is visually present — avoid interpretation or",
+            "inference. Mention shapes, arrows, labels, captions, etc.",
+            "Output everything as a single flattened paragraph — no markdown, no newlines, no bullets.",
+            "If the image contains no readable or useful information, or is clearly garbage (e.g. blurry,",
+            "overexposed, corrupted), set `reject` to true and `answer` to an empty string.",
+            "Do not include any disclaimers or explanations about what you can or cannot see."
         ])
 
     def __init__(self, cli: CliManager, model_embed: str, model_query: str, model_vision: str, temp_query: float):
@@ -192,6 +200,9 @@ class OpenAiManager(RetryManager):
 
         response = self.cli.format_openai_vision(lambda: self.retry(callback))
         self.total_tokens += response.usage.total_tokens
+
+        if response.status == 'incomplete':
+            raise OpenAIError("Vision response incomplete, probably due to token limits")
 
         if hasattr(response, "refusal") and response.refusal:
             raise OpenAIError(response.refusal)

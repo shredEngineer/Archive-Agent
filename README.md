@@ -316,7 +316,7 @@ poetry run pytest
 - The app context is initialized in [`archive_agent/core/ContextManager.py`](archive_agent/core/ContextManager.py)
 - The default config is defined in [`archive_agent/config/ConfigManager.py`](archive_agent/config/ConfigManager.py)  
 - The CLI commands are defined in [`archive_agent/__main__.py`](archive_agent/__main__.py)
-  - For verbose CLI output, set `VERBOSE = True` in [`archive_agent/util/CliManager.py`](archive_agent/util/CliManager.py)
+- The CLI verbosity can be adjusted in [`archive_agent/util/CliManager.py`](archive_agent/util/CliManager.py)
 - The GUI is implemented in [`archive_agent/core/GuiManager.py`](archive_agent/core/GuiManager.py)
 - The OpenAI API prompts for querying and vision are defined in [`archive_agent/openai_/OpenAiManager.py`](archive_agent/openai_/OpenAiManager.py) 
 

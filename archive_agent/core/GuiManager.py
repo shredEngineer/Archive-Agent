@@ -61,9 +61,6 @@ class GuiManager:
         :return: Answer.
         """
         answer = context.qdrant.query(question)
-
-        context.openai.usage()
-
         return answer
 
     @staticmethod
