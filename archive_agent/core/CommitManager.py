@@ -7,6 +7,7 @@ import logging
 from archive_agent.qdrant_ import QdrantManager
 from archive_agent.watchlist import WatchlistManager
 from archive_agent.data import FileData
+from archive_agent.util.format import format_file
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ class CommitManager:
             logger.info(f"Committing ({len(tracked)}) {cli_hint} file(s)...")
 
             for file_path, meta in tracked_unprocessable.items():
-                logger.warning(f" - Unprocessable file: '{file_path}'")
+                logger.warning(f" - Unprocessable {format_file(file_path)}")
                 if meta['diff'] == self.watchlist.DIFF_REMOVED:
                     _success = self.qdrant.remove(file_path)
                     self.watchlist.diff_mark_resolved(file_path)

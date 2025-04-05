@@ -10,6 +10,7 @@ from typing import Dict, Any
 
 from archive_agent.util.pattern import validate_pattern, resolve_pattern
 from archive_agent.util import StorageManager
+from archive_agent.util.format import format_file
 
 logger = logging.getLogger(__name__)
 
@@ -261,11 +262,11 @@ class WatchlistManager(StorageManager):
         :param file_path: File path.
         """
         if file_path not in self.data['tracked']:
-            logger.error(f"Untracked file: '{file_path}'")
+            logger.error(f"Untracked {format_file(file_path)}")
             raise typer.Exit(code=1)
 
         if self.data['tracked'][file_path]['diff'] == self.DIFF_NONE:
-            logger.error(f"File already marked as resolved: '{file_path}'")
+            logger.error(f"Already marked as resolved: {format_file(file_path)}")
             raise typer.Exit(code=1)
 
         if self.data['tracked'][file_path]['diff'] == self.DIFF_REMOVED:

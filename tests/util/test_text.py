@@ -14,14 +14,14 @@ def test_ensure_nltk_punkt_does_not_crash():
         pytest.fail(f"ensure_nltk_punkt() raised an exception: {e}")
 
 
-@pytest.mark.parametrize("filename,expected", [
+@pytest.mark.parametrize("file_path,expected", [
     ("test.txt", True),
     ("test.md", True),
     ("test.jpg", False),
     ("test.jpeg", False),
 ])
-def test_is_text_recognizes_extensions(filename, expected):
-    assert is_text(filename) is expected
+def test_is_text_recognizes_extensions(file_path, expected):
+    assert is_text(file_path) is expected
 
 
 def test_load_as_utf8_reads_text(tmp_path):

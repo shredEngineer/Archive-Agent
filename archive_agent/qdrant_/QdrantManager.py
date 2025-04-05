@@ -21,7 +21,7 @@ from archive_agent.openai_ import OpenAiManager
 from archive_agent.data import ChunkManager
 from archive_agent.data import FileData
 from archive_agent.util import CliManager
-from archive_agent.util.format import format_time
+from archive_agent.util.format import format_time, format_file
 
 logger = logging.getLogger(__name__)
 
@@ -80,13 +80,13 @@ class QdrantManager:
         :return: True if successful, False otherwise. 
         """
         if not quiet:
-            logger.info(f" - Adding file: '{file_path}'")
+            logger.info(f" - Adding {format_file(file_path)}")
 
         data = FileData(openai=self.openai, chunker=self.chunker, file_path=file_path, file_mtime=file_mtime)
         data.process()
         
         if len(data.points) == 0:
-            logger.error(f"Failed to process file data")
+            logger.warning(f"Skipping empty file")
             return False
 
         try:
@@ -105,8 +105,7 @@ class QdrantManager:
         :param quiet: Quiet output if True.
         :return: True if successful, False otherwise.
         """
-        if not quiet:
-            logger.info(f" - Counting chunks for file: '{file_path}'")
+        logger.debug(f" - Counting chunks for {format_file(file_path)}")
 
         try:
             count_result = self.qdrant.count(
@@ -128,11 +127,11 @@ class QdrantManager:
 
         if count == 0:
             if not quiet:
-                logger.info(f" - No chunks found for file: '{file_path}'")
+                logger.warning(f" - No chunks found for {format_file(file_path)}")
             return True
 
         if not quiet:
-            logger.info(f" - Removing ({count}) chunks of file: '{file_path}'")
+            logger.info(f" - Removing ({count}) chunk(s) of {format_file(file_path)}")
 
         try:
             self.qdrant.delete(
@@ -161,7 +160,7 @@ class QdrantManager:
         :param file_mtime: File modification time.
         :return: True if successful, False otherwise.
         """
-        logger.info(f" - Changing file: '{file_path}'")
+        logger.info(f" - Changing {format_file(file_path)}")
 
         successful_remove = self.remove(file_path, quiet=True)
         if not successful_remove:

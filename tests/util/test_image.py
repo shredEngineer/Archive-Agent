@@ -15,7 +15,7 @@ from archive_agent.util.image import (
 )
 
 
-@pytest.mark.parametrize("filename,expected", [
+@pytest.mark.parametrize("file_path,expected", [
     ("test.txt", False),
     ("test.md", False),
     ("test.jpg", True),
@@ -25,8 +25,8 @@ from archive_agent.util.image import (
     ("test.webp", True),
     ("test.bmp", True),
 ])
-def test_is_image_recognizes_extensions(filename, expected):
-    assert is_image(filename) is expected
+def test_is_image_recognizes_extensions(file_path, expected):
+    assert is_image(file_path) is expected
 
 
 def test_image_from_file_and_to_base64(tmp_path):

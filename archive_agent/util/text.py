@@ -4,8 +4,9 @@
 import typer
 import logging
 from typing import Set
-
 from charset_normalizer import from_path
+
+from archive_agent.util.format import format_file
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +44,12 @@ def load_as_utf8(file_path: str) -> str:
     try:
         matches = from_path(file_path)
     except IOError:
-        logger.error(f"Failed to read file: '{file_path}'")
+        logger.error(f"Failed to read {format_file(file_path)}")
         raise typer.Exit(code=1)
 
     best_match = matches.best()
     if best_match is None:
-        logger.error(f"Failed to decode file: '{file_path}'")
+        logger.error(f"Failed to decode {format_file(file_path)}")
         raise typer.Exit(code=1)
 
     return str(best_match)

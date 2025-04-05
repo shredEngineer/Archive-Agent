@@ -75,4 +75,4 @@ class CliManager:
             logger.info(f" - ({score_percent:.2f} %) matching chunk in file: '{point.payload['file_path']}':")
             print(Panel(f"[yellow]{point.payload['chunk']}"))
 
-        logger.warning(f" - Found ({len(points)}) matching chunks")
+        logger.warning(f" - Found ({len(points)}) matching chunk(s)")

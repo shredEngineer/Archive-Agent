@@ -8,7 +8,7 @@ import traceback
 import logging
 from typing import Callable, Optional, Any, Dict
 
-import openai
+from openai import OpenAIError
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +95,7 @@ class RetryManager:
                 return result
 
             except (
-                    openai.Timeout,
-                    openai.APIError,
-                    openai.RateLimitError,
+                    OpenAIError,
                     requests.exceptions.ReadTimeout,
             ) as e:
                 traceback.print_stack()
