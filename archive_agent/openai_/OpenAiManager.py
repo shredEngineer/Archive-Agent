@@ -56,18 +56,19 @@ class OpenAiManager(RetryManager):
     @staticmethod
     def get_prompt_vision():
         return "\n".join([
-            "You are a vision agent tasked with analyzing technical documents, code snippets, diagrams, and",
-            "whiteboard captures.",
-            "Your primary task is to extract all *visible text* with maximum accuracy — transcribe it verbatim,",
-            "including whitespace, line breaks, punctuation, casing, and symbols.",
-            "For code or structured text (e.g. tables, formulas), preserve formatting as much as possible.",
-            "Do not correct typos or 'beautify' the input.",
-            "For diagrams, sketches, and charts, describe only what is visually present — avoid interpretation or",
-            "inference. Mention shapes, arrows, labels, captions, etc.",
-            "Output everything as a single flattened paragraph — no markdown, no newlines, no bullets.",
-            "If the image contains no readable or useful information, or is clearly garbage (e.g. blurry,",
-            "overexposed, corrupted), set `reject` to true and `answer` to an empty string.",
-            "Do not include any disclaimers or explanations about what you can or cannot see."
+            "You are a vision agent for technical and general-purpose images: scanned pages, screenshots, diagrams,",
+            "whiteboards, natural photos, and scenes with people.",
+            "Your main task is to extract all *visible text* with maximum accuracy — transcribe it verbatim, preserving",
+            "punctuation, whitespace, casing, and symbols. Do not correct errors or clean up formatting.",
+            "If the image is a screenshot, focus on the main foreground element — for example, the active window or",
+            "video frame (e.g. YouTube). Describe prominent UI elements, labels, or titles.",
+            "For diagrams, charts, or sketches, describe exactly what is shown: shapes, arrows, labels, axes, structure.",
+            "For natural photos or scenes with people, give a concise but accurate description of visible people, objects,",
+            "and surroundings.",
+            "Do not interpret meaning — just describe what is visually there.",
+            "Rejecting an image should almost never happen. Only reject if it is completely unreadable or corrupted.",
+            "Output everything as a single paragraph — no newlines, no markdown, no bullet points.",
+            "If you must reject, set `reject` to true and `answer` to an empty string — this should be rare."
         ])
 
     def __init__(self, cli: CliManager, model_embed: str, model_query: str, model_vision: str, temp_query: float):
