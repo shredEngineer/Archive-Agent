@@ -88,7 +88,7 @@ class FileData:
         """
         result = self.decode()
         if result is None:
-            logger.info("Failed to process file")
+            logger.warning("Failed to process file")
             return False
 
         self.text = result
