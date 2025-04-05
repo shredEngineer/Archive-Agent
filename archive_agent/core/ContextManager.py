@@ -26,18 +26,23 @@ class ContextManager:
         profile_path = settings_path / "default"
 
         self.cli = CliManager()
+
         self.config = ConfigManager(profile_path)
+
         self.watchlist = WatchlistManager(profile_path)
+
         self.openai = OpenAiManager(
             cli=self.cli,
             model_embed=self.config.data[self.config.OPENAI_MODEL_EMBED],
             model_query=self.config.data[self.config.OPENAI_MODEL_QUERY],
             model_vision=self.config.data[self.config.OPENAI_MODEL_VISION],
         )
+
         self.chunker = ChunkManager(
             openai=self.openai,
             sentences_max=self.config.data[self.config.CHUNK_SENTENCES_MAX],
         )
+
         self.qdrant = QdrantManager(
             cli=self.cli,
             openai=self.openai,
@@ -48,6 +53,7 @@ class ContextManager:
             score_min=self.config.data[self.config.QDRANT_SCORE_MIN],
             chunks_max=self.config.data[self.config.QDRANT_CHUNKS_MAX],
         )
+
         self.committer = CommitManager(self.watchlist, self.qdrant)
 
         self.app = typer.Typer(
