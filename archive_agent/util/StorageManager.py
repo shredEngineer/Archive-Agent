@@ -10,6 +10,8 @@ from copy import deepcopy
 from typing import Dict, Any
 from abc import ABC, abstractmethod
 
+from archive_agent.util.format import format_file
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,7 +43,7 @@ class StorageManager(ABC):
             else:
                 self.load()
         except Exception as e:
-            logger.error(f"Failed to load file: '{self.file_path}': {e}")
+            logger.error(f"Failed to load {format_file(self.file_path)}: {e}")
             raise typer.Exit(code=1)
 
     def create(self) -> None:
@@ -50,7 +52,7 @@ class StorageManager(ABC):
         """
         self.data = deepcopy(self.default)
         self.save()
-        logger.info(f"Created default file: '{self.file_path}'")
+        logger.info(f"Created default {format_file(self.file_path)}")
 
     def load(self) -> None:
         """
@@ -61,21 +63,21 @@ class StorageManager(ABC):
 
         missing_keys = self.default.keys() - self.data.keys()
         if missing_keys:
-            logger.error(f"Missing keys in file: '{self.file_path}': {missing_keys}")
+            logger.error(f"Missing keys in {format_file(self.file_path)}: {missing_keys}")
             raise typer.Exit(code=1)
 
         if not self.validate():
-            logger.error(f"Invalid data in file: '{self.file_path}'")
+            logger.error(f"Invalid data in {format_file(self.file_path)}")
             raise typer.Exit(code=1)
 
-        logger.debug(f"Loaded existing file: '{self.file_path}'")
+        logger.debug(f"Loaded existing {format_file(self.file_path)}")
 
     def save(self) -> None:
         """
         Save file (atomic write).
         """
         if not self.validate():
-            logger.error(f"Invalid data in file: '{self.file_path}'")
+            logger.error(f"Invalid data in {format_file(self.file_path)}")
             raise typer.Exit(code=1)
 
         self.file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -86,7 +88,7 @@ class StorageManager(ABC):
             json.dump(self.data, f, indent=4)
         shutil.move(temp_path, self.file_path)
 
-        logger.debug(f"Saved file: '{self.file_path}'")
+        logger.debug(f"Saved {format_file(self.file_path)}")
 
     @abstractmethod
     def validate(self) -> bool:

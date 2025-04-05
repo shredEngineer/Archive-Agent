@@ -91,7 +91,7 @@ docker stop archive-agent-qdrant-server
 
 The default settings profile is created on the first run. (See [Storage](#-storage) section.)
 
-### How files are processed
+### ℹ️ How files are processed
 
 **Archive Agent** currently supports these file types:
 - Text: `.txt`, `.md`
@@ -100,6 +100,7 @@ The default settings profile is created on the first run. (See [Storage](#-stora
 **Archive Agent** decodes everything to text like this:
 - Text files are decoded to UTF-8, regardless of original encoding.
 - Image files are decoded to text using OpenAI vision.
+  - The vision model will reject unintelligible images.
 
 **NOTE:** Unsupported files are tracked but not processed.
 
@@ -109,7 +110,7 @@ The default settings profile is created on the first run. (See [Storage](#-stora
 - Each vector is turned into a *point* with file metadata.
 - Each *point* is stored in the Qdrant database.
 
-### How chunks are retrieved
+### ℹ️ How chunks are retrieved
 
 **Archive Agent** retrieves chunks related to your question like this:
 - The question is turned into a vector using OpenAI embeddings.
@@ -120,7 +121,7 @@ The default settings profile is created on the first run. (See [Storage](#-stora
 - The LLM receives the retrieved chunks as context to the question.
 - The LLM's answer is returned.
 
-### How files are selected for tracking
+### ℹ️ How files are selected for tracking
 
 **Archive Agent** uses *patterns* to select your files:
 
@@ -136,7 +137,7 @@ There are *included patterns* and *excluded patterns*:
 
 **NOTE:** Hidden files are always ignored.
 
-### List usage info
+### ⚡ List usage info
 
 To show the list of supported commands, run this:
 
@@ -144,7 +145,7 @@ To show the list of supported commands, run this:
 archive-agent
 ```
 
-### Add included patterns
+### ⚡ Add included patterns
 
 To add one or more included patterns, run this:
 
@@ -156,7 +157,7 @@ archive-agent include "~/Documents/*.txt"
 
 (Skip the pattern argument to get an interactive prompt.)
 
-### Add excluded patterns
+### ⚡ Add excluded patterns
 
 To add one or more excluded patterns, run this:
 
@@ -168,7 +169,7 @@ archive-agent exclude "~/Documents/*.txt"
 
 (Skip the pattern argument to get an interactive prompt.)
 
-### Remove included / excluded patterns
+### ⚡ Remove included / excluded patterns
 
 To remove one or more previously included / excluded patterns, run this:
 
@@ -180,7 +181,7 @@ archive-agent remove "~/Documents/*.txt"
 
 (Skip the pattern argument to get an interactive prompt.)
 
-### List included / excluded patterns
+### ⚡ List included / excluded patterns
 
 To show the list of included / excluded patterns, run this: 
 
@@ -188,7 +189,7 @@ To show the list of included / excluded patterns, run this:
 archive-agent patterns
 ```
 
-### Resolve patterns and track files
+### ⚡ Resolve patterns and track files
 
 To resolve all patterns and track changes to your files, run this:
 
@@ -196,7 +197,7 @@ To resolve all patterns and track changes to your files, run this:
 archive-agent track
 ```
 
-### List tracked files
+### ⚡ List tracked files
 
 To show the full list of tracked files, run this: 
 
@@ -204,7 +205,7 @@ To show the full list of tracked files, run this:
 archive-agent list
 ```
 
-### List changed files
+### ⚡ List changed files
 
 To show the list of changed files, run this: 
 
@@ -212,7 +213,7 @@ To show the list of changed files, run this:
 archive-agent diff
 ```
 
-### Commit changed files to database
+### ⚡ Commit changed files to database
 
 To sync changes to your files with the Qdrant database, run this:
 
@@ -227,7 +228,7 @@ archive-agent commit
   - Different file size
   - Different modification date
 
-### Search your files
+### ⚡ Search your files
 
 ```bash
 archive-agent search "Which files mention donuts?"
@@ -237,7 +238,7 @@ Lists files matching the question.
 
 (Skip the question argument to get an interactive prompt.)
 
-### Query your files
+### ⚡ Query your files
 
 ```bash
 archive-agent query "Which files mention donuts?"
@@ -247,7 +248,7 @@ Answers your question using RAG.
 
 (Skip the question argument to get an interactive prompt.)
 
-### Launch Archive Agent GUI
+### ⚡ Launch Archive Agent GUI
 
 To launch the **Archive Agent** GUI in your browser, run this:
 
@@ -263,7 +264,7 @@ Press `CTRL+C` in the console to close the GUI server.
 
 ## 📁 Storage
 
-### Archive Agent settings
+### ℹ️ Archive Agent settings
 
 **Archive Agent** settings are stored in `~/.archive-agent-settings/`. 
 
@@ -273,6 +274,7 @@ The default settings profile is located in `default/`:
   - `openai_model_embed`: OpenAI model for embedding
   - `openai_model_query`: OpenAI model for query
   - `openai_model_vision`: OpenAI model for vision
+  - `openai_temp_query`: Temperature of query model
   - `qdrant_collection`: Qdrant collection name
   - `qdrant_server_url`: Qdrant server URL
   - `qdrant_vector_size`: Qdrant vector size
@@ -283,7 +285,7 @@ The default settings profile is located in `default/`:
 - `watchlist.json`:
   - Managed via the `include` / `exclude` / `remove` / `track` / `commit` commands.
 
-### Qdrant database
+### ℹ️ Qdrant database
 
 The Qdrant database is stored in `~/.archive-agent-qdrant-storage/`.
 
@@ -314,6 +316,7 @@ poetry run pytest
 - The app context is initialized in [`archive_agent/core/ContextManager.py`](archive_agent/core/ContextManager.py)
 - The default config is defined in [`archive_agent/config/ConfigManager.py`](archive_agent/config/ConfigManager.py)  
 - The CLI commands are defined in [`archive_agent/__main__.py`](archive_agent/__main__.py)
+  - For verbose CLI output, set `VERBOSE = True` in [`archive_agent/util/CliManager.py`](archive_agent/util/CliManager.py)
 - The GUI is implemented in [`archive_agent/core/GuiManager.py`](archive_agent/core/GuiManager.py)
 - The OpenAI API prompts for querying and vision are defined in [`archive_agent/openai_/OpenAiManager.py`](archive_agent/openai_/OpenAiManager.py) 
 
@@ -331,10 +334,10 @@ poetry run pytest
 
 **Archive Agent** is fully functional right now and development is continuing. 
 
-Related to section [Launch Archive Agent GUI](#launch-archive-agent-gui):
+Related to section [Launch Archive Agent GUI](#-launch-archive-agent-gui):
 - [ ] Extend GUI functionality
 
-Related to section [How files are processed](#how-files-are-processed):
+Related to section [How files are processed](#ℹ-how-files-are-processed):
 - [ ] `FileData`: Convert `.doc`, `.docx`, `.odt`, `.rtf` to text 
 - [ ] `FileData`: Convert `.pdf` to `.jpg` internally and use vision
 

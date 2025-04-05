@@ -4,13 +4,29 @@
 import logging
 from typing import List
 
-from openai import OpenAI
+from pydantic import BaseModel
+from openai import OpenAI, OpenAIError
 
 from archive_agent.util.image import image_from_file, image_resize_safe, image_to_base64
 from archive_agent.util import CliManager
 from archive_agent.util import RetryManager
 
 logger = logging.getLogger(__name__)
+
+
+class QuerySchema(BaseModel):
+    answer: str
+
+    class Config:
+        extra = "forbid"  # Ensures additionalProperties: false
+
+
+class VisionSchema(BaseModel):
+    answer: str
+    reject: bool
+
+    class Config:
+        extra = "forbid"  # Ensures additionalProperties: false
 
 
 class OpenAiManager(RetryManager):
@@ -43,20 +59,23 @@ class OpenAiManager(RetryManager):
             f"Extract all text from the image: Transcribe verbatim, don't describe.",
             f"Only describe graphics or drawings in detail.",
             f"Output the answer as a single paragraph without newlines.",
+            f"Reject the image if it contains garbage or is unprocessable."
         ])
 
-    def __init__(self, cli: CliManager, model_embed: str, model_query: str, model_vision: str):
+    def __init__(self, cli: CliManager, model_embed: str, model_query: str, model_vision: str, temp_query: float):
         """
         Initialize OpenAI manager.
         :param cli: CLI manager.
         :param model_embed: Model for embeddings.
         :param model_query: Model for queries.
         :param model_vision: Model for vision.
+        :param temp_query: Temperature of query model.
         """
         self.cli = cli
         self.model_embed = model_embed
         self.model_query = model_query
         self.model_vision = model_vision
+        self.temp_query = temp_query
 
         self.client = OpenAI()
 
@@ -93,18 +112,19 @@ class OpenAiManager(RetryManager):
         self.total_tokens += response.usage.total_tokens
         return response.data[0].embedding
 
-    def query(self, question: str, context: str) -> str:
+    def query(self, question: str, context: str) -> QuerySchema:
         """
         Get answer to question using RAG.
         :param question: Question.
         :param context: RAG context.
-        :return: Answer.
+        :return: QuerySchema.
         """
         prompt = self.get_prompt_query(question, context)
 
         def callback():
             return self.client.responses.create(
                 model=self.model_query,
+                temperature=self.temp_query,
                 input=[
                     {
                         "role": "user",
@@ -116,17 +136,29 @@ class OpenAiManager(RetryManager):
                         ],
                     },
                 ],
+                text={
+                    "format": {
+                        "type": "json_schema",
+                        "name": QuerySchema.__name__,
+                        "schema": QuerySchema.model_json_schema(),
+                        "strict": True,
+                    },
+                },
             )
 
         response = self.cli.format_openai_query(lambda: self.retry(callback), prompt)
         self.total_tokens += response.usage.total_tokens
-        return response.output_text
 
-    def vision(self, file_path: str) -> str:
+        if hasattr(response, "refusal") and response.refusal:
+            raise OpenAIError(response.refusal)
+
+        return QuerySchema.model_validate_json(response.output[0].content[0].text)
+
+    def vision(self, file_path: str) -> VisionSchema:
         """
         Convert image to text.
         :param file_path: File path.
-        :return: Image converted to text.
+        :return: VisionSchema.
         """
         image_base64 = image_to_base64(image_resize_safe(image_from_file(file_path)))
 
@@ -148,8 +180,20 @@ class OpenAiManager(RetryManager):
                         ],
                     },
                 ],
+                text={
+                    "format": {
+                        "type": "json_schema",
+                        "name": VisionSchema.__name__,
+                        "schema": VisionSchema.model_json_schema(),
+                        "strict": True,
+                    },
+                },
             )
 
         response = self.cli.format_openai_vision(lambda: self.retry(callback))
         self.total_tokens += response.usage.total_tokens
-        return response.output_text
+
+        if hasattr(response, "refusal") and response.refusal:
+            raise OpenAIError(response.refusal)
+
+        return VisionSchema.model_validate_json(response.output[0].content[0].text)

@@ -83,7 +83,9 @@ class QdrantManager:
             logger.info(f" - Adding {format_file(file_path)}")
 
         data = FileData(openai=self.openai, chunker=self.chunker, file_path=file_path, file_mtime=file_mtime)
-        data.process()
+        if not data.process():
+            logger.warning(f"Failed to add file")
+            return False
         
         if len(data.points) == 0:
             logger.warning(f"Skipping empty file")
@@ -178,6 +180,8 @@ class QdrantManager:
         :param question: Question.
         :return: Points.
         """
+        self.cli.format_question(question)
+
         vector = self.openai.embed(question)
 
         try:
@@ -201,6 +205,8 @@ class QdrantManager:
         :param question: Question.
         :return: Answer.
         """
+        self.cli.format_question(question)
+
         vector = self.openai.embed(question)
 
         try:
@@ -225,5 +231,8 @@ class QdrantManager:
             for point in response.points
         ])
 
-        answer = self.openai.query(question, context)
+        query_result = self.openai.query(question, context)
+        answer = query_result.answer
+        self.cli.format_answer(answer)
+
         return answer

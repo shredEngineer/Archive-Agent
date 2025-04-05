@@ -60,7 +60,11 @@ class GuiManager:
         :param question: Question.
         :return: Answer.
         """
-        return context.qdrant.query(question)
+        answer = context.qdrant.query(question)
+
+        context.openai.usage()
+
+        return answer
 
     @staticmethod
     def display_answer(answer: str) -> None:

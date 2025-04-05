@@ -36,6 +36,7 @@ class ContextManager:
             model_embed=self.config.data[self.config.OPENAI_MODEL_EMBED],
             model_query=self.config.data[self.config.OPENAI_MODEL_QUERY],
             model_vision=self.config.data[self.config.OPENAI_MODEL_VISION],
+            temp_query=self.config.data[self.config.OPENAI_TEMP_QUERY],
         )
 
         self.chunker = ChunkManager(

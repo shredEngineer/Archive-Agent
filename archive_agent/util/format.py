@@ -16,7 +16,7 @@ def format_time(timestamp: float) -> str:
     return dt.strftime('%Y-%m-%d %H:%M:%S')
 
 
-def format_file(file_path: str) -> str:
+def format_file(file_path: str | pathlib.Path) -> str:
     """
     Format file path as file:// URI syntax.
 

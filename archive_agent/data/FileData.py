@@ -4,7 +4,7 @@
 import typer
 import logging
 import uuid
-from typing import List
+from typing import List, Optional
 
 from qdrant_client.models import PointStruct
 
@@ -12,6 +12,7 @@ from archive_agent.openai_ import OpenAiManager
 from archive_agent.util.image import is_image
 from archive_agent.util.text import is_text, load_as_utf8
 from archive_agent.data import ChunkManager
+from archive_agent.util.format import format_file
 
 logger = logging.getLogger(__name__)
 
@@ -60,31 +61,42 @@ class FileData:
         else:
             return False
 
-    def decode(self) -> str:
+    def decode(self) -> Optional[str]:
         """
         Decode file data to text.
-        :return: Text.
+        :return: Text if successful, None otherwise.
         """
         if is_image(self.file_path):
-            return self.openai.vision(self.file_path)
+            vision_result = self.openai.vision(self.file_path)
+            if vision_result.reject:
+                logger.warning(f"Image vision rejected {format_file(self.file_path)}")
+                return None
+
+            return vision_result.answer
 
         elif is_text(self.file_path):
             return load_as_utf8(self.file_path)
 
         else:
-            logger.error(f"Cannot process file: '{self.file_path}'")
+            logger.error(f"Cannot process {format_file(self.file_path)}")
             raise typer.Exit(code=1)
 
-    def process(self) -> None:
+    def process(self) -> bool:
         """
         Process file data.
+        :return: True if successful, False otherwise.
         """
-        self.text = self.decode()
+        result = self.decode()
+        if result is None:
+            logger.info("Failed to process file")
+            return False
+
+        self.text = result
 
         chunks = self.chunker.process(self.text)
 
         for chunk_index, chunk in enumerate(chunks):
-            logger.info(f" - Processing chunk ({chunk_index + 1}) / ({len(chunks)}) of file: '{self.file_path}'")
+            logger.info(f" - Processing chunk ({chunk_index + 1}) / ({len(chunks)}) of {format_file(self.file_path)}")
 
             vector = self.openai.embed(chunk)
 
@@ -101,3 +113,5 @@ class FileData:
                     },
                 )
             )
+
+        return True

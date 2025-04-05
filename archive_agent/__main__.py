@@ -105,6 +105,8 @@ def search(question: str = typer.Argument(None)) -> None:
 
     _chunks = context.qdrant.search(question)
 
+    context.openai.usage()
+
 
 @context.app.command()
 def query(question: str = typer.Argument(None)) -> None:
@@ -115,6 +117,8 @@ def query(question: str = typer.Argument(None)) -> None:
         question = typer.prompt("Type your question")
 
     _answer = context.qdrant.query(question)
+
+    context.openai.usage()
 
 
 @context.app.command()
