@@ -6,7 +6,9 @@ from rich.panel import Panel
 from rich.pretty import Pretty
 import json
 import logging
-from typing import Callable, List, Any
+from typing import Callable, List
+
+from openai.types.responses import Response
 
 from qdrant_client.models import ScoredPoint
 
@@ -24,6 +26,7 @@ class CliManager:
     VERBOSE_QUERY: bool = False
     VERBOSE_VISION: bool = True
     VERBOSE_RETRIEVAL: bool = True
+    VERBOSE_USAGE: bool = False
 
     def __init__(self):
         """
@@ -53,33 +56,34 @@ class CliManager:
         print(Panel(f"[yellow]{chunk}", title="Chunk", border_style="white"))
 
     @staticmethod
-    def format_openai_embed(callback: Callable[[], Any], chunk: str) -> Any:
+    def format_openai_embed(callback: Callable[[], Response], chunk: str) -> Response:
         """
         Format OpenAI response of embed callback.
         :param callback: Embed callback returning OpenAI response.
         :param chunk: Chunk.
         :return: OpenAI response.
         """
-        logger.info(f" - Embedding...")
+        logger.info(f"Embedding...")
 
         if CliManager.VERBOSE_EMBED:
             CliManager.format_chunk(chunk)
 
         response = callback()
 
-        logger.info(f" - Used ({response.usage.total_tokens}) token(s)")
+        if CliManager.VERBOSE_USAGE:
+            logger.info(f"Used ({response.usage.total_tokens}) token(s)")
 
         return response
 
     @staticmethod
-    def format_openai_query(callback: Callable[[], Any], prompt: str) -> Any:
+    def format_openai_query(callback: Callable[[], Response], prompt: str) -> Response:
         """
         Format OpenAI response of query callback.
         :param callback: Query callback returning OpenAI response.
         :param prompt: Prompt.
         :return: OpenAI response.
         """
-        logger.info(f" - Querying...")
+        logger.info(f"Querying...")
 
         if CliManager.VERBOSE_QUERY:
             print(Panel(f"[red]{prompt}", title="Query", border_style="white"))
@@ -89,25 +93,27 @@ class CliManager:
         if CliManager.VERBOSE_QUERY:
             CliManager.format_json(response.output_text)
 
-        logger.info(f" - Used ({response.usage.total_tokens}) token(s)")
+        if CliManager.VERBOSE_USAGE:
+            logger.info(f"Used ({response.usage.total_tokens}) token(s)")
 
         return response
 
     @staticmethod
-    def format_openai_vision(callback: Callable[[], Any]) -> Any:
+    def format_openai_vision(callback: Callable[[], Response]) -> Response:
         """
         Format OpenAI response of vision callback.
         :param callback: Vision callback returning OpenAI response.
         :return: OpenAI response.
         """
-        logger.info(f" - Image vision...")
+        logger.info(f"Image vision...")
 
         response = callback()
 
         if CliManager.VERBOSE_VISION:
             CliManager.format_json(response.output_text)
 
-        logger.info(f" - Used ({response.usage.total_tokens}) token(s)")
+        if CliManager.VERBOSE_USAGE:
+            logger.info(f"Used ({response.usage.total_tokens}) token(s)")
 
         return response
 
@@ -120,14 +126,14 @@ class CliManager:
         for point in points:
 
             logger.info(
-                f" - ({point.score * 100:.2f} %) matching chunk in {format_file(point.payload['file_path'])}"
+                f"({point.score * 100:.2f} %) matching chunk in {format_file(point.payload['file_path'])}"
                 f" @ {format_time(point.payload['file_mtime'])}:"
             )
 
             if CliManager.VERBOSE_RETRIEVAL:
                 CliManager.format_chunk(point.payload['chunk'])
 
-        logger.warning(f" - Found ({len(points)}) matching chunk(s)")
+        logger.warning(f"Found ({len(points)}) matching chunk(s)")
 
     @staticmethod
     def format_question(question: str) -> None:
@@ -138,9 +144,10 @@ class CliManager:
         print(Panel(f"[white]{question}", title="Question", border_style="red"))
 
     @staticmethod
-    def format_answer(answer: str) -> None:
+    def format_answer(answer: str, warning: bool = False) -> None:
         """
         Format answer.
         :param answer: Answer.
+        :param warning: Use red border if True, green otherwise.
         """
-        print(Panel(f"[white]{answer}", title="Answer", border_style="green"))
+        print(Panel(f"[white]{answer}", title="Answer", border_style="red" if warning else "green"))

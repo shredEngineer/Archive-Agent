@@ -35,7 +35,7 @@ class ConfigManager(StorageManager):
         QDRANT_COLLECTION: "archive-agent",
         QDRANT_VECTOR_SIZE: 1536,
         QDRANT_SCORE_MIN: .15,
-        QDRANT_CHUNKS_MAX: 8,
+        QDRANT_CHUNKS_MAX: 16,
         CHUNK_SENTENCES_MAX: 8,
     }
 

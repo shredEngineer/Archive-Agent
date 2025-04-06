@@ -11,9 +11,6 @@ import streamlit as st
 logger = logging.getLogger(__name__)
 
 
-context = ContextManager()
-
-
 class GuiManager:
     """
     GUI manager.
@@ -24,6 +21,8 @@ class GuiManager:
         Initialize GUI manager.
         """
         st.set_page_config(page_title="Archive Agent", layout="centered")
+
+        self.context = ContextManager()
 
     def run(self) -> None:
         """
@@ -53,15 +52,17 @@ class GuiManager:
                 result_md: str = self.get_answer(query)
             self.display_answer(result_md)
 
-    @staticmethod
-    def get_answer(question: str) -> str:
+    def get_answer(self, question: str) -> str:
         """
         Get answer to question.
         :param question: Question.
         :return: Answer.
         """
-        answer = context.qdrant.query(question)
-        return answer
+        query_result = self.context.qdrant.query(question)
+        if query_result.reject:
+            return f"**Query rejected:**\n\n{query_result.answer}"
+        else:
+            return query_result.answer
 
     @staticmethod
     def display_answer(answer: str) -> None:

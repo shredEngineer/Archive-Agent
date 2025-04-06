@@ -6,6 +6,7 @@ from typing import List
 
 from pydantic import BaseModel
 from openai import OpenAI, OpenAIError
+from openai.types.responses import Response
 
 from archive_agent.util.image import image_from_file, image_resize_safe, image_to_base64
 from archive_agent.util import CliManager
@@ -15,18 +16,43 @@ logger = logging.getLogger(__name__)
 
 
 class QuerySchema(BaseModel):
+    """
+    QuerySchema.
+    """
     answer: str
+    reject: bool
 
     class Config:
         extra = "forbid"  # Ensures additionalProperties: false
 
 
 class VisionSchema(BaseModel):
+    """
+    VisionSchema.
+    """
     answer: str
     reject: bool
 
     class Config:
         extra = "forbid"  # Ensures additionalProperties: false
+
+
+def response_to_QuerySchema(response: Response) -> QuerySchema:
+    """
+    Validate OpenAI response to QuerySchema.
+    :param response: OpenAI response.
+    :return: QuerySchema.
+    """
+    return QuerySchema.model_validate_json(response.output[0].content[0].text)
+
+
+def response_to_VisionSchema(response: Response) -> VisionSchema:
+    """
+    Validate OpenAI response to VisionSchema.
+    :param response: OpenAI response.
+    :return: VisionSchema.
+    """
+    return VisionSchema.model_validate_json(response.output[0].content[0].text)
 
 
 class OpenAiManager(RetryManager):
@@ -36,6 +62,7 @@ class OpenAiManager(RetryManager):
 
     @staticmethod
     def get_prompt_query(question: str, context: str):
+        # TODO: Translate the `Strictly structure the answer like this:` into QuerySchema, then format it for use.
         return "\n".join([
             f"Act as a RAG agent: Use ONLY the context to answer the question.",
             f"Respect the context: Do NOT use your internal knowledge to answer.",
@@ -45,8 +72,9 @@ class OpenAiManager(RetryManager):
             f"- Paragraph rephrasing the original question, guessing the intent from the context.",
             f"- List of all possible answers to the question, extensively considering the context.",
             f"- Paragraph summarizing and concluding the answer. Do NOT include fillers like \"Summarizing, ...\"",
-            f"- List of all `file://` associated with snippets considered from the context, formatted markdown URLs."
-            f"If the context does not allow any answers at all, ONLY output the token \"[NO FURTHER CONTEXT FOUND]\".",
+            f"- List of all `file://` associated with snippets considered from the context, formatted markdown URLs.",
+            f"In extremely rase cases, reject questions if the context does not allow any answers at all.",
+            f"If rejecting, set `reject` to `true` and `answer` to a very short description for rejecting.",
             f"\n\n",
             f"Context:\n\"\"\"\n{context}\n\"\"\"\n\n",
             f"Question:\n\"\"\"\n{question}\n\"\"\"\n\n",
@@ -56,23 +84,14 @@ class OpenAiManager(RetryManager):
     @staticmethod
     def get_prompt_vision():
         return "\n".join([
-            "You are a vision agent analyzing technical images, screenshots, documents, diagrams, whiteboards,",
-            "photos, and natural scenes.",
-            "Extract all visible text with maximum accuracy.",
-            "Transcribe verbatim, preserving casing, punctuation, whitespace, and line breaks.",
-            "Do not correct typos or reformat text.",
-            "Use markdown only when it appears visibly in the image, such as lists, headings, code blocks, or tables.",
-            "Do not use markdown to format your answer — only reflect the structure of the original image.",
-            "If the image is a screenshot, focus on the main visible element, such as a window or video frame in the"
-            "foreground.",
-            "Describe visible UI elements, labels, titles, and the contents of the primary window or screen area.",
-            "For diagrams and whiteboards, describe exactly what is shown — shapes, arrows, labels, captions, axes,"
-            "layout.",
-            "For photos or scenes with people, describe visible people, objects, clothing, actions, and surroundings.",
-            "Do not interpret, guess, or infer anything not clearly visible.",
-            "Output multiple dense paragraphs — use one for each distinct element or region in the image.",
-            "Reject only if the image is entirely unreadable, corrupted, or blank. This should be extremely rare.",
-            "If rejecting, set `reject` to true and `answer` to an empty string."
+            f"Act as a vision agent: Analyze photos, images of notes, whiteboards, diagrams, documents, screenshots.",
+            f"Extract ALL visible text verbatim and with maximum accuracy.",
+            f"Extract ALL visible shapes, objects, and surroundings.",
+            f"Describe ALL relations between visible elements.",
+            f"For screenshots, focus on the window or video frame in the foreground.",
+            f"As `answer` return multiple dense paragraphs containing ALL extracted information and descriptions.",
+            f"In extremely rase cases, reject entirely unreadable, corrupted, or blank images.",
+            f"If rejecting, set `reject` to `true` and `answer` to the reason for rejecting the image.",
         ])
 
     def __init__(self, cli: CliManager, model_embed: str, model_query: str, model_vision: str, temp_query: float):
@@ -165,7 +184,9 @@ class OpenAiManager(RetryManager):
         if hasattr(response, "refusal") and response.refusal:
             raise OpenAIError(response.refusal)
 
-        return QuerySchema.model_validate_json(response.output[0].content[0].text)
+        query_result = response_to_QuerySchema(response)
+
+        return query_result
 
     def vision(self, file_path: str) -> VisionSchema:
         """
@@ -212,4 +233,6 @@ class OpenAiManager(RetryManager):
         if hasattr(response, "refusal") and response.refusal:
             raise OpenAIError(response.refusal)
 
-        return VisionSchema.model_validate_json(response.output[0].content[0].text)
+        vision_result = response_to_VisionSchema(response)
+
+        return vision_result

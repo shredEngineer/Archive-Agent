@@ -34,5 +34,5 @@ def validate_pattern(pattern: str) -> str:
         return pattern
     else:
         logger.error(f"Invalid pattern:")
-        logger.error(f" - {pattern}")
+        logger.error(f"{pattern}")
         raise typer.Exit(code=1)

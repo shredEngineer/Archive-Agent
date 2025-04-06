@@ -56,7 +56,7 @@ def image_resize_safe(
             img_bytes.seek(0)
             return Image.open(img_bytes)
 
-    logger.error(" - Failed to resize image")
+    logger.error("Failed to resize image")
     raise typer.Exit(code=1)
 
 

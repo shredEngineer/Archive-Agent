@@ -69,7 +69,7 @@ class FileData:
         if is_image(self.file_path):
             vision_result = self.openai.vision(self.file_path)
             if vision_result.reject:
-                logger.warning(f"Image vision rejected {format_file(self.file_path)}")
+                logger.warning(f"Image rejected!")
                 return None
 
             return vision_result.answer
@@ -96,7 +96,7 @@ class FileData:
         chunks = self.chunker.process(self.text)
 
         for chunk_index, chunk in enumerate(chunks):
-            logger.info(f" - Processing chunk ({chunk_index + 1}) / ({len(chunks)}) of {format_file(self.file_path)}")
+            logger.info(f"Processing chunk ({chunk_index + 1}) / ({len(chunks)}) of {format_file(self.file_path)}")
 
             vector = self.openai.embed(chunk)
 

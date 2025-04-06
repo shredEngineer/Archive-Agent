@@ -1,7 +1,6 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import typer
 from pathlib import Path
 
 from archive_agent.util import CliManager
@@ -56,9 +55,3 @@ class ContextManager:
         )
 
         self.committer = CommitManager(self.watchlist, self.qdrant)
-
-        self.app = typer.Typer(
-            add_completion=False,
-            no_args_is_help=True,
-            help="Archive Agent tracks your files, syncs changes, and powers smart queries.",
-        )
