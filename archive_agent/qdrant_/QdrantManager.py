@@ -65,7 +65,6 @@ class QdrantManager:
         self.score_min = score_min
         self.chunks_max = chunks_max
 
-        logger.info(f"Connecting to Qdrant...")
         if not self.qdrant.collection_exists(collection):
             logger.info(f"Creating new Qdrant collection: '{collection}'")
             self.qdrant.create_collection(

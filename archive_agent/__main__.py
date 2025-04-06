@@ -7,9 +7,11 @@ import pathlib
 import subprocess
 from typing import List
 
-from archive_agent.core import ContextManager
-
 logger = logging.getLogger(__name__)
+
+logger.info("Starting...")
+
+from archive_agent.core import ContextManager
 
 
 app = typer.Typer(
