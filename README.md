@@ -28,7 +28,6 @@
 - [Python](https://www.python.org/downloads/) **>= 3.10** *(core runtime)*
 - [Poetry](https://python-poetry.org/docs/#installation) *(dependency management)*
 
-
 - **Tested with Ubuntu 24.04**
 
 ---
@@ -55,6 +54,7 @@ To install **Archive Agent** in the current directory of your choice, run this o
 git clone https://github.com/shredEngineer/Archive-Agent
 cd Archive-Agent
 poetry install
+sudo apt install pandoc
 chmod +x *.sh
 echo "alias archive-agent='$(pwd)/archive-agent.sh'" >> ~/.bashrc && source ~/.bashrc
 ```
@@ -94,8 +94,8 @@ The default settings profile is created on the first run. (See [Storage](#-stora
 ### ℹ️ How files are processed
 
 **Archive Agent** currently supports these file types:
-- Text: `.txt`, `.md`
-- Image: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
+- Text: `.txt`, `.md`, `.odt`, `.docx`, `.rtf`, `.html` (decoded using *Pandoc*)
+- Image: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp` (decoded using *Pillow*)
 
 **Archive Agent** decodes everything to text like this:
 - Text files are decoded to UTF-8, regardless of original encoding.
@@ -311,6 +311,17 @@ poetry run pytest
 
 ---
 
+## 🔬 Static code analysis
+
+To perform static code analysis, run these commands:
+
+```bash
+poetry run pyright
+poetry run pycodestyle archive_agent tests
+```
+
+---
+
 ## 📖 Developer's guide
 
 - The app context is initialized in [`archive_agent/core/ContextManager.py`](archive_agent/core/ContextManager.py)
@@ -338,7 +349,6 @@ Related to section [Launch Archive Agent GUI](#-launch-archive-agent-gui):
 - [ ] Extend GUI functionality
 
 Related to section [How files are processed](#ℹ-how-files-are-processed):
-- [ ] `FileData`: Convert `.doc`, `.docx`, `.odt`, `.rtf` to text 
 - [ ] `FileData`: Convert `.pdf` to `.jpg` internally and use vision
 
 Related to section [Storage](#-storage):
@@ -352,6 +362,8 @@ Train-of-Thought mechanism:
 General improvements:
 - [ ] Implement [OpenAI API request parallel processor](https://github.com/openai/openai-cookbook/blob/main/examples/api_request_parallel_processor.py)
 - [ ] Improve test coverage
+- [ ] Improve error handling — needs **your** feedback!
+- [ ] Fix type errors in `OpenAiManager` class (reported by *pyright*) 
 
 ---
 

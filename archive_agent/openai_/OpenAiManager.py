@@ -6,7 +6,7 @@ from typing import List
 
 from pydantic import BaseModel
 from openai import OpenAI, OpenAIError
-from openai.types.responses import Response
+from openai.types.responses.response import Response
 
 from archive_agent.util.image import image_from_file, image_resize_safe, image_to_base64
 from archive_agent.util import CliManager
@@ -84,12 +84,12 @@ class OpenAiManager(RetryManager):
     @staticmethod
     def get_prompt_vision():
         return "\n".join([
-            f"Act as a vision agent: Analyze photos, images of notes, whiteboards, diagrams, documents, screenshots.",
-            f"Extract ALL visible text verbatim and with maximum accuracy.",
-            f"Extract ALL visible shapes, objects, and surroundings.",
-            f"Describe ALL relations between visible elements.",
+            f"Act as a vision agent for RAG: Extract all visible text verbatim and with maximum accuracy.",
+            f"Analyze images of notes, whiteboards, diagrams, documents, screenshots, and photos of scenes or objects."
             f"For screenshots, focus on the window or video frame in the foreground.",
-            f"As `answer` return multiple dense paragraphs containing ALL extracted information and descriptions.",
+            f"Describe ONLY meaningful relationships between relevant visible elements.",
+            f"Prioritize written content, ignoring minor details like grid lines or binder holes."
+            f"As `answer` return multiple dense paragraphs containing the extracted information.",
             f"In extremely rase cases, reject entirely unreadable, corrupted, or blank images.",
             f"If rejecting, set `reject` to `true` and `answer` to the reason for rejecting the image.",
         ])
@@ -126,7 +126,10 @@ class OpenAiManager(RetryManager):
         """
         Show usage.
         """
-        logger.info(f"Used ({self.total_tokens}) token(s) in total")
+        if self.total_tokens > 0:
+            logger.info(f"Used ({self.total_tokens}) OpenAI API token(s) in total")
+        else:
+            logger.info(f"No OpenAI API tokens used")
 
     def embed(self, text: str) -> List[float]:
         """
@@ -225,7 +228,8 @@ class OpenAiManager(RetryManager):
             )
 
         response = self.cli.format_openai_vision(lambda: self.retry(callback))
-        self.total_tokens += response.usage.total_tokens
+        if response.usage is not None:  # makes pyright happy
+            self.total_tokens += response.usage.total_tokens
 
         if response.status == 'incomplete':
             raise OpenAIError("Vision response incomplete, probably due to token limits")

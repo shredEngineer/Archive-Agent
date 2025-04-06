@@ -81,7 +81,7 @@ class QdrantManager:
         :param file_path: File path.
         :param file_mtime: File modification time.
         :param quiet: Quiet output if True.
-        :return: True if successful, False otherwise. 
+        :return: True if successful, False otherwise.
         """
         if not quiet:
             logger.info(f"Adding {format_file(file_path)}")
@@ -90,7 +90,7 @@ class QdrantManager:
         if not data.process():
             logger.warning(f"Failed to add file")
             return False
-        
+
         if len(data.points) == 0:
             logger.warning(f"Failed to add empty file")
             return False
@@ -175,8 +175,8 @@ class QdrantManager:
         successful_add = self.add(file_path, file_mtime, quiet=True)
         if not successful_add:
             return False
-        
-        return True 
+
+        return True
 
     def search(self, question: str) -> List[ScoredPoint]:
         """
@@ -233,6 +233,7 @@ class QdrantManager:
                 f"{point.payload['chunk']}\n",
             ])
             for point in response.points
+            if point.payload is not None  # makes pyright happy
         ])
 
         query_result = self.openai.query(question, context)

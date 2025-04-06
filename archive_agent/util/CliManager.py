@@ -8,7 +8,7 @@ import json
 import logging
 from typing import Callable, List
 
-from openai.types.responses import Response
+from openai.types.responses.response import Response
 
 from qdrant_client.models import ScoredPoint
 
@@ -70,8 +70,8 @@ class CliManager:
 
         response = callback()
 
-        if CliManager.VERBOSE_USAGE:
-            logger.info(f"Used ({response.usage.total_tokens}) token(s)")
+        if CliManager.VERBOSE_USAGE and response.usage is not None:
+            logger.info(f"Used ({response.usage.total_tokens}) OpenAI API token(s)")
 
         return response
 
@@ -90,11 +90,11 @@ class CliManager:
 
         response = callback()
 
-        if CliManager.VERBOSE_QUERY:
+        if CliManager.VERBOSE_USAGE and response.usage is not None:
             CliManager.format_json(response.output_text)
 
-        if CliManager.VERBOSE_USAGE:
-            logger.info(f"Used ({response.usage.total_tokens}) token(s)")
+        if CliManager.VERBOSE_USAGE and response.usage is not None:
+            logger.info(f"Used ({response.usage.total_tokens}) OpenAI API token(s)")
 
         return response
 
@@ -112,8 +112,8 @@ class CliManager:
         if CliManager.VERBOSE_VISION:
             CliManager.format_json(response.output_text)
 
-        if CliManager.VERBOSE_USAGE:
-            logger.info(f"Used ({response.usage.total_tokens}) token(s)")
+        if CliManager.VERBOSE_USAGE and response.usage is not None:
+            logger.info(f"Used ({response.usage.total_tokens}) OpenAI API token(s)")
 
         return response
 
@@ -124,6 +124,8 @@ class CliManager:
         :param points: Retrieved points.
         """
         for point in points:
+
+            assert point.payload is not None
 
             logger.info(
                 f"({point.score * 100:.2f} %) matching chunk in {format_file(point.payload['file_path'])}"

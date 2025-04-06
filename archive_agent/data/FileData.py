@@ -10,7 +10,7 @@ from qdrant_client.models import PointStruct
 
 from archive_agent.openai_ import OpenAiManager
 from archive_agent.util.image import is_image
-from archive_agent.util.text import is_text, load_as_utf8
+from archive_agent.util.text import is_text, load_text
 from archive_agent.data import ChunkManager
 from archive_agent.util.format import format_file
 
@@ -75,7 +75,7 @@ class FileData:
             return vision_result.answer
 
         elif is_text(self.file_path):
-            return load_as_utf8(self.file_path)
+            return load_text(self.file_path)
 
         else:
             logger.error(f"Cannot process {format_file(self.file_path)}")

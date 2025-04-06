@@ -43,5 +43,5 @@ class ChunkManager:
             ' '.join(sentences[i:i + self.sentences_max])
             for i in range(0, len(sentences), self.sentences_max)
         ]
-        
+
         return chunks

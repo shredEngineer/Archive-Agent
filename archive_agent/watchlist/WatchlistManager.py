@@ -199,10 +199,12 @@ class WatchlistManager(StorageManager):
         for file in changed_files:
             tracked_dict_new[file]['diff'] = self.DIFF_CHANGED
 
+        unchanged_count = len(tracked_files_new) - len(added_files) - len(changed_files)
+
         logger.info(f"({len(added_files)}) added file(s)")
         logger.info(f"({len(removed_files)}) removed file(s)")
         logger.info(f"({len(changed_files)}) changed file(s)")
-        logger.info(f"({len(tracked_files_new) - len(changed_files)}) unchanged file(s)")
+        logger.info(f"({unchanged_count}) unchanged file(s)")
 
         self.data['tracked'] = tracked_dict_new
         self.save()
