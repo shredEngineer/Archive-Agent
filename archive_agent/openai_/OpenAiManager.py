@@ -6,7 +6,6 @@ from typing import List
 
 from pydantic import BaseModel
 from openai import OpenAI, OpenAIError
-from openai.types.responses.response import Response
 
 from archive_agent.util.image import image_from_file, image_resize_safe, image_to_base64
 from archive_agent.util import CliManager
@@ -15,10 +14,21 @@ from archive_agent.util import RetryManager
 logger = logging.getLogger(__name__)
 
 
+class ChunkSchema(BaseModel):
+
+    class Chunk(BaseModel):
+        text: str
+
+        class Config:
+            extra = "forbid"  # Ensures additionalProperties: false
+
+    chunks: List[Chunk]
+
+    class Config:
+        extra = "forbid"  # Ensures additionalProperties: false
+
+
 class QuerySchema(BaseModel):
-    """
-    QuerySchema.
-    """
     answer: str
     reject: bool
 
@@ -27,32 +37,11 @@ class QuerySchema(BaseModel):
 
 
 class VisionSchema(BaseModel):
-    """
-    VisionSchema.
-    """
     answer: str
     reject: bool
 
     class Config:
         extra = "forbid"  # Ensures additionalProperties: false
-
-
-def response_to_QuerySchema(response: Response) -> QuerySchema:
-    """
-    Validate OpenAI response to QuerySchema.
-    :param response: OpenAI response.
-    :return: QuerySchema.
-    """
-    return QuerySchema.model_validate_json(response.output[0].content[0].text)
-
-
-def response_to_VisionSchema(response: Response) -> VisionSchema:
-    """
-    Validate OpenAI response to VisionSchema.
-    :param response: OpenAI response.
-    :return: VisionSchema.
-    """
-    return VisionSchema.model_validate_json(response.output[0].content[0].text)
 
 
 class OpenAiManager(RetryManager):
@@ -61,8 +50,31 @@ class OpenAiManager(RetryManager):
     """
 
     @staticmethod
+    def get_prompt_chunk(text: str):
+        return "\n".join([
+            f"Act as a semantic chunking agent for RAG: Split the text into multiple semantically distinct chunks.",
+            f"Each chunk must start and end at a sentence or formatting boundary."
+            f"The chunks must be a complete, sequential, and exclusive partition of the original text.",
+            f"Process ALL text: If the chunks were concatenated together, they MUST return the original text."
+            f"Each chunk should contain as many sentences as necessary for the particular semantic group.",
+            f"Semantic groups should span a specific topic, narrative, or logical section.",
+            f"Avoid single-sentence chunks, as sentences USUALLY occur within a greater semantic structure.",
+            f"Capture that greater semantic structure and produce chunks of reasonable size."
+            f"Return the chunks in `chunks`.",
+            f"\n\n",
+            f"Context:\n\"\"\"\n{text}\n\"\"\"\n\n",
+        ])
+
+    @staticmethod
     def get_prompt_query(question: str, context: str):
-        # TODO: Translate the `Strictly structure the answer like this:` into QuerySchema, then format it for use.
+        """
+            TODO: Translate the `Strictly structure the answer like this:` into QuerySchema, then format it for use.
+            - Rephrased question
+            - List of Answers
+            - Conclusion
+            - Relevant URI list
+            - Follow-up questions
+        """
         return "\n".join([
             f"Act as a RAG agent: Use ONLY the context to answer the question.",
             f"Respect the context: Do NOT use your internal knowledge to answer.",
@@ -94,16 +106,26 @@ class OpenAiManager(RetryManager):
             f"If rejecting, set `reject` to `true` and `answer` to the reason for rejecting the image.",
         ])
 
-    def __init__(self, cli: CliManager, model_embed: str, model_query: str, model_vision: str, temp_query: float):
+    def __init__(
+            self,
+            cli: CliManager,
+            model_chunk: str,
+            model_embed: str,
+            model_query: str,
+            model_vision: str,
+            temp_query: float,
+    ):
         """
         Initialize OpenAI manager.
         :param cli: CLI manager.
+        :param model_chunk: Model for chunking.
         :param model_embed: Model for embeddings.
         :param model_query: Model for queries.
         :param model_vision: Model for vision.
         :param temp_query: Temperature of query model.
         """
         self.cli = cli
+        self.model_chunk = model_chunk
         self.model_embed = model_embed
         self.model_query = model_query
         self.model_vision = model_vision
@@ -111,7 +133,10 @@ class OpenAiManager(RetryManager):
 
         self.client = OpenAI()
 
-        self.total_tokens = 0
+        self.total_tokens_chunk = 0
+        self.total_tokens_embed = 0
+        self.total_tokens_query = 0
+        self.total_tokens_vision = 0
 
         RetryManager.__init__(
             self,
@@ -126,10 +151,65 @@ class OpenAiManager(RetryManager):
         """
         Show usage.
         """
-        if self.total_tokens > 0:
-            logger.info(f"Used ({self.total_tokens}) OpenAI API token(s) in total")
+        if (
+                self.total_tokens_chunk > 0 or
+                self.total_tokens_embed > 0 or
+                self.total_tokens_query > 0 or
+                self.total_tokens_vision > 0
+        ):
+            logger.info(
+                f"Used OpenAI API token(s): "
+                f"({self.total_tokens_chunk}) chunking, "
+                f"({self.total_tokens_embed}) embedding, "
+                f"({self.total_tokens_query}) query, "
+                f"({self.total_tokens_vision}) vision"
+            )
         else:
             logger.info(f"No OpenAI API tokens used")
+
+    def chunk(self, text: str) -> ChunkSchema:
+        """
+        Get chunks of text.
+        :param text: Text.
+        :return: ChunkSchema.
+        """
+        prompt = self.get_prompt_chunk(text)
+
+        def callback():
+            return self.client.responses.create(
+                model=self.model_chunk,
+                temperature=0,
+                input=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "input_text",
+                                "text": prompt,
+                            },
+                        ],
+                    },
+                ],
+                text={
+                    "format": {
+                        "type": "json_schema",
+                        "name": ChunkSchema.__name__,
+                        "schema": ChunkSchema.model_json_schema(),
+                        "strict": True,
+                    },
+                },
+            )
+
+        response = self.cli.format_openai_chunk(lambda: self.retry(callback), text)
+        if response.usage is not None:  # makes pyright happy
+            self.total_tokens_chunk += response.usage.total_tokens
+
+        if hasattr(response, "refusal") and response.refusal:
+            raise OpenAIError(response.refusal)
+
+        chunk_result = ChunkSchema.model_validate_json(response.output[0].content[0].text)
+
+        return chunk_result
 
     def embed(self, text: str) -> List[float]:
         """
@@ -144,7 +224,8 @@ class OpenAiManager(RetryManager):
             )
 
         response = self.cli.format_openai_embed(lambda: self.retry(callback), text)
-        self.total_tokens += response.usage.total_tokens
+        if response.usage is not None:  # makes pyright happy
+            self.total_tokens_embed += response.usage.total_tokens
         return response.data[0].embedding
 
     def query(self, question: str, context: str) -> QuerySchema:
@@ -182,12 +263,13 @@ class OpenAiManager(RetryManager):
             )
 
         response = self.cli.format_openai_query(lambda: self.retry(callback), prompt)
-        self.total_tokens += response.usage.total_tokens
+        if response.usage is not None:  # makes pyright happy
+            self.total_tokens_query += response.usage.total_tokens
 
         if hasattr(response, "refusal") and response.refusal:
             raise OpenAIError(response.refusal)
 
-        query_result = response_to_QuerySchema(response)
+        query_result = QuerySchema.model_validate_json(response.output[0].content[0].text)
 
         return query_result
 
@@ -229,7 +311,7 @@ class OpenAiManager(RetryManager):
 
         response = self.cli.format_openai_vision(lambda: self.retry(callback))
         if response.usage is not None:  # makes pyright happy
-            self.total_tokens += response.usage.total_tokens
+            self.total_tokens_vision += response.usage.total_tokens
 
         if response.status == 'incomplete':
             raise OpenAIError("Vision response incomplete, probably due to token limits")
@@ -237,6 +319,6 @@ class OpenAiManager(RetryManager):
         if hasattr(response, "refusal") and response.refusal:
             raise OpenAIError(response.refusal)
 
-        vision_result = response_to_VisionSchema(response)
+        vision_result = VisionSchema.model_validate_json(response.output[0].content[0].text)
 
         return vision_result

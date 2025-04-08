@@ -4,14 +4,7 @@
 import typer
 import pytest
 
-from archive_agent.util.text import ensure_nltk_punkt, is_text, load_text
-
-
-def test_ensure_nltk_punkt_does_not_crash():
-    try:
-        ensure_nltk_punkt()
-    except Exception as e:
-        pytest.fail(f"ensure_nltk_punkt() raised an exception: {e}")
+from archive_agent.util.text import is_text, load_text
 
 
 def test_pandoc_is_installed():

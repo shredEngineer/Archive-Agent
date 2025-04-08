@@ -22,6 +22,7 @@ class CliManager:
     CLI manager.
     """
 
+    VERBOSE_CHUNK: bool = True
     VERBOSE_EMBED: bool = False
     VERBOSE_QUERY: bool = False
     VERBOSE_VISION: bool = True
@@ -48,12 +49,27 @@ class CliManager:
             print(Panel(f"[white]{text}", title="Raw output", border_style="red"))
 
     @staticmethod
-    def format_chunk(chunk: str) -> None:
+    def format_openai_chunk(callback: Callable[[], Response], text: str) -> Response:
         """
-        Format chunk.
-        :param chunk: Chunk.
+        Format OpenAI response of chunk callback.
+        :param callback: Chunk callback returning OpenAI response.
+        :param text: Text.
+        :return: OpenAI response.
         """
-        print(Panel(f"[yellow]{chunk}", title="Chunk", border_style="white"))
+        logger.info(f"Chunking...")
+
+        if CliManager.VERBOSE_CHUNK:
+            print(Panel(f"[blue]{text}", title="Text", border_style="white"))
+
+        response = callback()
+
+        if CliManager.VERBOSE_CHUNK:
+            CliManager.format_json(response.output_text)
+
+        if CliManager.VERBOSE_USAGE and response.usage is not None:
+            logger.info(f"Used ({response.usage.total_tokens}) OpenAI API token(s) for chunking")
+
+        return response
 
     @staticmethod
     def format_openai_embed(callback: Callable[[], Response], chunk: str) -> Response:
@@ -71,7 +87,7 @@ class CliManager:
         response = callback()
 
         if CliManager.VERBOSE_USAGE and response.usage is not None:
-            logger.info(f"Used ({response.usage.total_tokens}) OpenAI API token(s)")
+            logger.info(f"Used ({response.usage.total_tokens}) OpenAI API token(s) for embedding")
 
         return response
 
@@ -90,11 +106,11 @@ class CliManager:
 
         response = callback()
 
-        if CliManager.VERBOSE_USAGE and response.usage is not None:
+        if CliManager.VERBOSE_QUERY:
             CliManager.format_json(response.output_text)
 
         if CliManager.VERBOSE_USAGE and response.usage is not None:
-            logger.info(f"Used ({response.usage.total_tokens}) OpenAI API token(s)")
+            logger.info(f"Used ({response.usage.total_tokens}) OpenAI API token(s) for query")
 
         return response
 
@@ -113,7 +129,7 @@ class CliManager:
             CliManager.format_json(response.output_text)
 
         if CliManager.VERBOSE_USAGE and response.usage is not None:
-            logger.info(f"Used ({response.usage.total_tokens}) OpenAI API token(s)")
+            logger.info(f"Used ({response.usage.total_tokens}) OpenAI API token(s) for vision")
 
         return response
 
@@ -128,14 +144,24 @@ class CliManager:
             assert point.payload is not None
 
             logger.info(
-                f"({point.score * 100:.2f} %) matching chunk in {format_file(point.payload['file_path'])}"
-                f" @ {format_time(point.payload['file_mtime'])}:"
+                f"({point.score * 100:.2f} %) matching "
+                f"chunk ({point.payload['chunk_index']}) / ({point.payload['chunks_total']}) "
+                f"of {format_file(point.payload['file_path'])} "
+                f"@ {format_time(point.payload['file_mtime'])}:"
             )
 
             if CliManager.VERBOSE_RETRIEVAL:
-                CliManager.format_chunk(point.payload['chunk'])
+                CliManager.format_chunk(point.payload['chunk_text'])
 
         logger.warning(f"Found ({len(points)}) matching chunk(s)")
+
+    @staticmethod
+    def format_chunk(chunk: str) -> None:
+        """
+        Format chunk.
+        :param chunk: Chunk.
+        """
+        print(Panel(f"[yellow]{chunk}", title="Chunk", border_style="white"))
 
     @staticmethod
     def format_question(question: str) -> None:

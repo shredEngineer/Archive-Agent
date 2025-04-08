@@ -11,8 +11,8 @@ from qdrant_client.models import PointStruct
 from archive_agent.openai_ import OpenAiManager
 from archive_agent.util.image import is_image
 from archive_agent.util.text import is_text, load_text
-from archive_agent.data import ChunkManager
 from archive_agent.util.format import format_file
+from archive_agent.util.text import split_sentences, sanitize_sentences, group_sentences_block
 
 logger = logging.getLogger(__name__)
 
@@ -22,27 +22,25 @@ class FileData:
     File data.
     """
 
+    SENTENCES_PER_BLOCK: int = 16
+
     def __init__(
         self,
-        chunker: ChunkManager,
         openai: OpenAiManager,
         file_path: str,
         file_mtime: float,
     ):
         """
         Initialize file data.
-        :param chunker: Chunk manager.
         :param openai: OpenAI manager.
         :param file_path: File path.
         :param file_mtime: File modification time.
         """
-        self.chunker = chunker
         self.openai = openai
 
         self.file_path = file_path
         self.file_mtime = file_mtime
 
-        self.text: str = ""
         self.points: List[PointStruct] = []
 
     @staticmethod
@@ -86,19 +84,25 @@ class FileData:
         Process file data.
         :return: True if successful, False otherwise.
         """
-        result = self.decode()
-        if result is None:
+        text = self.decode()
+        if text is None:
             logger.warning("Failed to process file")
             return False
 
-        self.text = result
+        sentences = sanitize_sentences(split_sentences(text))
 
-        chunks = self.chunker.process(self.text)
+        blocks = group_sentences_block(sentences, self.SENTENCES_PER_BLOCK)
+
+        chunks = []
+        for block_index, block in enumerate(blocks):
+            logger.info(f"Chunking block ({block_index + 1}) / ({len(blocks)}) of {format_file(self.file_path)}")
+            chunk_result = self.openai.chunk(block)
+            chunks += chunk_result.chunks
 
         for chunk_index, chunk in enumerate(chunks):
             logger.info(f"Processing chunk ({chunk_index + 1}) / ({len(chunks)}) of {format_file(self.file_path)}")
 
-            vector = self.openai.embed(chunk)
+            vector = self.openai.embed(chunk.text)
 
             self.points.append(
                 PointStruct(
@@ -109,7 +113,7 @@ class FileData:
                         'file_mtime': self.file_mtime,
                         'chunk_index': chunk_index,
                         'chunks_total': len(chunks),
-                        'chunk': chunk,
+                        'chunk_text': chunk.text,
                     },
                 )
             )

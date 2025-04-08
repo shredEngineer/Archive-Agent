@@ -18,7 +18,6 @@ from qdrant_client.models import (
 )
 
 from archive_agent.openai_ import OpenAiManager
-from archive_agent.data import ChunkManager
 from archive_agent.data import FileData
 from archive_agent.util import CliManager
 from archive_agent.util.format import format_time, format_file
@@ -38,7 +37,6 @@ class QdrantManager:
         self,
         cli: CliManager,
         openai: OpenAiManager,
-        chunker: ChunkManager,
         server_url: str,
         collection: str,
         vector_size: int,
@@ -49,7 +47,6 @@ class QdrantManager:
         Initialize Qdrant manager.
         :param cli: CLI manager.
         :param openai: OpenAI manager.
-        :param chunker: Chunk manager.
         :param server_url: Server URL.
         :param collection: Collection name.
         :param vector_size: Vector size.
@@ -58,7 +55,6 @@ class QdrantManager:
         """
         self.cli = cli
         self.openai = openai
-        self.chunker = chunker
         self.qdrant = QdrantClient(url=server_url)
         self.collection = collection
         self.vector_size = vector_size
@@ -85,7 +81,7 @@ class QdrantManager:
         if not quiet:
             logger.info(f"Adding {format_file(file_path)}")
 
-        data = FileData(openai=self.openai, chunker=self.chunker, file_path=file_path, file_mtime=file_mtime)
+        data = FileData(openai=self.openai, file_path=file_path, file_mtime=file_mtime)
         if not data.process():
             logger.warning(f"Failed to add file")
             return False
@@ -228,8 +224,12 @@ class QdrantManager:
 
         context = "\n\n\n\n".join([
             "\n\n".join([
-                f"<<< file://{point.payload['file_path']} @ {format_time(point.payload['file_mtime'])} >>>",
-                f"{point.payload['chunk']}\n",
+                f"<<< "
+                f"Chunk ({point.payload['chunk_index']}) / ({point.payload['chunks_total']}) "
+                f"of file://{point.payload['file_path']} "
+                f"@ {format_time(point.payload['file_mtime'])} "
+                f">>>",
+                f"{point.payload['chunk_text']}\n",
             ])
             for point in response.points
             if point.payload is not None  # makes pyright happy

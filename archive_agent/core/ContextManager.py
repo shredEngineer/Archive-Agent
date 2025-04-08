@@ -7,7 +7,6 @@ from archive_agent.util import CliManager
 from archive_agent.config import ConfigManager
 from archive_agent.watchlist import WatchlistManager
 from archive_agent.openai_ import OpenAiManager
-from archive_agent.data import ChunkManager
 from archive_agent.qdrant_ import QdrantManager
 from archive_agent.core.CommitManager import CommitManager
 
@@ -32,21 +31,16 @@ class ContextManager:
 
         self.openai = OpenAiManager(
             cli=self.cli,
+            model_chunk=self.config.data[self.config.OPENAI_MODEL_CHUNK],
             model_embed=self.config.data[self.config.OPENAI_MODEL_EMBED],
             model_query=self.config.data[self.config.OPENAI_MODEL_QUERY],
             model_vision=self.config.data[self.config.OPENAI_MODEL_VISION],
             temp_query=self.config.data[self.config.OPENAI_TEMP_QUERY],
         )
 
-        self.chunker = ChunkManager(
-            openai=self.openai,
-            sentences_max=self.config.data[self.config.CHUNK_SENTENCES_MAX],
-        )
-
         self.qdrant = QdrantManager(
             cli=self.cli,
             openai=self.openai,
-            chunker=self.chunker,
             server_url=self.config.data[self.config.QDRANT_SERVER_URL],
             collection=self.config.data[self.config.QDRANT_COLLECTION],
             vector_size=self.config.data[self.config.QDRANT_VECTOR_SIZE],

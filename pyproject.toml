@@ -6,7 +6,7 @@ authors = [
     {name = "Dr.-Ing. Paul Wilhelm", email = "paul@wilhelm.dev"}
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
 dependencies = [
     "openai (>=1.69.0,<2.0.0)",
     "qdrant-client (>=1.13.3,<2.0.0)",
@@ -14,12 +14,12 @@ dependencies = [
     "pillow (>=11.1.0,<12.0.0)",
     "charset-normalizer (>=3.4.1,<4.0.0)",
     "rich (>=14.0.0,<15.0.0)",
-    "nltk (>=3.9.1,<4.0.0)",
     "requests (>=2.32.3,<3.0.0)",
     "streamlit (>=1.44.1,<2.0.0)",
     "pypandoc (>=1.15,<2.0)",
     "pyright (>=1.1.398,<2.0.0)",
-    "pycodestyle (>=2.13.0,<3.0.0)"
+    "pycodestyle (>=2.13.0,<3.0.0)",
+    "spacy (>=3.8.5,<4.0.0)",
 ]
 
 

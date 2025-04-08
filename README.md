@@ -25,7 +25,7 @@
 ## ⚙️ Install Requirements
 
 - [Docker](https://docs.docker.com/engine/install/) *(for running Qdrant server)*
-- [Python](https://www.python.org/downloads/) **>= 3.10** *(core runtime)*
+- [Python](https://www.python.org/downloads/) **>= 3.10, < 3.13** *(core runtime)*
 - [Poetry](https://python-poetry.org/docs/#installation) *(dependency management)*
 
 - **Tested with Ubuntu 24.04**
@@ -54,6 +54,7 @@ To install **Archive Agent** in the current directory of your choice, run this o
 git clone https://github.com/shredEngineer/Archive-Agent
 cd Archive-Agent
 poetry install
+poetry run python -m spacy download xx_sent_ud_sm
 sudo apt install pandoc
 chmod +x *.sh
 echo "alias archive-agent='$(pwd)/archive-agent.sh'" >> ~/.bashrc && source ~/.bashrc
@@ -94,8 +95,12 @@ The default settings profile is created on the first run. (See [Storage](#-stora
 ### ℹ️ How files are processed
 
 **Archive Agent** currently supports these file types:
-- Text: `.txt`, `.md`, `.odt`, `.docx`, `.rtf`, `.html` (decoded using *Pandoc*)
-- Image: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp` (decoded using *Pillow*)
+- Text:
+  - Plaintext: `.txt`, `.md`
+  - Documents: `.odt`, `.docx`, `.rtf`, `.html` (decoded using *Pandoc*)
+  - **COMING SOON:** PDF (**with OCR layer only**): `.pdf` (decoded using *PyMuPDF4LLM*)
+- Image:
+  - `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp` (decoded using *Pillow*)
 
 **Archive Agent** decodes everything to text like this:
 - Text files are decoded to UTF-8, regardless of original encoding.
@@ -105,7 +110,7 @@ The default settings profile is created on the first run. (See [Storage](#-stora
 **NOTE:** Unsupported files are tracked but not processed.
 
 **Archive Agent** processes decoded text like this:
-- Each decoded text is split into smaller chunks.
+- Decoded text is split into smaller chunks (**smart chunking**).
 - Each chunk is turned into a vector using OpenAI embeddings.
 - Each vector is turned into a *point* with file metadata.
 - Each *point* is stored in the Qdrant database.
@@ -280,7 +285,6 @@ The default settings profile is located in `default/`:
   - `qdrant_vector_size`: Qdrant vector size
   - `qdrant_score_min`: Minimum score of retrieved chunks (`0`...`1`)
   - `qdrant_chunks_max`: Maximum number of retrieved chunks
-  - `chunk_sentences_max`: Maximum number of sentences per chunk
 
 - `watchlist.json`:
   - Managed via the `include` / `exclude` / `remove` / `track` / `commit` commands.
@@ -295,23 +299,13 @@ Visit your [Qdrant dashboard](http://localhost:6333/dashboard#/collections) to m
 
 ---
 
-## 🐞 Testing
-
-To install local tokenizer, run this once:
-
-```bash
-poetry run python -m nltk.downloader punkt_tab
-```
+## 🔬 Testing and code analysis
 
 To run all tests, run this:
 
 ```bash
 poetry run pytest
 ```
-
----
-
-## 🔬 Static code analysis
 
 To perform static code analysis, run these commands:
 
@@ -323,6 +317,8 @@ poetry run pycodestyle archive_agent tests
 ---
 
 ## 📖 Developer's guide
+
+**Archive Agent** was written from scratch for educational purposes.
 
 - The app context is initialized in [`archive_agent/core/ContextManager.py`](archive_agent/core/ContextManager.py)
 - The default config is defined in [`archive_agent/config/ConfigManager.py`](archive_agent/config/ConfigManager.py)  
@@ -348,9 +344,6 @@ poetry run pycodestyle archive_agent tests
 Related to section [Launch Archive Agent GUI](#-launch-archive-agent-gui):
 - [ ] Extend GUI functionality
 
-Related to section [How files are processed](#ℹ-how-files-are-processed):
-- [ ] `FileData`: Convert `.pdf` to `.jpg` internally and use vision
-
 Related to section [Storage](#-storage):
 - [ ] Command: Switch profiles (use folder other than `default/`)
 - [ ] Save answers to "answers" bucket, give include pattern hint
@@ -364,6 +357,12 @@ General improvements:
 - [ ] Improve test coverage
 - [ ] Improve error handling — needs **your** feedback!
 - [ ] Fix type errors in `OpenAiManager` class (reported by *pyright*) 
+
+---
+
+## 🐞 Known bugs
+
+- [ ] While `track` initially reports a file as *added*, subsequent `track` calls report it as *changed*. 
 
 ---
 
