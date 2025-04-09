@@ -135,28 +135,33 @@ def load_pdf_document(
 
         # noinspection PyTypeChecker
         for page_index, page in enumerate(doc):
+            logger.info(f"Processing page ({page_index + 1}) / ({len(doc)})...")
+
             # Append markdown content line by line
             page_md_lines = [line for line in md_text if f"Page {page_index + 1}" in line]
             if page_md_lines:
                 result_parts.extend(page_md_lines)
             else:
-                logger.warning(f"Page {page_index + 1} appears to be a scanned page without OCR")
+                logger.warning(f"Page appears to be a scanned page without OCR")
 
             # Extract images from page
             image_blocks = [
                 b for b in page.get_text("dict")["blocks"] if b["type"] == 1
             ]
             for img_index, img_block in enumerate(image_blocks, start=1):
-                result_parts.append(f"[Image {img_index} on Page {page_index + 1}]")
+                logger.info(f"Processing image ({img_index}) on page ({page_index + 1}) / ({len(doc)})...")
                 image_bytes = img_block["image"]
                 try:
                     with io.BytesIO(image_bytes) as img_io:
                         with Image.open(img_io) as img:
                             image_text = image_to_text_callback(img)
                             if image_text is None:
-                                logger.warning(f"Failed to convert image on Page {page_index + 1}")
+                                logger.warning(f"Failed to convert image")
                                 return None
-                            result_parts.append(image_text)
+                            result_parts.append(" : ".join([
+                                f"[Image ({img_index}) on page ({page_index + 1}) / ({len(doc)})]"
+                                f"{image_text}",
+                            ]))
                 except Exception as e:
                     logger.warning(f"Failed to load {format_file(file_path)}: {e}")
                     return None
