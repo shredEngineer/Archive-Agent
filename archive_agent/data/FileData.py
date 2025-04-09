@@ -12,7 +12,7 @@ from qdrant_client.models import PointStruct
 from archive_agent.openai_ import OpenAiManager
 from archive_agent.util.image import is_image
 from archive_agent.util.text import is_text, load_text, is_pdf_document
-from util.pdf import load_pdf_document
+from archive_agent.util.pdf import load_pdf_document
 from archive_agent.util.format import format_file
 from archive_agent.util.text import split_sentences, sanitize_sentences, group_blocks_of_sentences
 from archive_agent.util.image import image_from_file, image_resize_safe, image_to_base64
