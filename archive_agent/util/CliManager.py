@@ -6,9 +6,11 @@ from rich.panel import Panel
 from rich.pretty import Pretty
 import json
 import logging
-from typing import Callable, List
+from typing import Callable, List, Any
 
-from openai.types.responses.response import Response
+# TODO: Use specific type; pyright doesn't like:
+#       from openai.types.responses.response import Response
+Response = Any
 
 from qdrant_client.models import ScoredPoint
 
@@ -193,9 +195,9 @@ class CliManager:
             for follow_up in query_result.follow_up_list
         ])
         answer_text = "\n\n".join([
-            f"{query_result.question_rephrased}",
+            f"**{query_result.question_rephrased}**",
             f"{answer_list_text}",
-            f"{query_result.answer_conclusion}",
+            f"**{query_result.answer_conclusion}**",
             f"{chunk_ref_list_text}",
             f"{follow_up_list_text}",
         ])

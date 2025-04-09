@@ -1,10 +1,9 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import typer
 import logging
 import os
-from typing import Set, List
+from typing import Set, List, Optional
 
 import spacy
 import pypandoc
@@ -44,11 +43,11 @@ def is_document(file_path: str) -> bool:
     return any(file_path.lower().endswith(ext) for ext in extensions)
 
 
-def load_text(file_path: str) -> str:
+def load_text(file_path: str) -> Optional[str]:
     """
     Load text.
     :param file_path: File path.
-    :return: Text.
+    :return: Text if successful, None otherwise.
     """
     if is_plaintext(file_path):
         return load_plaintext(file_path)
@@ -57,43 +56,58 @@ def load_text(file_path: str) -> str:
         return load_document(file_path)
 
     else:
-        logger.error(f"Cannot load {format_file(file_path)}")
-        raise typer.Exit(code=1)
+        logger.warning(f"Cannot load {format_file(file_path)}")
+        return None
 
 
-def load_plaintext(file_path: str) -> str:
+def load_plaintext(file_path: str) -> Optional[str]:
     """
     Load plaintext.
     :param file_path: File path.
-    :return: Plaintext.
+    :return: Plaintext if successful, None otherwise.
     """
     try:
         matches = from_path(file_path)
     except IOError:
-        logger.error(f"Failed to read {format_file(file_path)}")
-        raise typer.Exit(code=1)
+        logger.warning(f"Failed to read {format_file(file_path)}")
+        return None
 
     best_match = matches.best()
     if best_match is None:
-        logger.error(f"Failed to decode {format_file(file_path)}")
-        raise typer.Exit(code=1)
+        logger.warning(f"Failed to decode {format_file(file_path)}")
+        return None
 
     return str(best_match)
 
 
-def load_document(file_path: str) -> str:
+def load_document(file_path: str) -> Optional[str]:
     """
     Load document.
     :param file_path: File path.
-    :return: Text.
+    :return: Text if successful, None otherwise.
     """
     ext = os.path.splitext(file_path)[1].lower().lstrip(".")
     try:
         text = pypandoc.convert_file(file_path, to='plain', format=ext, extra_args=["--wrap=preserve"])
         return text.encode('utf-8', errors='replace').decode('utf-8')
     except Exception as e:
-        logger.error(f"Failed to convert {format_file(file_path)}: {e}")
-        raise typer.Exit(code=1)
+        logger.warning(f"Failed to convert {format_file(file_path)}: {e}")
+        return None
+
+
+def load_pdf_document(file_path: str) -> Optional[str]:
+    """
+    Load PDF document.
+    :param file_path: File path.
+    :return: Text if successful, None otherwise.
+    """
+    ext = os.path.splitext(file_path)[1].lower().lstrip(".")
+    try:
+        text = pypandoc.convert_file(file_path, to='plain', format=ext, extra_args=["--wrap=preserve"])
+        return text.encode('utf-8', errors='replace').decode('utf-8')
+    except Exception as e:
+        logger.warning(f"Failed to convert {format_file(file_path)}: {e}")
+        return None
 
 
 def split_sentences(text: str) -> List[str]:

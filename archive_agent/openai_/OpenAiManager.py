@@ -9,7 +9,6 @@ from openai import OpenAI, OpenAIError
 from archive_agent.schema.ChunkSchema import ChunkSchema
 from archive_agent.schema.QuerySchema import QuerySchema
 from archive_agent.schema.VisionSchema import VisionSchema
-from archive_agent.util.image import image_from_file, image_resize_safe, image_to_base64
 from archive_agent.util.text import prepend_line_numbers
 from archive_agent.util import CliManager
 from archive_agent.util import RetryManager
@@ -119,12 +118,9 @@ class OpenAiManager(RetryManager):
         """
         Show usage.
         """
-        if (
-                self.total_tokens_chunk > 0 or
-                self.total_tokens_embed > 0 or
-                self.total_tokens_query > 0 or
-                self.total_tokens_vision > 0
-        ):
+        if any([x > 0 for x in [
+            self.total_tokens_chunk, self.total_tokens_embed, self.total_tokens_query, self.total_tokens_vision
+        ]]):
             logger.info(
                 f"Used OpenAI API token(s): "
                 f"({self.total_tokens_chunk}) chunking, "
@@ -246,13 +242,12 @@ class OpenAiManager(RetryManager):
 
         return query_result
 
-    def vision(self, file_path: str) -> VisionSchema:
+    def vision(self, image_base64: str) -> VisionSchema:
         """
         Convert image to text.
-        :param file_path: File path.
+        :param image_base64: Image as UTF-8 encoded Base64 string.
         :return: VisionSchema.
         """
-        image_base64 = image_to_base64(image_resize_safe(image_from_file(file_path)))
 
         def callback():
             return self.client.responses.create(

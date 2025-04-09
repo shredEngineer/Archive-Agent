@@ -358,8 +358,6 @@ Train-of-Thought mechanism:
 General improvements:
 - [ ] Implement [OpenAI API request parallel processor](https://github.com/openai/openai-cookbook/blob/main/examples/api_request_parallel_processor.py)
 - [ ] Improve test coverage
-- [ ] Improve error handling — needs **your** feedback!
-- [ ] Fix type errors in `OpenAiManager` class (reported by *pyright*) 
 
 ---
 

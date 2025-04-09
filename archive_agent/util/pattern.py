@@ -28,11 +28,11 @@ def validate_pattern(pattern: str) -> str:
     Validate file system search pattern (expanded home directory).
     :param pattern: Pattern.
     :return: Pattern (expanded home directory).
+    :raises typer.Exit: If pattern is invalid.
     """
     pattern = os.path.expanduser(pattern)
     if os.path.isabs(pattern):
         return pattern
     else:
-        logger.error(f"Invalid pattern:")
-        logger.error(f"{pattern}")
+        logger.error(f"Invalid pattern: {pattern}")
         raise typer.Exit(code=1)

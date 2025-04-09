@@ -33,8 +33,4 @@ def format_file(file_path: str | pathlib.Path) -> str:
     else:
         uri_path = str(abs_path)
 
-    uri = f"file://{urllib.parse.quote(uri_path, safe='/')}"
-
-    print(uri)
-
-    return uri
+    return f"file://{urllib.parse.quote(uri_path, safe='/')}"

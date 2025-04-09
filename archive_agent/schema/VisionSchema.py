@@ -10,4 +10,3 @@ class VisionSchema(BaseModel):
 
     class Config:
         extra = "forbid"  # Ensures additionalProperties: false
-

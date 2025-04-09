@@ -1,7 +1,6 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import typer
 import logging
 import uuid
 from typing import List, Optional
@@ -13,6 +12,7 @@ from archive_agent.util.image import is_image
 from archive_agent.util.text import is_text, load_text
 from archive_agent.util.format import format_file
 from archive_agent.util.text import split_sentences, sanitize_sentences, group_blocks_of_sentences
+from archive_agent.util.image import image_from_file, image_resize_safe, image_to_base64
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,19 @@ class FileData:
         :return: Text if successful, None otherwise.
         """
         if is_image(self.file_path):
-            vision_result = self.openai.vision(self.file_path)
+            image = image_from_file(self.file_path)
+            if image is None:
+                logger.warning(f"Failed to load image")
+                return None
+
+            image_possibly_resized = image_resize_safe(image)
+            if image_possibly_resized is None:
+                logger.warning(f"Failed to resize image")
+                return None
+
+            image_base64 = image_to_base64(image_possibly_resized)
+
+            vision_result = self.openai.vision(image_base64)
             if vision_result.reject:
                 logger.warning(f"Image rejected!")
                 return None
@@ -75,8 +87,8 @@ class FileData:
             return load_text(self.file_path)
 
         else:
-            logger.error(f"Cannot process {format_file(self.file_path)}")
-            raise typer.Exit(code=1)
+            logger.warning(f"Cannot process {format_file(self.file_path)}")
+            return None
 
     def chunks(self, text: str) -> List[str]:
         """
