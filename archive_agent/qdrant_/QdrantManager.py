@@ -226,7 +226,7 @@ class QdrantManager:
             "\n\n".join([
                 f"<<< "
                 f"Chunk ({point.payload['chunk_index'] + 1}) / ({point.payload['chunks_total']}) "
-                f"of file://{point.payload['file_path']} "
+                f"of {format_file(point.payload['file_path'])} "
                 f"@ {format_time(point.payload['file_mtime'])} "
                 f">>>",
                 f"{point.payload['chunk_text']}\n",

@@ -19,9 +19,9 @@ def format_time(timestamp: float) -> str:
 
 def format_file(file_path: str | pathlib.Path) -> str:
     """
-    Format file path as file:// URI syntax, escaping special characters like spaces.
+    Format file path as file:// URI, escaping special characters like spaces.
 
-    :param file_path: Local file path.
+    :param file_path: File path.
     :return: File path formatted as file:// URI.
     """
     abs_path = pathlib.Path(file_path).resolve()
@@ -33,4 +33,8 @@ def format_file(file_path: str | pathlib.Path) -> str:
     else:
         uri_path = str(abs_path)
 
-    return f"file://{urllib.parse.quote(uri_path, safe='/')}"
+    uri = f"file://{urllib.parse.quote(uri_path, safe='/')}"
+
+    print(uri)
+
+    return uri
