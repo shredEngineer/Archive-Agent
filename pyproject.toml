@@ -1,6 +1,6 @@
 [project]
 name = "archive-agent"
-version = "1.2.0"
+version = "2.0.0"
 description = "Archive Agent: Smart Indexer with RAG Engine"
 authors = [
     {name = "Dr.-Ing. Paul Wilhelm", email = "paul@wilhelm.dev"}
@@ -20,6 +20,7 @@ dependencies = [
     "pyright (>=1.1.398,<2.0.0)",
     "pycodestyle (>=2.13.0,<3.0.0)",
     "spacy (>=3.8.5,<4.0.0)",
+    "pymupdf4llm (>=0.0.21,<0.0.22)",
 ]
 
 

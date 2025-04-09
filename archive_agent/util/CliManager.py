@@ -186,19 +186,26 @@ class CliManager:
             f"- {answer_text}"
             for answer_text in query_result.answer_list
         ])
+
         chunk_ref_list_text = "\n".join([
             f"- {chunk_ref}"
             for chunk_ref in query_result.chunk_ref_list
         ])
+
         follow_up_list_text = "\n".join([
             f"- {follow_up}"
             for follow_up in query_result.follow_up_list
         ])
         answer_text = "\n\n".join([
+            f"### Question",
             f"**{query_result.question_rephrased}**",
+            f"### Answers",
             f"{answer_list_text}",
+            f"### Conclusion",
             f"**{query_result.answer_conclusion}**",
+            f"### References",
             f"{chunk_ref_list_text}",
+            f"### Follow-Up Questions",
             f"{follow_up_list_text}",
         ])
         print(Panel(f"[white]{answer_text}", title="Answer", border_style="red" if warning else "green"))

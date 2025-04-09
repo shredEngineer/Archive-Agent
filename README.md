@@ -100,7 +100,7 @@ The default settings profile is created on the first run. (See [Storage](#-stora
 - Text:
   - Plaintext: `.txt`, `.md`
   - Documents: `.odt`, `.docx`, `.rtf`, `.html` (decoded using *Pandoc*)
-  - **COMING SOON:** PDF (**with OCR layer only**): `.pdf` (decoded using *PyMuPDF4LLM*)
+  - PDF (**with OCR layer only**): `.pdf` (decoded using *PyMuPDF4LLM*)
 - Image:
   - `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp` (decoded using *Pillow*)
 
@@ -351,8 +351,8 @@ Related to section [Storage](#-storage):
 - [ ] Command: Switch profiles (use folder other than `default/`)
 - [ ] Save answers to "answers" bucket, give include pattern hint
 
-Train-of-Thought mechanism:
-- [ ] Add follow-up question to structured output, save to "questions" bucket
+Chain-of-Thought mechanism:
+- [ ] Save follow-up questions to "questions" bucket
 - [ ] Command `auto [N]`: Query random question(s) from question bucket
 
 General improvements:

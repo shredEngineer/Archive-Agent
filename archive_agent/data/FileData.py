@@ -5,11 +5,13 @@ import logging
 import uuid
 from typing import List, Optional
 
+from PIL import Image
+
 from qdrant_client.models import PointStruct
 
 from archive_agent.openai_ import OpenAiManager
 from archive_agent.util.image import is_image
-from archive_agent.util.text import is_text, load_text
+from archive_agent.util.text import is_text, load_text, is_pdf_document, load_pdf_document
 from archive_agent.util.format import format_file
 from archive_agent.util.text import split_sentences, sanitize_sentences, group_blocks_of_sentences
 from archive_agent.util.image import image_from_file, image_resize_safe, image_to_base64
@@ -55,8 +57,31 @@ class FileData:
         elif is_text(file_path):
             return True
 
+        elif is_pdf_document(file_path):
+            return True
+
         else:
             return False
+
+    def image_to_text(self, image: Image.Image) -> Optional[str]:
+        """
+        Convert image to text.
+        :param image: Image.
+        :return: Text if successful, None otherwise.
+        """
+        image_possibly_resized = image_resize_safe(image)
+        if image_possibly_resized is None:
+            logger.warning(f"Failed to resize {format_file(self.file_path)}")
+            return None
+
+        image_base64 = image_to_base64(image_possibly_resized)
+
+        vision_result = self.openai.vision(image_base64)
+        if vision_result.reject:
+            logger.warning(f"Image rejected!")
+            return None
+
+        return vision_result.answer
 
     def decode(self) -> Optional[str]:
         """
@@ -66,25 +91,16 @@ class FileData:
         if is_image(self.file_path):
             image = image_from_file(self.file_path)
             if image is None:
-                logger.warning(f"Failed to load image")
+                logger.warning(f"Failed to load {format_file(self.file_path)}")
                 return None
 
-            image_possibly_resized = image_resize_safe(image)
-            if image_possibly_resized is None:
-                logger.warning(f"Failed to resize image")
-                return None
-
-            image_base64 = image_to_base64(image_possibly_resized)
-
-            vision_result = self.openai.vision(image_base64)
-            if vision_result.reject:
-                logger.warning(f"Image rejected!")
-                return None
-
-            return vision_result.answer
+            return self.image_to_text(image)
 
         elif is_text(self.file_path):
             return load_text(self.file_path)
+
+        elif is_pdf_document(self.file_path):
+            return load_pdf_document(self.file_path, self.image_to_text)
 
         else:
             logger.warning(f"Cannot process {format_file(self.file_path)}")
@@ -129,7 +145,7 @@ class FileData:
         """
         text = self.decode()
         if text is None:
-            logger.warning("Failed to process file")
+            logger.warning(f"Failed to process {format_file(self.file_path)}")
             return False
 
         chunks = self.chunks(text)

@@ -8,6 +8,8 @@ import io
 import base64
 from PIL import Image, UnidentifiedImageError
 
+from archive_agent.util.format import format_file
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,7 +32,7 @@ def image_from_file(file_path: str) -> Optional[Image.Image]:
     try:
         return Image.open(file_path).convert("RGB")
     except (FileNotFoundError, UnidentifiedImageError) as e:
-        logger.warning(f"Failed to load image: {e}")
+        logger.warning(f"Failed to load {format_file(file_path)}: {e}")
         return None
 
 
@@ -59,7 +61,7 @@ def image_resize_safe(
             img_bytes.seek(0)
             return Image.open(img_bytes)
 
-    logger.warning("Failed to resize image")
+    logger.warning(f"Failed to resize image: Too huge")
     return None
 
 

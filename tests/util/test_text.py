@@ -3,7 +3,7 @@
 
 import pytest
 
-from archive_agent.util.text import is_text, load_text
+from archive_agent.util.text import load_text
 
 
 def test_pandoc_is_installed():

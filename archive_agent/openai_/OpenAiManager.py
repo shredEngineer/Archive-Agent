@@ -48,6 +48,7 @@ class OpenAiManager(RetryManager):
             f"- `chunk_ref_list`: List of reference designators of chunks used in the answers.",
             f"  Enforce format as found in context: `<<< Chunk (X) / (Y) of file://... @ YYYY-MM-DD HH:MM:SS >>>`.",
             f"- `further_questions_list`: List of further questions following up on the question, context, and answer.",
+            f"  IMPORTANT: Each question must be closed in itself, not referencing the question, context, or answer.",
             f"- `reject`: Rejection flag for rare cases where the context does not allow any answers at all.",
             f"  If rejecting, set `reject` to `true` and leave all other return values blank.",
             f"\n\n",

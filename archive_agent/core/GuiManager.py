@@ -4,9 +4,10 @@
 import logging
 from pathlib import Path
 
-from archive_agent.core import ContextManager
-
 import streamlit as st
+
+from archive_agent.core import ContextManager
+from archive_agent.util.text import replace_file_uris_with_markdown
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,15 @@ class GuiManager:
                 result_md: str = self.get_answer(query)
             self.display_answer(result_md)
 
+    @staticmethod
+    def format_chunk_refs(text: str) -> str:
+        """
+        Format chunk reference designators in the text.
+        :param text: Text.
+        :return: Text.
+        """
+        return replace_file_uris_with_markdown(text.replace("<<< ", "").replace(" >>>", ""))
+
     def get_answer(self, question: str) -> str:
         """
         Get answer to question.
@@ -62,7 +72,7 @@ class GuiManager:
         if query_result.reject:
             return f"**Query rejected**"
         else:
-            return answer_text
+            return self.format_chunk_refs(answer_text)
 
     @staticmethod
     def display_answer(answer: str) -> None:
