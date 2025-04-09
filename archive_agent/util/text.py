@@ -122,7 +122,7 @@ def sanitize_sentences(sentences: List[str]) -> List[str]:
     return result
 
 
-def group_sentences_block(sentences: List[str], sentences_per_block: int) -> List[str]:
+def group_blocks_of_sentences(sentences: List[str], sentences_per_block: int) -> List[List[str]]:
     """
     Group sentences into blocks of multiple sentences.
     :param sentences: Sentences.
@@ -130,6 +130,18 @@ def group_sentences_block(sentences: List[str], sentences_per_block: int) -> Lis
     :return: Blocks of multiple sentences.
     """
     return [
-        ' '.join(sentences[i:i + sentences_per_block])
+        sentences[i:i + sentences_per_block]
         for i in range(0, len(sentences), sentences_per_block)
+    ]
+
+
+def prepend_line_numbers(sentences: List[str]) -> List[str]:
+    """
+    Prepend line numbers to sentences.
+    :param sentences: Sentences.
+    :return: Sentences with line numbers.
+    """
+    return [
+        f"{line_number + 1:<4}{sentence}"
+        for line_number, sentence in enumerate(sentences)
     ]

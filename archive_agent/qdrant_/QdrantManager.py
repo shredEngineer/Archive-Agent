@@ -3,7 +3,7 @@
 
 import typer
 import logging
-from typing import List
+from typing import List, Tuple
 
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
@@ -198,11 +198,11 @@ class QdrantManager:
         self.cli.format_points(response.points)
         return response.points
 
-    def query(self, question: str) -> QuerySchema:
+    def query(self, question: str) -> Tuple[QuerySchema, str]:
         """
         Get answer to question using RAG.
         :param question: Question.
-        :return: QuerySchema.
+        :return: (QuerySchema, formatted answer)
         """
         self.cli.format_question(question)
 
@@ -225,7 +225,7 @@ class QdrantManager:
         context = "\n\n\n\n".join([
             "\n\n".join([
                 f"<<< "
-                f"Chunk ({point.payload['chunk_index']}) / ({point.payload['chunks_total']}) "
+                f"Chunk ({point.payload['chunk_index'] + 1}) / ({point.payload['chunks_total']}) "
                 f"of file://{point.payload['file_path']} "
                 f"@ {format_time(point.payload['file_mtime'])} "
                 f">>>",
@@ -239,6 +239,6 @@ class QdrantManager:
         if query_result.reject:
             logger.warning(f"Query rejected!")
 
-        self.cli.format_answer(query_result.answer, warning=query_result.reject)
+        answer_text = self.cli.format_answer(query_result, warning=query_result.reject)
 
-        return query_result
+        return query_result, answer_text

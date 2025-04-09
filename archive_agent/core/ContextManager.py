@@ -36,6 +36,7 @@ class ContextManager:
             model_query=self.config.data[self.config.OPENAI_MODEL_QUERY],
             model_vision=self.config.data[self.config.OPENAI_MODEL_VISION],
             temp_query=self.config.data[self.config.OPENAI_TEMP_QUERY],
+            chunk_lines_block=self.config.data[self.config.CHUNK_LINES_BLOCK],
         )
 
         self.qdrant = QdrantManager(

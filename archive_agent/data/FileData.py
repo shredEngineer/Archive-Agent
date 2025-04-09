@@ -12,7 +12,7 @@ from archive_agent.openai_ import OpenAiManager
 from archive_agent.util.image import is_image
 from archive_agent.util.text import is_text, load_text
 from archive_agent.util.format import format_file
-from archive_agent.util.text import split_sentences, sanitize_sentences, group_sentences_block
+from archive_agent.util.text import split_sentences, sanitize_sentences, group_blocks_of_sentences
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +21,6 @@ class FileData:
     """
     File data.
     """
-
-    SENTENCES_PER_BLOCK: int = 16
 
     def __init__(
         self,
@@ -37,6 +35,7 @@ class FileData:
         :param file_mtime: File modification time.
         """
         self.openai = openai
+        self.chunk_lines_block = openai.chunk_lines_block
 
         self.file_path = file_path
         self.file_mtime = file_mtime
@@ -79,6 +78,38 @@ class FileData:
             logger.error(f"Cannot process {format_file(self.file_path)}")
             raise typer.Exit(code=1)
 
+    def chunks(self, text: str) -> List[str]:
+        """
+        Split text into chunks.
+        :param text: Text.
+        :return: Chunks.
+        """
+        sentences = sanitize_sentences(split_sentences(text))
+
+        blocks_of_sentences = group_blocks_of_sentences(sentences, self.chunk_lines_block)
+
+        chunks = []
+        block_start_line = 1
+        for block_index, block_of_sentences in enumerate(blocks_of_sentences):
+            logger.info(
+                f"Chunking block ({block_index + 1}) / ({len(blocks_of_sentences)}) "
+                f"of {format_file(self.file_path)}"
+            )
+
+            chunk_result = self.openai.chunk(block_of_sentences)
+
+            start_lines = chunk_result.chunk_start_lines + [len(sentences) + 1]
+            block_chunks = [
+                "\n".join(sentences[block_start_line - 1 + start - 1:block_start_line - 1 + end - 1])
+                for start, end in zip(start_lines, start_lines[1:])
+            ]
+
+            chunks += block_chunks
+
+            block_start_line += len(block_of_sentences)
+
+        return chunks
+
     def process(self) -> bool:
         """
         Process file data.
@@ -89,20 +120,12 @@ class FileData:
             logger.warning("Failed to process file")
             return False
 
-        sentences = sanitize_sentences(split_sentences(text))
-
-        blocks = group_sentences_block(sentences, self.SENTENCES_PER_BLOCK)
-
-        chunks = []
-        for block_index, block in enumerate(blocks):
-            logger.info(f"Chunking block ({block_index + 1}) / ({len(blocks)}) of {format_file(self.file_path)}")
-            chunk_result = self.openai.chunk(block)
-            chunks += chunk_result.chunks
+        chunks = self.chunks(text)
 
         for chunk_index, chunk in enumerate(chunks):
             logger.info(f"Processing chunk ({chunk_index + 1}) / ({len(chunks)}) of {format_file(self.file_path)}")
 
-            vector = self.openai.embed(chunk.text)
+            vector = self.openai.embed(chunk)
 
             self.points.append(
                 PointStruct(
@@ -113,7 +136,7 @@ class FileData:
                         'file_mtime': self.file_mtime,
                         'chunk_index': chunk_index,
                         'chunks_total': len(chunks),
-                        'chunk_text': chunk.text,
+                        'chunk_text': chunk,
                     },
                 )
             )

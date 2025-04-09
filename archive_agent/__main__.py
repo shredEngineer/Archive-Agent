@@ -144,7 +144,7 @@ def query(question: str = typer.Argument(None)) -> None:
     if question is None:
         question = typer.prompt("Type your question")
 
-    _query_result = context.qdrant.query(question)
+    _query_result, _answer_text = context.qdrant.query(question)
 
     context.openai.usage()
 

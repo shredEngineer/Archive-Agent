@@ -58,11 +58,11 @@ class GuiManager:
         :param question: Question.
         :return: Answer.
         """
-        query_result = self.context.qdrant.query(question)
+        query_result, answer_text = self.context.qdrant.query(question)
         if query_result.reject:
-            return f"**Query rejected:**\n\n{query_result.answer}"
+            return f"**Query rejected**"
         else:
-            return query_result.answer
+            return answer_text
 
     @staticmethod
     def display_answer(answer: str) -> None:

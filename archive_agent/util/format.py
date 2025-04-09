@@ -1,9 +1,10 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-from datetime import datetime, timezone
+import os
 import pathlib
 import urllib.parse
+from datetime import datetime, timezone
 
 
 def format_time(timestamp: float) -> str:
@@ -18,10 +19,18 @@ def format_time(timestamp: float) -> str:
 
 def format_file(file_path: str | pathlib.Path) -> str:
     """
-    Format file path as file:// URI syntax.
+    Format file path as file:// URI syntax, escaping special characters like spaces.
 
     :param file_path: Local file path.
     :return: File path formatted as file:// URI.
     """
     abs_path = pathlib.Path(file_path).resolve()
-    return f"file://{urllib.parse.quote(str(abs_path))}"
+
+    # On Windows, pathlib will produce a path like "C:\path\to\file"
+    # We need to convert it to /C:/path/to/file for proper file:// URI
+    if os.name == 'nt':
+        uri_path = '/' + str(abs_path).replace('\\', '/')
+    else:
+        uri_path = str(abs_path)
+
+    return f"file://{urllib.parse.quote(uri_path, safe='/')}"

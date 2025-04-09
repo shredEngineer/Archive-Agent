@@ -25,6 +25,7 @@ class ConfigManager(StorageManager):
     QDRANT_VECTOR_SIZE = 'qdrant_vector_size'
     QDRANT_SCORE_MIN = 'qdrant_score_min'
     QDRANT_CHUNKS_MAX = 'qdrant_chunks_max'
+    CHUNK_LINES_BLOCK = 'chunk_lines_block'
 
     DEFAULT_CONFIG = {
         OPENAI_MODEL_CHUNK: "gpt-4o-mini-2024-07-18",
@@ -36,7 +37,8 @@ class ConfigManager(StorageManager):
         QDRANT_COLLECTION: "archive-agent",
         QDRANT_VECTOR_SIZE: 1536,
         QDRANT_SCORE_MIN: .2,
-        QDRANT_CHUNKS_MAX: 10,
+        QDRANT_CHUNKS_MAX: 20,
+        CHUNK_LINES_BLOCK: 20,
     }
 
     def __init__(self, profile_path: Path) -> None:

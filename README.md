@@ -20,6 +20,8 @@
 
 ![](archive_agent/assets/Screenshot-GUI.png)
 
+> Smart chunking. Better answers.
+
 ---
 
 ## ⚙️ Install Requirements
@@ -285,6 +287,7 @@ The default settings profile is located in `default/`:
   - `qdrant_vector_size`: Qdrant vector size
   - `qdrant_score_min`: Minimum score of retrieved chunks (`0`...`1`)
   - `qdrant_chunks_max`: Maximum number of retrieved chunks
+  - `chunk_lines_block`: Number of lines per block for chunking
 
 - `watchlist.json`:
   - Managed via the `include` / `exclude` / `remove` / `track` / `commit` commands.

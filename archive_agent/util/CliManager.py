@@ -12,6 +12,7 @@ from openai.types.responses.response import Response
 
 from qdrant_client.models import ScoredPoint
 
+from archive_agent.schema import QuerySchema
 from archive_agent.util.format import format_file, format_time
 
 logger = logging.getLogger(__name__)
@@ -23,11 +24,11 @@ class CliManager:
     """
 
     VERBOSE_CHUNK: bool = True
-    VERBOSE_EMBED: bool = False
-    VERBOSE_QUERY: bool = False
+    VERBOSE_EMBED: bool = True
+    VERBOSE_QUERY: bool = True
     VERBOSE_VISION: bool = True
     VERBOSE_RETRIEVAL: bool = True
-    VERBOSE_USAGE: bool = False
+    VERBOSE_USAGE: bool = True
 
     def __init__(self):
         """
@@ -49,17 +50,17 @@ class CliManager:
             print(Panel(f"[white]{text}", title="Raw output", border_style="red"))
 
     @staticmethod
-    def format_openai_chunk(callback: Callable[[], Response], text: str) -> Response:
+    def format_openai_chunk(callback: Callable[[], Response], line_numbered_text: str) -> Response:
         """
         Format OpenAI response of chunk callback.
         :param callback: Chunk callback returning OpenAI response.
-        :param text: Text.
+        :param line_numbered_text: Text with line numbers.
         :return: OpenAI response.
         """
         logger.info(f"Chunking...")
 
         if CliManager.VERBOSE_CHUNK:
-            print(Panel(f"[blue]{text}", title="Text", border_style="white"))
+            print(Panel(f"[blue]{line_numbered_text}", title="Text", border_style="white"))
 
         response = callback()
 
@@ -145,7 +146,7 @@ class CliManager:
 
             logger.info(
                 f"({point.score * 100:.2f} %) matching "
-                f"chunk ({point.payload['chunk_index']}) / ({point.payload['chunks_total']}) "
+                f"chunk ({point.payload['chunk_index'] + 1}) / ({point.payload['chunks_total']}) "
                 f"of {format_file(point.payload['file_path'])} "
                 f"@ {format_time(point.payload['file_mtime'])}:"
             )
@@ -172,10 +173,31 @@ class CliManager:
         print(Panel(f"[white]{question}", title="Question", border_style="red"))
 
     @staticmethod
-    def format_answer(answer: str, warning: bool = False) -> None:
+    def format_answer(query_result: QuerySchema, warning: bool = False) -> str:
         """
         Format answer.
-        :param answer: Answer.
+        :param query_result: Query result.
         :param warning: Use red border if True, green otherwise.
+        :return: Formatted answer.
         """
-        print(Panel(f"[white]{answer}", title="Answer", border_style="red" if warning else "green"))
+        answer_list_text = "\n".join([
+            f"- {answer_text}"
+            for answer_text in query_result.answer_list
+        ])
+        chunk_ref_list_text = "\n".join([
+            f"- {chunk_ref}"
+            for chunk_ref in query_result.chunk_ref_list
+        ])
+        follow_up_list_text = "\n".join([
+            f"- {follow_up}"
+            for follow_up in query_result.follow_up_list
+        ])
+        answer_text = "\n\n".join([
+            f"{query_result.question_rephrased}",
+            f"{answer_list_text}",
+            f"{query_result.answer_conclusion}",
+            f"{chunk_ref_list_text}",
+            f"{follow_up_list_text}",
+        ])
+        print(Panel(f"[white]{answer_text}", title="Answer", border_style="red" if warning else "green"))
+        return answer_text

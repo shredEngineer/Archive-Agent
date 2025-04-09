@@ -4,44 +4,17 @@
 import logging
 from typing import List
 
-from pydantic import BaseModel
 from openai import OpenAI, OpenAIError
 
+from archive_agent.schema.ChunkSchema import ChunkSchema
+from archive_agent.schema.QuerySchema import QuerySchema
+from archive_agent.schema.VisionSchema import VisionSchema
 from archive_agent.util.image import image_from_file, image_resize_safe, image_to_base64
+from archive_agent.util.text import prepend_line_numbers
 from archive_agent.util import CliManager
 from archive_agent.util import RetryManager
 
 logger = logging.getLogger(__name__)
-
-
-class ChunkSchema(BaseModel):
-
-    class Chunk(BaseModel):
-        text: str
-
-        class Config:
-            extra = "forbid"  # Ensures additionalProperties: false
-
-    chunks: List[Chunk]
-
-    class Config:
-        extra = "forbid"  # Ensures additionalProperties: false
-
-
-class QuerySchema(BaseModel):
-    answer: str
-    reject: bool
-
-    class Config:
-        extra = "forbid"  # Ensures additionalProperties: false
-
-
-class VisionSchema(BaseModel):
-    answer: str
-    reject: bool
-
-    class Config:
-        extra = "forbid"  # Ensures additionalProperties: false
 
 
 class OpenAiManager(RetryManager):
@@ -50,43 +23,34 @@ class OpenAiManager(RetryManager):
     """
 
     @staticmethod
-    def get_prompt_chunk(text: str):
+    def get_prompt_chunk(line_numbered_text: str):
         return "\n".join([
-            f"Act as a semantic chunking agent for RAG: Split the text into multiple semantically distinct chunks.",
-            f"Each chunk must start and end at a sentence or formatting boundary."
-            f"The chunks must be a complete, sequential, and exclusive partition of the original text.",
-            f"Process ALL text: If the chunks were concatenated together, they MUST return the original text."
-            f"Each chunk should contain as many sentences as necessary for the particular semantic group.",
-            f"Semantic groups should span a specific topic, narrative, or logical section.",
-            f"Avoid single-sentence chunks, as sentences USUALLY occur within a greater semantic structure.",
-            f"Capture that greater semantic structure and produce chunks of reasonable size."
-            f"Return the chunks in `chunks`.",
+            f"Act as a semantinc chunking agent for RAG: Split the text into multiple chunks of related sentences.",
+            f"Aim for paragraph-sized chunks, avoiding single-sentence chunks whenever possible.",
+            f"Strictly adhere to the response schema:",
+            f"- `chunk_start_lines`: List of chunk start lines, where the i-th element is the first line of chunk i.",
+            f"  Since The first chunk always starts at line 1, the first element must be 1.",
+            f"  Return at least 3 further elements that are unique and monotonically increasing.",
             f"\n\n",
-            f"Context:\n\"\"\"\n{text}\n\"\"\"\n\n",
+            f"Text with line numbers:\n\"\"\"\n{line_numbered_text}\n\"\"\"\n\n",
         ])
 
     @staticmethod
     def get_prompt_query(question: str, context: str):
-        """
-            TODO: Translate the `Strictly structure the answer like this:` into QuerySchema, then format it for use.
-            - Rephrased question
-            - List of Answers
-            - Conclusion
-            - Relevant URI list
-            - Follow-up questions
-        """
         return "\n".join([
             f"Act as a RAG agent: Use ONLY the context to answer the question.",
             f"Respect the context: Do NOT use your internal knowledge to answer.",
             f"Answer in great detail, considering ALL relevant aspects of the given context.",
-            f"Do NOT include fillers like \"According to the provided context, ...\".",
-            f"Strictly structure the answer like this:",
-            f"- Paragraph rephrasing the original question, guessing the intent from the context.",
-            f"- List of all possible answers to the question, extensively considering the context.",
-            f"- Paragraph summarizing and concluding the answer. Do NOT include fillers like \"Summarizing, ...\"",
-            f"- List of all `file://` associated with snippets considered from the context, formatted markdown URLs.",
-            f"In extremely rase cases, reject questions if the context does not allow any answers at all.",
-            f"If rejecting, set `reject` to `true` and `answer` to a very short description for rejecting.",
+            f"Do NOT include fillers like \"According to the provided context, ...\", \"Summarizing, ...\", etc.",
+            f"Strictly adhere to the response schema:",
+            f"- `question_rephrased`: Rephrased question, guessing the intent from the context.",
+            f"- `answer_list`: List of all possible answers to the question, extensively considering the context.",
+            f"- `answer_conclusion`: Summary and conclusion of the answers.",
+            f"- `chunk_ref_list`: List of reference designators of chunks used in the answers.",
+            f"  Enforce format as found in context: `<<< Chunk (X) / (Y) of file://... @ YYYY-MM-DD HH:MM:SS >>>`.",
+            f"- `further_questions_list`: List of further questions following up on the question, context, and answer.",
+            f"- `reject`: Rejection flag for rare cases where the context does not allow any answers at all.",
+            f"  If rejecting, set `reject` to `true` and leave all other return values blank.",
             f"\n\n",
             f"Context:\n\"\"\"\n{context}\n\"\"\"\n\n",
             f"Question:\n\"\"\"\n{question}\n\"\"\"\n\n",
@@ -101,9 +65,10 @@ class OpenAiManager(RetryManager):
             f"For screenshots, focus on the window or video frame in the foreground.",
             f"Describe ONLY meaningful relationships between relevant visible elements.",
             f"Prioritize written content, ignoring minor details like grid lines or binder holes."
-            f"As `answer` return multiple dense paragraphs containing the extracted information.",
-            f"In extremely rase cases, reject entirely unreadable, corrupted, or blank images.",
-            f"If rejecting, set `reject` to `true` and `answer` to the reason for rejecting the image.",
+            f"Strictly adhere to the response schema:",
+            f"- `answer`: Multiple dense paragraphs containing the extracted information.",
+            f"- `reject`: Rejection flag for rare cases where the image is entirely unreadable, corrupted, or blank.",
+            f"  If rejecting, set `reject` to `true` and leave all other return values blank.",
         ])
 
     def __init__(
@@ -114,6 +79,7 @@ class OpenAiManager(RetryManager):
             model_query: str,
             model_vision: str,
             temp_query: float,
+            chunk_lines_block: int,
     ):
         """
         Initialize OpenAI manager.
@@ -123,6 +89,7 @@ class OpenAiManager(RetryManager):
         :param model_query: Model for queries.
         :param model_vision: Model for vision.
         :param temp_query: Temperature of query model.
+        :param chunk_lines_block: Number of lines per block for chunking.
         """
         self.cli = cli
         self.model_chunk = model_chunk
@@ -130,6 +97,7 @@ class OpenAiManager(RetryManager):
         self.model_query = model_query
         self.model_vision = model_vision
         self.temp_query = temp_query
+        self.chunk_lines_block = chunk_lines_block
 
         self.client = OpenAI()
 
@@ -167,13 +135,15 @@ class OpenAiManager(RetryManager):
         else:
             logger.info(f"No OpenAI API tokens used")
 
-    def chunk(self, text: str) -> ChunkSchema:
+    def chunk(self, sentences: List[str]) -> ChunkSchema:
         """
-        Get chunks of text.
-        :param text: Text.
+        Get chunks of sentences.
+        :param sentences: Sentences.
         :return: ChunkSchema.
         """
-        prompt = self.get_prompt_chunk(text)
+        line_numbered_text = "\n".join(prepend_line_numbers(sentences))
+
+        prompt = self.get_prompt_chunk(line_numbered_text)
 
         def callback():
             return self.client.responses.create(
@@ -200,7 +170,7 @@ class OpenAiManager(RetryManager):
                 },
             )
 
-        response = self.cli.format_openai_chunk(lambda: self.retry(callback), text)
+        response = self.cli.format_openai_chunk(lambda: self.retry(callback), line_numbered_text)
         if response.usage is not None:  # makes pyright happy
             self.total_tokens_chunk += response.usage.total_tokens
 
@@ -208,6 +178,9 @@ class OpenAiManager(RetryManager):
             raise OpenAIError(response.refusal)
 
         chunk_result = ChunkSchema.model_validate_json(response.output[0].content[0].text)
+
+        if len(chunk_result.chunk_start_lines) == 0 or chunk_result.chunk_start_lines[0] != 1:
+            raise RuntimeError(f"Invalid chunk start lines: {chunk_result.chunk_start_lines}")
 
         return chunk_result
 
