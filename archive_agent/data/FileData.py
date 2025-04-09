@@ -118,7 +118,6 @@ class FileData:
         blocks_of_sentences = group_blocks_of_sentences(sentences, self.chunk_lines_block)
 
         chunks = []
-        block_start_line = 1
         for block_index, block_of_sentences in enumerate(blocks_of_sentences):
             logger.info(
                 f"Chunking block ({block_index + 1}) / ({len(blocks_of_sentences)}) "
@@ -127,15 +126,21 @@ class FileData:
 
             chunk_result = self.openai.chunk(block_of_sentences)
 
-            start_lines = chunk_result.chunk_start_lines + [len(sentences) + 1]
+            # Append a sentinel value to simplify range slicing
+            start_lines = chunk_result.chunk_start_lines + [len(block_of_sentences) + 1]
+
             block_chunks = [
-                "\n".join(sentences[block_start_line - 1 + start - 1:block_start_line - 1 + end - 1])
+                "\n".join(block_of_sentences[start - 1:end - 1])
                 for start, end in zip(start_lines, start_lines[1:])
             ]
 
-            chunks += block_chunks
+            for i, chunk in enumerate(block_chunks):
+                if len(chunk) > 5000:  # Adjust threshold as needed
+                    logger.warning(
+                        f"Chunk {i + 1} in block {block_index + 1} is very large: {len(chunk)} characters"
+                    )
 
-            block_start_line += len(block_of_sentences)
+            chunks += block_chunks
 
         return chunks
 

@@ -24,26 +24,24 @@ def load_pdf_document(
     :return: Text with image descriptions if successful, None otherwise.
     """
     try:
-        # Extract markdown text using pymupdf4llm
-        md_text = pymupdf4llm.to_markdown(file_path).split("\n")
-
-        # Open document with PyMuPDF
-        doc = fitz.open(file_path)
-
         result_parts: list[str] = []
 
-        # noinspection PyTypeChecker
-        for page_index, page in enumerate(doc):
-            logger.info(f"Processing page ({page_index + 1}) / ({len(doc)})...")
-
-            # Append markdown content line by line
-            page_md_lines = [line for line in md_text if f"Page {page_index + 1}" in line]
-            if page_md_lines:
-                result_parts.extend(page_md_lines)
+        # Extract all markdown text from document
+        try:
+            text = pymupdf4llm.to_markdown(file_path).strip()
+            if text:
+                logger.info(f"Extracted {len(text)} characters of markdown text")
+                result_parts.append(text)
             else:
-                logger.warning(f"Page appears to be a scanned page without OCR")
+                logger.warning("Document appears to contain no extractable text")
+        except Exception as e:
+            logger.warning(f"Failed to extract markdown text: {e}")
+            return None
 
-            # Extract images from page
+        # Open document with PyMuPDF to get images
+        doc = fitz.open(file_path)
+
+        for page_index, page in enumerate(doc):
             image_blocks = [
                 b for b in page.get_text("dict")["blocks"] if b["type"] == 1
             ]
@@ -57,12 +55,9 @@ def load_pdf_document(
                             if image_text is None:
                                 logger.warning(f"Failed to convert image")
                                 return None
-                            result_parts.append(" : ".join([
-                                f"[Image ({img_index}) on page ({page_index + 1}) / ({len(doc)})]"
-                                f"{image_text}",
-                            ]))
+                            result_parts.append(f"[Image] {image_text}")
                 except Exception as e:
-                    logger.warning(f"Failed to load {format_file(file_path)}: {e}")
+                    logger.warning(f"Failed to load image from {format_file(file_path)}: {e}")
                     return None
 
         return "\n\n".join(result_parts)
