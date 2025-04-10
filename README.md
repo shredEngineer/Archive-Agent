@@ -67,11 +67,13 @@ echo "alias archive-agent='$(pwd)/archive-agent.sh'" >> ~/.bashrc && source ~/.b
 
 This will create a global `archive-agent` command for the current user.
 
+Next, set up the Qdrant server **before** using the `archive-agent` command.
+
 ---
 
 ## ⚙️ Setup Qdrant server
 
-**IMPORTANT:** To manage Docker without root, run this once **and reboot**:
+🚨 **IMPORTANT:** To manage Docker without root, run this once **and reboot**:
 
 ```bash
 sudo usermod -aG docker $USER
