@@ -67,7 +67,7 @@ echo "alias archive-agent='$(pwd)/archive-agent.sh'" >> ~/.bashrc && source ~/.b
 
 This will create a global `archive-agent` command for the current user.
 
-Next, set up the Qdrant server **before** using the `archive-agent` command.
+**Complete Qdrant server setup before using the `archive-agent` command.**
 
 ---
 
