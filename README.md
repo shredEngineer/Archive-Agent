@@ -47,6 +47,8 @@ This will persist the export for the current user.
 
 **NOTE:** Embeddings and queries will incur OpenAI API token costs. **Use at your own risk.**
 
+💡 Good to know: [OpenAI won't use your data for training.](https://platform.openai.com/docs/guides/your-data)
+
 ---
 
 ## ⚙️ Install Archive Agent
