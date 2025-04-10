@@ -28,7 +28,7 @@ class ConfigManager(StorageManager):
     CHUNK_LINES_BLOCK = 'chunk_lines_block'
 
     DEFAULT_CONFIG = {
-        OPENAI_MODEL_CHUNK: "gpt-4o-mini-2024-07-18",
+        OPENAI_MODEL_CHUNK: "gpt-4o-2024-08-06",
         OPENAI_MODEL_EMBED: "text-embedding-3-small",
         OPENAI_MODEL_QUERY: "gpt-4o-2024-08-06",
         OPENAI_MODEL_VISION: "gpt-4o-2024-08-06",
@@ -38,7 +38,7 @@ class ConfigManager(StorageManager):
         QDRANT_VECTOR_SIZE: 1536,
         QDRANT_SCORE_MIN: .2,
         QDRANT_CHUNKS_MAX: 20,
-        CHUNK_LINES_BLOCK: 20,
+        CHUNK_LINES_BLOCK: 50,
     }
 
     def __init__(self, profile_path: Path) -> None:

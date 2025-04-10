@@ -129,8 +129,7 @@ def sanitize_sentences(sentences: List[str]) -> List[str]:
     for sentence in sentences:
         for part in sentence.splitlines():
             s = part.strip()
-            if s:
-                result.append(s)
+            result.append(s)
     return result
 
 

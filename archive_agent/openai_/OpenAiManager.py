@@ -24,14 +24,20 @@ class OpenAiManager(RetryManager):
     @staticmethod
     def get_prompt_chunk(line_numbered_text: str):
         return "\n".join([
-            f"Act as a semantinc chunking agent for RAG: Split the text into multiple chunks of related sentences.",
-            f"Aim for paragraph-sized chunks, avoiding single-sentence chunks whenever possible.",
-            f"Strictly adhere to the response schema:",
-            f"- `chunk_start_lines`: List of chunk start lines, where the i-th element is the first line of chunk i.",
-            f"  Since The first chunk always starts at line 1, the first element must be 1.",
-            f"  Return at least 3 further elements that are unique and monotonically increasing.",
-            f"\n\n",
-            f"Text with line numbers:\n\"\"\"\n{line_numbered_text}\n\"\"\"\n\n",
+            "Act as a semantic chunking agent for RAG: Split the text into multiple chunks of related sentences.",
+            "Strictly adhere to the response schema:",
+            "- `chunk_start_lines`: List of chunk start lines, where the i-th element is the first line of chunk i.",
+            "  Since The first chunk always starts at line 1, the first element must be 1.",
+            "  Return further elements that are unique and monotonically increasing.",
+            "",
+            "Handle both well-structured text and unordered note dumps.",
+            "Group only strongly related content together; do NOT split by formatting or superficial line breaks.",
+            "Each chunk must be topically coherent, self-contained, and useful in isolation.",
+            "Do NOT create chunks smaller than 3 lines unless strictly necessary.",
+            "ONLY create a new chunk when there's a clear semantic shift or topic boundary.",
+            "Do NOT process the text line by line; review the entire input before selecting chunk boundaries.",
+            "",
+            "Text with line numbers:\n\"\"\"\n" + line_numbered_text + "\n\"\"\""
         ])
 
     @staticmethod
