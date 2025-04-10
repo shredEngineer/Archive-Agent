@@ -40,7 +40,7 @@ class OpenAiManager(RetryManager):
             "- Consider both well-structured text and unordered note dumps.",
             "- Group content based on semantic relatedness, not formatting or superficial structure.",
             "- Each chunk must contain a coherent, self-contained unit of meaning.",
-            "- Avoid small chunks: Do NOT create chunks smaller than 3 lines unless strictly necessary.",
+            "- Avoid small chunks: Do NOT create chunks smaller than 10 lines unless strictly necessary.",
             "- Only create a new chunk if there is a clear semantic shift or topic boundary.",
             "- Review the entire text before selecting chunk boundaries. Do NOT chunk line by line.",
             "",
