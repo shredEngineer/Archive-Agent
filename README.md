@@ -4,6 +4,7 @@
 
 - OpenAI API for embeddings and queries
 - Qdrant *(running locally)* for storage and search 
+- Fast and effective semantic chunking (**smart chunking**)
 
 ![Archive Agent Logo](archive_agent/assets/Archive-Agent-400x300.png)
 
@@ -20,7 +21,7 @@
 
 ![](archive_agent/assets/Screenshot-GUI.png)
 
-> Smart chunking. Better answers.
+[(enlarge screenshot to see details)](archive_agent/assets/Screenshot-GUI.png)
 
 ---
 
@@ -98,11 +99,20 @@ The default settings profile is created on the first run. (See [Storage](#-stora
 
 **Archive Agent** currently supports these file types:
 - Text:
-  - Plaintext: `.txt`, `.md`
-  - Documents: `.odt`, `.docx`, `.rtf`, `.html` (decoded using *Pandoc*)
-  - PDF (**with OCR layer only**): `.pdf` (decoded using *PyMuPDF4LLM*)
+  - Plaintext:
+    - `.txt`, `.md`
+  - Documents:
+    - `.odt`, `.docx`, `.rtf`, `.html`
+    - Decoded using *Pandoc*
+  - PDF documents:
+    - `.pdf`
+    - Decoded using *PyMuPDF4LLM*
+    - Text / OCR pages are decoded to text natively
+    - Non-OCR pages are decoded to text using OpenAI vision
+    - Images are decoded to text using OpenAI vision
 - Image:
-  - `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp` (decoded using *Pillow*)
+  - `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
+  - Decoded using *Pillow*
 
 **Archive Agent** decodes everything to text like this:
 - Text files are decoded to UTF-8, regardless of original encoding.
@@ -112,10 +122,14 @@ The default settings profile is created on the first run. (See [Storage](#-stora
 **NOTE:** Unsupported files are tracked but not processed.
 
 **Archive Agent** processes decoded text like this:
-- Decoded text is split into smaller chunks (**smart chunking**).
+- Decoded text is sanitized and split into sentences.
+- Sentences are grouped into reasonably-sized blocks.
+- Each block is split into smaller chunks using OpenAI model.
 - Each chunk is turned into a vector using OpenAI embeddings.
 - Each vector is turned into a *point* with file metadata.
 - Each *point* is stored in the Qdrant database.
+
+This **smart chunking** enables effective embedding of knowledge.
 
 ### ℹ️ How chunks are retrieved
 
