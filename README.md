@@ -6,6 +6,8 @@
 - Qdrant *(running locally)* for storage and search 
 - Fast and effective semantic chunking (**smart chunking**)
 
+🍀 **[BETA TESTERS WELCOME!](#-collaborators-welcome)**
+
 ![Archive Agent Logo](archive_agent/assets/Archive-Agent-400x300.png)
 
 **Archive Agent** tracks your files, syncs changes, and powers smart queries.  
