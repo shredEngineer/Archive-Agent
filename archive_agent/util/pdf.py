@@ -2,7 +2,7 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import io
-from typing import Callable, Optional
+from typing import Callable, Optional, List, Any
 
 # noinspection PyPackageRequirements
 import fitz
@@ -30,32 +30,38 @@ def load_pdf_document(
         try:
             text = pymupdf4llm.to_markdown(file_path).strip()
             if text:
-                logger.info(f"Extracted {len(text)} characters of markdown text")
+                logger.info(f"Extracted ({len(text)}) characters from document")
                 result_parts.append(text)
             else:
                 logger.warning("Document appears to contain no extractable text")
+
         except Exception as e:
             logger.warning(f"Failed to extract markdown text: {e}")
             return None
 
         # Open document with PyMuPDF to get images
-        doc = fitz.open(file_path)
+        pages: List[Any] = [page for page in fitz.open(file_path)]
 
-        for page_index, page in enumerate(doc):
-            image_blocks = [
-                b for b in page.get_text("dict")["blocks"] if b["type"] == 1
-            ]
-            for img_index, img_block in enumerate(image_blocks, start=1):
-                logger.info(f"Processing image ({img_index}) on page ({page_index + 1}) / ({len(doc)})...")
+        for page_index, page in enumerate(pages):
+            logger.info(f"Processing page ({page_index + 1}) / ({len(pages)})...")
+            image_blocks = [b for b in page.get_text("dict")["blocks"] if b["type"] == 1]
+
+            for img_index, img_block in enumerate(image_blocks):
+                logger.info(f"Processing image ({img_index + 1}) / ({len(image_blocks)})...")
                 image_bytes = img_block["image"]
+
                 try:
                     with io.BytesIO(image_bytes) as img_io:
+
                         with Image.open(img_io) as img:
                             image_text = image_to_text_callback(img)
+
                             if image_text is None:
                                 logger.warning(f"Failed to convert image")
                                 return None
+
                             result_parts.append(f"[Image] {image_text}")
+
                 except Exception as e:
                     logger.warning(f"Failed to load image from {format_file(file_path)}: {e}")
                     return None

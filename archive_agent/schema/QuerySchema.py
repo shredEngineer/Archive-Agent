@@ -12,6 +12,7 @@ class QuerySchema(BaseModel):
     chunk_ref_list: List[str]
     follow_up_list: List[str]
     reject: bool
+    rejection_reason: str
 
     class Config:
         extra = "forbid"  # Ensures additionalProperties: false

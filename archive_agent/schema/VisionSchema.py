@@ -7,6 +7,7 @@ from pydantic import BaseModel
 class VisionSchema(BaseModel):
     answer: str
     reject: bool
+    rejection_reason: str
 
     class Config:
         extra = "forbid"  # Ensures additionalProperties: false

@@ -78,8 +78,9 @@ class FileData:
         image_base64 = image_to_base64(image_possibly_resized)
 
         vision_result = self.openai.vision(image_base64)
+
         if vision_result.reject:
-            logger.warning(f"Image rejected!")
+            logger.warning(f"Image rejected: {vision_result.rejection_reason}")
             return None
 
         return vision_result.answer
@@ -137,7 +138,7 @@ class FileData:
             for i, chunk in enumerate(block_chunks):
                 if len(chunk) > 5000:  # Adjust threshold as needed
                     logger.warning(
-                        f"Chunk {i + 1} in block {block_index + 1} is very large: {len(chunk)} characters"
+                        f"Chunk ({i + 1}) in block ({block_index + 1}) is very large: ({len(chunk)}) characters"
                     )
 
             chunks += block_chunks

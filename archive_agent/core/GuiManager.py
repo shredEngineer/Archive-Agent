@@ -70,7 +70,7 @@ class GuiManager:
         """
         query_result, answer_text = self.context.qdrant.query(question)
         if query_result.reject:
-            return f"**Query rejected**"
+            return f"**Query rejected:** {query_result.rejection_reason}"
         else:
             return self.format_chunk_refs(answer_text)
 

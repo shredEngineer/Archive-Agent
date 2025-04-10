@@ -175,13 +175,16 @@ class CliManager:
         print(Panel(f"[white]{question}", title="Question", border_style="red"))
 
     @staticmethod
-    def format_answer(query_result: QuerySchema, warning: bool = False) -> str:
+    def format_answer(query_result: QuerySchema) -> str:
         """
         Format answer.
         :param query_result: Query result.
-        :param warning: Use red border if True, green otherwise.
-        :return: Formatted answer.
+        :return: Formatted answer, or empty string if rejected.
         """
+        if query_result.reject:
+            print(Panel(f"[white]{query_result.rejection_reason}", title="Query rejected", border_style="red"))
+            return ""
+
         answer_list_text = "\n".join([
             f"- {answer_text}"
             for answer_text in query_result.answer_list
@@ -196,6 +199,7 @@ class CliManager:
             f"- {follow_up}"
             for follow_up in query_result.follow_up_list
         ])
+
         answer_text = "\n\n".join([
             f"### Question",
             f"**{query_result.question_rephrased}**",
@@ -208,5 +212,7 @@ class CliManager:
             f"### Follow-Up Questions",
             f"{follow_up_list_text}",
         ])
-        print(Panel(f"[white]{answer_text}", title="Answer", border_style="red" if warning else "green"))
+
+        print(Panel(f"[white]{answer_text}", title="Answer", border_style="green"))
+
         return answer_text
