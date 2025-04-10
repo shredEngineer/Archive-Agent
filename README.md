@@ -358,6 +358,9 @@ poetry run pycodestyle archive_agent tests
 
 **Archive Agent** is fully functional right now and development is continuing. 
 
+Quality:
+- [ ] Overlapping blocks in smart chunking to prevent poorly cut trailing chunks
+
 Related to section [Launch Archive Agent GUI](#-launch-archive-agent-gui):
 - [ ] Extend GUI functionality
 
