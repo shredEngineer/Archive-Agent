@@ -387,6 +387,10 @@ General improvements:
 ## 🐞 Known bugs
 
 - [ ] While `track` initially reports a file as *added*, subsequent `track` calls report it as *changed*. 
+- [ ] Removing and restoring a tracked file in the tracking phase is currently not handled properly:
+  - Removing a tracked file sets `{size=0, mtime=0, diff=removed}`.
+  - Restoring a tracked file sets `{size=X, mtime=Y, diff=added}`.
+  - Because `size` and `mtime` were cleared, we lost the information to detect a restored file.
 
 ---
 
