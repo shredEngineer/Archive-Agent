@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 logger.info("Starting...")
 
-from archive_agent.core import ContextManager
+from archive_agent.core.ContextManager import ContextManager
 
 
 app = typer.Typer(
@@ -116,7 +116,7 @@ def commit() -> None:
 
     context.committer.commit()
 
-    context.openai.usage()
+    context.ai.usage()
 
 
 @app.command()
@@ -131,7 +131,7 @@ def search(question: str = typer.Argument(None)) -> None:
 
     _chunks = context.qdrant.search(question)
 
-    context.openai.usage()
+    context.ai.usage()
 
 
 @app.command()
@@ -146,7 +146,7 @@ def query(question: str = typer.Argument(None)) -> None:
 
     _query_result, _answer_text = context.qdrant.query(question)
 
-    context.openai.usage()
+    context.ai.usage()
 
 
 @app.command()

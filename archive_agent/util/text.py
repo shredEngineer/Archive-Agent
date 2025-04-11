@@ -128,8 +128,7 @@ def sanitize_sentences(sentences: List[str]) -> List[str]:
     result = []
     for sentence in sentences:
         for part in sentence.splitlines():
-            s = part.strip()
-            result.append(s)
+            result.append(part.strip())
     return result
 
 

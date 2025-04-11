@@ -8,9 +8,9 @@ from pathlib import Path
 from copy import deepcopy
 from typing import Dict, Any
 
-from archive_agent.util.pattern import validate_pattern, resolve_pattern
-from archive_agent.util import StorageManager
+from archive_agent.util.StorageManager import StorageManager
 from archive_agent.util.format import format_file
+from archive_agent.util.pattern import validate_pattern, resolve_pattern
 
 logger = logging.getLogger(__name__)
 
@@ -63,18 +63,18 @@ class WatchlistManager(StorageManager):
 
         if pattern in self.data['included']:
             logger.info(f"Already included pattern:")
-            logger.info(f"{pattern}")
+            logger.info(f" - {pattern}")
 
         elif pattern in self.data['excluded']:
             logger.info(f"Included previously excluded pattern:")
-            logger.info(f"{pattern}")
+            logger.info(f" - {pattern}")
             self.data['excluded'].remove(pattern)
             self.data['included'] = list(set(self.data['included']) | {pattern})
             self.save()
 
         else:
             logger.info(f"New included pattern:")
-            logger.info(f"{pattern}")
+            logger.info(f" - {pattern}")
             self.data['included'] = list(set(self.data['included']) | {pattern})
             self.save()
 
@@ -87,18 +87,18 @@ class WatchlistManager(StorageManager):
 
         if pattern in self.data['excluded']:
             logger.info(f"Already excluded pattern:")
-            logger.info(f"{pattern}")
+            logger.info(f" - {pattern}")
 
         elif pattern in self.data['included']:
             logger.info(f"Excluded previously included pattern:")
-            logger.info(f"{pattern}")
+            logger.info(f" - {pattern}")
             self.data['included'].remove(pattern)
             self.data['excluded'] = list(set(self.data['excluded']) | {pattern})
             self.save()
 
         else:
             logger.info(f"New excluded pattern:")
-            logger.info(f"{pattern}")
+            logger.info(f" - {pattern}")
             self.data['excluded'] = list(set(self.data['excluded']) | {pattern})
             self.save()
 
@@ -111,13 +111,13 @@ class WatchlistManager(StorageManager):
 
         if pattern in self.data['included']:
             logger.info(f"Removed included pattern:")
-            logger.info(f"{pattern}")
+            logger.info(f" - {pattern}")
             self.data['included'].remove(pattern)
             self.save()
 
         elif pattern in self.data['excluded']:
             logger.info(f"Removed excluded pattern:")
-            logger.info(f"{pattern}")
+            logger.info(f" - {pattern}")
             self.data['excluded'].remove(pattern)
             self.save()
 
@@ -132,14 +132,14 @@ class WatchlistManager(StorageManager):
         if len(self.data['included']) > 0:
             logger.info(f"({len(self.data['included'])}) included pattern(s):")
             for included_pattern in self.data['included']:
-                logger.info(f"{included_pattern}")
+                logger.info(f" - {included_pattern}")
         else:
             logger.info("(0) included pattern(s)")
 
         if len(self.data['excluded']) > 0:
             logger.info(f"({len(self.data['excluded'])}) excluded pattern(s):")
             for excluded_pattern in self.data['excluded']:
-                logger.info(f"{excluded_pattern}")
+                logger.info(f" - {excluded_pattern}")
         else:
             logger.info("(0) excluded pattern(s)")
 
@@ -216,7 +216,7 @@ class WatchlistManager(StorageManager):
         if len(self.data['tracked']) > 0:
             logger.info(f"({len(self.data['included'])}) tracked files(s):")
             for file in self.data['tracked'].keys():
-                logger.info(f"{file}")
+                logger.info(f" - {file}")
         else:
             logger.info("(0) tracked file(s)")
 
@@ -239,21 +239,21 @@ class WatchlistManager(StorageManager):
         if len(added_files) > 0:
             logger.info(f"({len(added_files)}) added files(s):")
             for file in added_files.keys():
-                logger.info(f"{file}")
+                logger.info(f" - ADDED    {file}")
         else:
             logger.info("(0) added file(s)")
 
         if len(changed_files) > 0:
             logger.info(f"({len(changed_files)}) changed files(s):")
             for file in changed_files.keys():
-                logger.info(f"{file}")
+                logger.info(f" - CHANGED  {file}")
         else:
             logger.info("(0) changed file(s)")
 
         if len(removed_files) > 0:
             logger.info(f"({len(removed_files)}) removed files(s):")
             for file in removed_files.keys():
-                logger.info(f"{file}")
+                logger.info(f" - REMOVED  {file}")
         else:
             logger.info("(0) removed file(s)")
 

@@ -17,11 +17,11 @@ from qdrant_client.models import (
     ScoredPoint,
 )
 
-from archive_agent.openai_ import OpenAiManager
-from archive_agent.data import FileData
-from archive_agent.util import CliManager
+from archive_agent.ai.AiManager import AiManager
+from archive_agent.data.FileData import FileData
+from archive_agent.util.CliManager import CliManager
 from archive_agent.util.format import format_time, format_file
-from archive_agent.openai_.OpenAiManager import QuerySchema
+from archive_agent.schema.QuerySchema import QuerySchema
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class QdrantManager:
     def __init__(
         self,
         cli: CliManager,
-        openai: OpenAiManager,
+        ai: AiManager,
         server_url: str,
         collection: str,
         vector_size: int,
@@ -46,7 +46,7 @@ class QdrantManager:
         """
         Initialize Qdrant manager.
         :param cli: CLI manager.
-        :param openai: OpenAI manager.
+        :param ai: AI manager.
         :param server_url: Server URL.
         :param collection: Collection name.
         :param vector_size: Vector size.
@@ -54,7 +54,7 @@ class QdrantManager:
         :param chunks_max: Maximum number of retrieved chunks
         """
         self.cli = cli
-        self.openai = openai
+        self.ai = ai
         self.qdrant = QdrantClient(url=server_url)
         self.collection = collection
         self.vector_size = vector_size
@@ -79,9 +79,9 @@ class QdrantManager:
         :return: True if successful, False otherwise.
         """
         if not quiet:
-            logger.info(f"Adding {format_file(file_path)}")
+            logger.info(f"--  ADDING  {format_file(file_path)}")
 
-        data = FileData(openai=self.openai, file_path=file_path, file_mtime=file_mtime)
+        data = FileData(ai=self.ai, file_path=file_path, file_mtime=file_mtime)
         if not data.process():
             logger.warning(f"Failed to add file")
             return False
@@ -132,7 +132,7 @@ class QdrantManager:
             return True
 
         if not quiet:
-            logger.info(f"Removing ({count}) chunk(s) of {format_file(file_path)}")
+            logger.info(f"--  REMOVING ({count}) chunk(s) of  {format_file(file_path)}")
 
         try:
             self.qdrant.delete(
@@ -161,7 +161,7 @@ class QdrantManager:
         :param file_mtime: File modification time.
         :return: True if successful, False otherwise.
         """
-        logger.info(f"Changing {format_file(file_path)}")
+        logger.info(f"--  CHANGING  {format_file(file_path)}")
 
         successful_remove = self.remove(file_path, quiet=True)
         if not successful_remove:
@@ -181,7 +181,7 @@ class QdrantManager:
         """
         self.cli.format_question(question)
 
-        vector = self.openai.embed(question)
+        vector = self.ai.embed(question)
 
         try:
             response = self.qdrant.query_points(
@@ -206,7 +206,7 @@ class QdrantManager:
         """
         self.cli.format_question(question)
 
-        vector = self.openai.embed(question)
+        vector = self.ai.embed(question)
 
         try:
             response = self.qdrant.query_points(
@@ -235,10 +235,11 @@ class QdrantManager:
             if point.payload is not None  # makes pyright happy
         ])
 
-        query_result = self.openai.query(question, context)
+        query_result = self.ai.query(question, context)
         if query_result.reject:
             logger.warning(f"Query rejected: {query_result.rejection_reason}")
 
         answer_text = self.cli.format_answer(query_result)
 
         return query_result, answer_text
+    

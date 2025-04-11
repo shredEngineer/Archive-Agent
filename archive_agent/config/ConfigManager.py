@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from copy import deepcopy
 
-from archive_agent.util import StorageManager
+from archive_agent.util.StorageManager import StorageManager
 
 logger = logging.getLogger(__name__)
 

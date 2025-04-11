@@ -3,11 +3,11 @@
 
 from pathlib import Path
 
-from archive_agent.util import CliManager
-from archive_agent.config import ConfigManager
-from archive_agent.watchlist import WatchlistManager
-from archive_agent.openai_ import OpenAiManager
-from archive_agent.qdrant_ import QdrantManager
+from archive_agent.util.CliManager import CliManager
+from archive_agent.config.ConfigManager import ConfigManager
+from archive_agent.watchlist.WatchlistManager import WatchlistManager
+from archive_agent.ai.AiManager import AiManager
+from archive_agent.db.QdrantManager import QdrantManager
 from archive_agent.core.CommitManager import CommitManager
 
 
@@ -29,7 +29,7 @@ class ContextManager:
 
         self.watchlist = WatchlistManager(profile_path)
 
-        self.openai = OpenAiManager(
+        self.ai = AiManager(
             cli=self.cli,
             model_chunk=self.config.data[self.config.OPENAI_MODEL_CHUNK],
             model_embed=self.config.data[self.config.OPENAI_MODEL_EMBED],
@@ -41,7 +41,7 @@ class ContextManager:
 
         self.qdrant = QdrantManager(
             cli=self.cli,
-            openai=self.openai,
+            ai=self.ai,
             server_url=self.config.data[self.config.QDRANT_SERVER_URL],
             collection=self.config.data[self.config.QDRANT_COLLECTION],
             vector_size=self.config.data[self.config.QDRANT_VECTOR_SIZE],

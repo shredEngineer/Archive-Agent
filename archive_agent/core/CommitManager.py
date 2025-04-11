@@ -4,9 +4,12 @@
 import typer
 import logging
 
-from archive_agent.qdrant_ import QdrantManager
-from archive_agent.watchlist import WatchlistManager
-from archive_agent.data import FileData
+from archive_agent.data.FileData import FileData
+
+from archive_agent.db.QdrantManager import QdrantManager
+
+from archive_agent.watchlist.WatchlistManager import WatchlistManager
+
 from archive_agent.util.format import format_file
 
 logger = logging.getLogger(__name__)

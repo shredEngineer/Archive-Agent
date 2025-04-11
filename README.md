@@ -3,6 +3,7 @@
 **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**
 
 - OpenAI API for embeddings and queries
+  - **Coming soon:** Support for further AI providers.
 - Qdrant *(running locally)* for storage and search 
 - Fast and effective semantic chunking (**smart chunking**)
 
@@ -47,9 +48,9 @@ echo "export OPENAI_API_KEY='sk-...'" >> ~/.bashrc && source ~/.bashrc
 
 This will persist the export for the current user.
 
-**NOTE:** Embeddings and queries will incur OpenAI API token costs. **Use at your own risk.**
+**NOTE:** Embeddings and queries will incur AI API token costs. **Use at your own risk.**
 
-💡 Good to know: [OpenAI won't use your data for training.](https://platform.openai.com/docs/guides/your-data)
+💡 **Good to know:** [OpenAI won't use your data for training.](https://platform.openai.com/docs/guides/your-data)
 
 ---
 
@@ -69,7 +70,7 @@ echo "alias archive-agent='$(pwd)/archive-agent.sh'" >> ~/.bashrc && source ~/.b
 
 This will create a global `archive-agent` command for the current user.
 
-**Complete Qdrant server setup before using the `archive-agent` command.**
+🟠 **NOTE:** Complete Qdrant server setup **before** using the `archive-agent` command.
 
 ---
 
@@ -89,7 +90,7 @@ To launch Qdrant with persistent storage and auto-restart, run this once:
 
 This will download the Qdrant docker image on the first run.
 
-**NOTE:** In case you need to stop the Qdrant Docker image, run this:
+🟠 **Note:** In case you need to stop the Qdrant Docker image, run this:
 
 ```bash
 docker stop archive-agent-qdrant-server
@@ -101,52 +102,49 @@ docker stop archive-agent-qdrant-server
 
 The default settings profile is created on the first run. (See [Storage](#-storage) section.)
 
-### ℹ️ How files are processed
+### ℹ️ Which files are processed
 
 **Archive Agent** currently supports these file types:
 - Text:
-  - Plaintext:
-    - `.txt`, `.md`
-  - Documents:
-    - `.odt`, `.docx`, `.rtf`, `.html`
-    - Decoded using *Pandoc*
-  - PDF documents:
-    - `.pdf`
-    - Decoded using *PyMuPDF4LLM*
-    - Text / OCR pages are decoded to text natively
-    - Non-OCR pages are decoded to text using OpenAI vision
-    - Images are decoded to text using OpenAI vision
-- Image:
-  - `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
-  - Decoded using *Pillow*
+  - Plaintext: `.txt`, `.md`
+  - Documents: `.odt`, `.docx`, `.rtf`, `.html`
+  - PDF documents: `.pdf`
+- Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
 
-**Archive Agent** decodes everything to text like this:
+Ultimately, **Archive Agent** decodes everything to text like this:
 - Text files are decoded to UTF-8, regardless of original encoding.
-- Image files are decoded to text using OpenAI vision.
+- Non-OCR PDF pages are treated as images.
+- Image files are decoded to text using AI vision.
   - The vision model will reject unintelligible images.
 
-**NOTE:** Unsupported files are tracked but not processed.
+Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
+
+🟠 **Note:** Unsupported files are tracked but not processed.
+
+### ℹ️ How files are processed
 
 **Archive Agent** processes decoded text like this:
 - Decoded text is sanitized and split into sentences.
 - Sentences are grouped into reasonably-sized blocks.
-- Each block is split into smaller chunks using OpenAI model.
-- Each chunk is turned into a vector using OpenAI embeddings.
+- **Each block is split into smaller chunks using an AI model.**
+- Each chunk is turned into a vector using AI embeddings.
 - Each vector is turned into a *point* with file metadata.
 - Each *point* is stored in the Qdrant database.
 
-This **smart chunking** enables effective embedding of knowledge.
+💡 **Good to know:** This **smart chunking** improves the accuracy and effectiveness of the retrieval. 
 
 ### ℹ️ How chunks are retrieved
 
 **Archive Agent** retrieves chunks related to your question like this:
-- The question is turned into a vector using OpenAI embeddings.
+- The question is turned into a vector using AI embeddings.
 - Points with similar vectors are retrieved from the Qdrant database.
 - Chunks of points with sufficient score are returned.
 
 **Archive Agent** answers your question using retrieved chunks like this:
 - The LLM receives the retrieved chunks as context to the question.
-- The LLM's answer is returned.
+- The LLM's answer is returned and formatted.
+
+The LLM's answer is structured to be multi-faceted, making **Archive Agent** a helpful assistant.
 
 ### ℹ️ How files are selected for tracking
 
@@ -159,10 +157,11 @@ This **smart chunking** enables effective embedding of knowledge.
 
 There are *included patterns* and *excluded patterns*:
 
-- The set of resolved excluded files is removed from the set of resolved included files.   
+- The set of resolved excluded files is removed from the set of resolved included files.
 - Only the remaining set of files (included but not excluded) is tracked by **Archive Agent**. 
+- Hidden files are always ignored!
 
-**NOTE:** Hidden files are always ignored.
+This approach gives you the best control over the specific files or file types to track.
 
 ### ⚡ List usage info
 
@@ -180,9 +179,8 @@ To add one or more included patterns, run this:
 archive-agent include "~/Documents/*.txt"
 ```
 
-**NOTE:** **Always use quotes** to prevent your shell's wildcard expansion.
-
-(Skip the pattern argument to get an interactive prompt.)
+🟠 **Note:** **Always use quotes** for the the pattern argument (to prevent your shell's wildcard expansion),
+**or skip it** to get an interactive prompt.
 
 ### ⚡ Add excluded patterns
 
@@ -192,9 +190,8 @@ To add one or more excluded patterns, run this:
 archive-agent exclude "~/Documents/*.txt"
 ```
 
-**NOTE:** **Always use quotes** to prevent your shell's wildcard expansion.
-
-(Skip the pattern argument to get an interactive prompt.)
+🟠 **Note:** **Always use quotes** for the the pattern argument (to prevent your shell's wildcard expansion),
+**or skip it** to get an interactive prompt.
 
 ### ⚡ Remove included / excluded patterns
 
@@ -204,9 +201,8 @@ To remove one or more previously included / excluded patterns, run this:
 archive-agent remove "~/Documents/*.txt"
 ```
 
-**NOTE:** **Always use quotes** to prevent your shell's wildcard expansion.
-
-(Skip the pattern argument to get an interactive prompt.)
+🟠 **Note:** **Always use quotes** for the the pattern argument (to prevent your shell's wildcard expansion),
+**or skip it** to get an interactive prompt.
 
 ### ⚡ List included / excluded patterns
 
@@ -248,7 +244,7 @@ To sync changes to your files with the Qdrant database, run this:
 archive-agent commit
 ```
 
-**NOTE:** Changes are triggered by:
+💡 **Good to know:**  Changes are triggered by:
 - File added
 - File removed
 - File changed:
@@ -263,7 +259,7 @@ archive-agent search "Which files mention donuts?"
 
 Lists files matching the question.
 
-(Skip the question argument to get an interactive prompt.)
+🟠 **Note:** **Always use quotes** for the question argument, **or skip it** to get an interactive prompt.
 
 ### ⚡ Query your files
 
@@ -273,7 +269,7 @@ archive-agent query "Which files mention donuts?"
 
 Answers your question using RAG.
 
-(Skip the question argument to get an interactive prompt.)
+🟠 **Note:** **Always use quotes** for the question argument, **or skip it** to get an interactive prompt.
 
 ### ⚡ Launch Archive Agent GUI
 
@@ -283,9 +279,7 @@ To launch the **Archive Agent** GUI in your browser, run this:
 archive-agent gui
 ```
 
-Press `CTRL+C` in the console to close the GUI server.
-
-**NOTE:** The GUI currently supports queries only.
+🟠 **Note:** Press `CTRL+C` in the console to close the GUI server.
 
 ---
 
@@ -316,39 +310,35 @@ The default settings profile is located in `default/`:
 
 The Qdrant database is stored in `~/.archive-agent-qdrant-storage/`.
 
-**NOTE:** This folder is created by the Qdrant Docker image running as root.
+🟠 **Note:** This folder is created by the Qdrant Docker image running as root.
 
-Visit your [Qdrant dashboard](http://localhost:6333/dashboard#/collections) to manage collections and snapshots.
+💡 **Good to know:** Visit your [Qdrant dashboard](http://localhost:6333/dashboard#/collections) to manage collections and snapshots.
 
 ---
 
 ## 🔬 Testing and code analysis
 
-To run all tests, run this:
+To run unit tests, check types, and check style, run this:
 
 ```bash
-poetry run pytest
-```
-
-To perform static code analysis, run these commands:
-
-```bash
-poetry run pyright
-poetry run pycodestyle archive_agent tests
+./audit.sh
 ```
 
 ---
 
 ## 📖 Developer's guide
 
-**Archive Agent** was written from scratch for educational purposes.
+**Archive Agent** was written from scratch for educational purposes (on either end of the software).
 
 - The app context is initialized in [`archive_agent/core/ContextManager.py`](archive_agent/core/ContextManager.py)
 - The default config is defined in [`archive_agent/config/ConfigManager.py`](archive_agent/config/ConfigManager.py)  
 - The CLI commands are defined in [`archive_agent/__main__.py`](archive_agent/__main__.py)
+- The commit logic is implemented in [`archive_agent/core/CommitManager.py`](archive_agent/core/CommitManager.py)
 - The CLI verbosity can be adjusted in [`archive_agent/util/CliManager.py`](archive_agent/util/CliManager.py)
 - The GUI is implemented in [`archive_agent/core/GuiManager.py`](archive_agent/core/GuiManager.py)
-- The OpenAI API prompts for querying and vision are defined in [`archive_agent/openai_/OpenAiManager.py`](archive_agent/openai_/OpenAiManager.py) 
+- The AI API prompts for chunking, embedding, vision, and querying are defined in [`archive_agent/ai/AiManager.py`](archive_agent/ai/AiManager.py) 
+
+If you miss something or spot bad patterns, feel free to contribue and refactor!
 
 ---
 
@@ -364,22 +354,30 @@ poetry run pycodestyle archive_agent tests
 
 **Archive Agent** is fully functional right now and development is continuing. 
 
+Flexibility:
+- [ ] Use `llamaindex` to support more APIs beyond OpenAI (upgrade config).
+
+Modularity:
+- [ ] Implement **Archive Agent** FastAPI server, make CLI and GUI clients.
+
+Performance:
+- [ ] Implement API request parallel processor for [OpenAI API](https://github.com/openai/openai-cookbook/blob/main/examples/api_request_parallel_processor.py) (or `llamaindex`).
+
 Quality:
-- [ ] Overlapping blocks in smart chunking to prevent poorly cut trailing chunks
+- [ ] Use overlapping blocks in smart chunking to prevent poorly cut trailing chunks.
 
 Related to section [Launch Archive Agent GUI](#-launch-archive-agent-gui):
-- [ ] Extend GUI functionality
+- [ ] Extend GUI functionality beyond queries.
 
 Related to section [Storage](#-storage):
-- [ ] Command: Switch profiles (use folder other than `default/`)
-- [ ] Save answers to "answers" bucket, give include pattern hint
+- [ ] Command: Switch profiles (use folder other than `default/`).
+- [ ] Save answers to "answers" bucket (feed back).
 
 Chain-of-Thought mechanism:
-- [ ] Save follow-up questions to "questions" bucket
-- [ ] Command `auto [N]`: Query random question(s) from question bucket
+- [ ] Save follow-up questions to "questions" bucket.
+- [ ] Command `auto [N]`: Query random question(s) from question bucket.
 
-General improvements:
-- [ ] Implement [OpenAI API request parallel processor](https://github.com/openai/openai-cookbook/blob/main/examples/api_request_parallel_processor.py)
+Code Quality:
 - [ ] Improve test coverage
 
 ---
@@ -387,6 +385,8 @@ General improvements:
 ## 🐞 Known bugs
 
 - [ ] While `track` initially reports a file as *added*, subsequent `track` calls report it as *changed*. 
+
+
 - [ ] Removing and restoring a tracked file in the tracking phase is currently not handled properly:
   - Removing a tracked file sets `{size=0, mtime=0, diff=removed}`.
   - Restoring a tracked file sets `{size=X, mtime=Y, diff=added}`.

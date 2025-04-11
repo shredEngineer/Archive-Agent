@@ -3,19 +3,18 @@
 
 import json
 import logging
-from typing import Callable, List, Any
+from typing import Callable, List
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.pretty import Pretty
 
-# TODO: Use specific type; pyright doesn't like:
-#       from openai.types.responses.response import Response
-Response = Any
-
 from qdrant_client.models import ScoredPoint
 
-from archive_agent.schema import QuerySchema
+from archive_agent.ai.AiResult import AiResult
+
+from archive_agent.schema.QuerySchema import QuerySchema
+
 from archive_agent.util.format import format_file, format_time
 
 logger = logging.getLogger(__name__)
@@ -50,88 +49,103 @@ class CliManager:
             pretty = Pretty(data, expand_all=True)
             self.console.print(Panel(pretty, title="Structured output", border_style="white"))
         except json.JSONDecodeError:
-            self.console.print(Panel(f"[white]{text}", title="Raw output", border_style="red"))
+            self.console.print(Panel(f"{text}", title="Raw output", border_style="red"))
 
-    def format_openai_chunk(self, callback: Callable[[], Response], line_numbered_text: str) -> Response:
+    def format_openai_chunk(
+            self,
+            callback: Callable[[], AiResult],
+            line_numbered_text: str,
+    ) -> AiResult:
         """
-        Format OpenAI response of chunk callback.
-        :param callback: Chunk callback returning OpenAI response.
+        Format AI result of chunk callback.
+        :param callback: Chunk callback returning AI result.
         :param line_numbered_text: Text with line numbers.
-        :return: OpenAI response.
+        :return: AI result.
         """
         logger.info(f"Chunking...")
 
         if CliManager.VERBOSE_CHUNK:
-            self.console.print(Panel(f"[blue]{line_numbered_text}", title="Text", border_style="white"))
+            self.console.print(Panel(f"{line_numbered_text}", title="Text", border_style="white"))
 
-        response = callback()
+        result = callback()
 
         if CliManager.VERBOSE_CHUNK:
-            self.format_json(response.output_text)
+            self.format_json(result.output_text)
 
-        if CliManager.VERBOSE_USAGE and response.usage is not None:
-            logger.info(f"Used ({response.usage.total_tokens}) OpenAI API token(s) for chunking")
+        if CliManager.VERBOSE_USAGE:
+            logger.info(f"Used ({result.total_tokens}) AI API token(s) for chunking")
 
-        return response
+        return result
 
-    def format_openai_embed(self, callback: Callable[[], Response], chunk: str) -> Response:
+    def format_openai_embed(
+            self,
+            callback: Callable[[], AiResult],
+            chunk: str,
+    ) -> AiResult:
         """
-        Format OpenAI response of embed callback.
-        :param callback: Embed callback returning OpenAI response.
+        Format AI result of embed callback.
+        :param callback: Embed callback returning AI result.
         :param chunk: Chunk.
-        :return: OpenAI response.
+        :return: AI result.
         """
         logger.info(f"Embedding...")
 
         if CliManager.VERBOSE_EMBED:
             self.format_chunk(chunk)
 
-        response = callback()
+        result = callback()
 
-        if CliManager.VERBOSE_USAGE and response.usage is not None:
-            logger.info(f"Used ({response.usage.total_tokens}) OpenAI API token(s) for embedding")
+        if CliManager.VERBOSE_USAGE:
+            logger.info(f"Used ({result.total_tokens}) AI API token(s) for embedding")
 
-        return response
+        return result
 
-    def format_openai_query(self, callback: Callable[[], Response], prompt: str) -> Response:
+    def format_openai_query(
+            self,
+            callback: Callable[[], AiResult],
+            prompt: str,
+    ) -> AiResult:
         """
-        Format OpenAI response of query callback.
-        :param callback: Query callback returning OpenAI response.
+        Format AI result of query callback.
+        :param callback: Query callback returning AI result.
         :param prompt: Prompt.
-        :return: OpenAI response.
+        :return: AI result.
         """
         logger.info(f"Querying...")
 
         if CliManager.VERBOSE_QUERY:
-            self.console.print(Panel(f"[red]{prompt}", title="Query", border_style="white"))
+            self.console.print(Panel(f"{prompt}", title="Query", border_style="white"))
 
-        response = callback()
+        result = callback()
 
         if CliManager.VERBOSE_QUERY:
-            self.format_json(response.output_text)
+            self.format_json(result.output_text)
 
-        if CliManager.VERBOSE_USAGE and response.usage is not None:
-            logger.info(f"Used ({response.usage.total_tokens}) OpenAI API token(s) for query")
+        if CliManager.VERBOSE_USAGE:
+            logger.info(f"Used ({result.total_tokens}) AI API token(s) for query")
 
-        return response
+        return result
 
-    def format_openai_vision(self, callback: Callable[[], Response]) -> Response:
+    def format_openai_vision(
+            self,
+            callback: Callable[[], AiResult],
+    ) -> AiResult:
         """
-        Format OpenAI response of vision callback.
-        :param callback: Vision callback returning OpenAI response.
-        :return: OpenAI response.
+        Format AI result of vision callback.
+        :param callback: Vision callback returning AI result.
+        :return: AI result.
         """
         logger.info(f"Image vision...")
 
-        response = callback()
+        result = callback()
 
         if CliManager.VERBOSE_VISION:
-            self.format_json(response.output_text)
+            self.format_json(result.output_text)
 
-        if CliManager.VERBOSE_USAGE and response.usage is not None:
-            logger.info(f"Used ({response.usage.total_tokens}) OpenAI API token(s) for vision")
+        if CliManager.VERBOSE_USAGE:
+            logger.info(f"Used ({result.total_tokens}) AI API token(s) for vision")
 
-        return response
+        return result
 
     def format_points(self, points: List[ScoredPoint]) -> None:
         """
@@ -159,14 +173,14 @@ class CliManager:
         Format chunk.
         :param chunk: Chunk.
         """
-        self.console.print(Panel(f"[yellow]{chunk}", title="Chunk", border_style="white"))
+        self.console.print(Panel(f"{chunk}", title="Chunk", border_style="white"))
 
     def format_question(self, question: str) -> None:
         """
         Format question.
         :param question: Question.
         """
-        self.console.print(Panel(f"[white]{question}", title="Question", border_style="red"))
+        self.console.print(Panel(f"{question}", title="Question", border_style="red"))
 
     def format_answer(self, query_result: QuerySchema) -> str:
         """
@@ -176,7 +190,7 @@ class CliManager:
         """
         if query_result.reject:
             self.console.print(
-                Panel(f"[white]{query_result.rejection_reason}", title="Query rejected", border_style="red")
+                Panel(f"{query_result.rejection_reason}", title="Query rejected", border_style="red")
             )
             return ""
 
@@ -208,6 +222,6 @@ class CliManager:
             f"{follow_up_list_text}",
         ])
 
-        self.console.print(Panel(f"[white]{answer_text}", title="Answer", border_style="green"))
+        self.console.print(Panel(f"{answer_text}", title="Answer", border_style="green"))
 
         return answer_text

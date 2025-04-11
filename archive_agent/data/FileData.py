@@ -9,7 +9,7 @@ from PIL import Image
 
 from qdrant_client.models import PointStruct
 
-from archive_agent.openai_ import OpenAiManager
+from archive_agent.ai.AiManager import AiManager
 from archive_agent.util.image import is_image
 from archive_agent.util.text import is_text, load_text, is_pdf_document
 from archive_agent.util.pdf import load_pdf_document
@@ -27,18 +27,18 @@ class FileData:
 
     def __init__(
         self,
-        openai: OpenAiManager,
+        ai: AiManager,
         file_path: str,
         file_mtime: float,
     ):
         """
         Initialize file data.
-        :param openai: OpenAI manager.
+        :param ai: AI manager.
         :param file_path: File path.
         :param file_mtime: File modification time.
         """
-        self.openai = openai
-        self.chunk_lines_block = openai.chunk_lines_block
+        self.ai = ai
+        self.chunk_lines_block = ai.chunk_lines_block
 
         self.file_path = file_path
         self.file_mtime = file_mtime
@@ -77,7 +77,7 @@ class FileData:
 
         image_base64 = image_to_base64(image_possibly_resized)
 
-        vision_result = self.openai.vision(image_base64)
+        vision_result = self.ai.vision(image_base64)
 
         if vision_result.reject:
             logger.warning(f"Image rejected: {vision_result.rejection_reason}")
@@ -125,7 +125,7 @@ class FileData:
                 f"of {format_file(self.file_path)}"
             )
 
-            chunk_result = self.openai.chunk(block_of_sentences)
+            chunk_result = self.ai.chunk(block_of_sentences)
 
             # Append a sentinel value to simplify range slicing
             start_lines = chunk_result.chunk_start_lines + [len(block_of_sentences) + 1]
@@ -160,7 +160,7 @@ class FileData:
         for chunk_index, chunk in enumerate(chunks):
             logger.info(f"Processing chunk ({chunk_index + 1}) / ({len(chunks)}) of {format_file(self.file_path)}")
 
-            vector = self.openai.embed(chunk)
+            vector = self.ai.embed(chunk)
 
             self.points.append(
                 PointStruct(
