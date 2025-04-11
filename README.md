@@ -354,6 +354,9 @@ If you miss something or spot bad patterns, feel free to contribue and refactor!
 
 **Archive Agent** is fully functional right now and development is continuing. 
 
+Effectiveness:
+- [ ] Implement image vision cache (store image hash: image pairs, add only once). 
+
 Flexibility:
 - [ ] Use `llamaindex` to support more APIs beyond OpenAI (upgrade config).
 
