@@ -75,6 +75,8 @@ class FileData:
             logger.warning(f"Failed to resize {format_file(self.file_path)}")
             return None
 
+        logger.info(f"Image dimensions: ({image_possibly_resized.width} x {image_possibly_resized.height} px)")
+
         image_base64 = image_to_base64(image_possibly_resized)
 
         vision_result = self.ai.vision(image_base64)

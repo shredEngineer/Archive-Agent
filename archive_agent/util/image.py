@@ -54,12 +54,20 @@ def image_resize_safe(
     image_copy = image.copy()
     image_copy.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
 
+    if image_copy.width != image.width or image_copy.height != image.height:
+        logger.warning(
+            f"Resized image "
+            f"from ({image.width} x {image.height} px) "
+            f"to ({image_copy.width} x {image.height} px)"
+        )
+
     for quality in range(100, 0, -5):
         img_bytes = io.BytesIO()
         image_copy.save(img_bytes, format="JPEG", quality=quality)
         if img_bytes.tell() <= max_bytes:
             img_bytes.seek(0)
             return Image.open(img_bytes)
+        logger.warning(f"Reducing image quality to ({quality} %)")
 
     logger.warning(f"Failed to resize image: Too huge")
     return None
