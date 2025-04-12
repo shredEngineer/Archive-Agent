@@ -363,6 +363,10 @@ export ARCHIVE_AGENT_IMAGE_DEBUGGER=1
 Effectiveness:
 - [ ] Implement image vision cache (store image hash: image pairs, add only once). 
 
+Quality:
+- [ ] **Add strict OCR option for converting all PDF pages to JPG first.**  
+- [X] Use overlapping blocks in smart chunking to prevent poorly cut trailing chunks.
+
 Flexibility:
 - [ ] Use `llamaindex` to support more APIs beyond OpenAI (upgrade config).
 
@@ -371,9 +375,6 @@ Modularity:
 
 Performance:
 - [ ] Implement API request parallel processor for [OpenAI API](https://github.com/openai/openai-cookbook/blob/main/examples/api_request_parallel_processor.py) (or `llamaindex`).
-
-Quality:
-- [X] Use overlapping blocks in smart chunking to prevent poorly cut trailing chunks.
 
 Related to section [Launch Archive Agent GUI](#-launch-archive-agent-gui):
 - [ ] Extend GUI functionality beyond queries.

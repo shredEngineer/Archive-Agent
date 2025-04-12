@@ -2,23 +2,36 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import threading
-from typing import List, Tuple
-from PIL import Image, ImageTk
 import tkinter as tk
 from tkinter import ttk
+from typing import List, Tuple, Optional
+from PIL import Image, ImageTk
 
 
 IndexedImage = Tuple[Image.Image, int, int]
 
 
+_viewer_thread: Optional[threading.Thread] = None
+_thread_lock = threading.Lock()
+_stop_event = threading.Event()
+
+
 def show_images(images: List[IndexedImage]) -> None:
     """
-    Launch image viewer window in a new thread.
+    Launch image viewer window in a new thread, replacing any existing viewer.
 
     :param images: List of tuples (PIL.Image, page number, image index per page).
     """
-    thread = threading.Thread(target=_run_viewer, args=(images,), daemon=True)
-    thread.start()
+    global _viewer_thread
+
+    with _thread_lock:
+        if _viewer_thread and _viewer_thread.is_alive():
+            _stop_event.set()
+            _viewer_thread.join()
+
+        _stop_event.clear()
+        _viewer_thread = threading.Thread(target=_run_viewer, args=(images,), daemon=True)
+        _viewer_thread.start()
 
 
 def _run_viewer(images: List[IndexedImage]) -> None:
@@ -31,6 +44,12 @@ def _run_viewer(images: List[IndexedImage]) -> None:
     root = tk.Tk()
     root.title("Archive Agent: PDF Image Debugger")
     root.geometry("800x600")
+
+    def on_close() -> None:
+        _stop_event.set()
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", on_close)
 
     frame = ttk.Frame(root)
     frame.pack(fill="both", expand=True)
@@ -54,6 +73,10 @@ def _run_viewer(images: List[IndexedImage]) -> None:
     image_refs = []
 
     for img, page_num, img_index in images:
+        if _stop_event.is_set():
+            root.destroy()
+            return
+
         aspect_ratio = img.width / img.height
         height = min(img.height, max_height)
         width = int(height * aspect_ratio)
