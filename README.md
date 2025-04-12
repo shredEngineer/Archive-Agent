@@ -362,10 +362,10 @@ export ARCHIVE_AGENT_IMAGE_DEBUGGER=1
 
 Quality:
 - [ ] **Add strict OCR option to convert all PDF pages to JPG first.**  
+- [ ] **Add option to convert background images of PDF pages as well.**
 - [X] Use overlapping blocks in smart chunking to prevent poorly cut trailing chunks.
 
 - Fail-Safe:
-- [ ] **Add relaxed OCR option to ignore rejected images.**
 - [ ] Implement image vision cache (store image hash: image pairs, add only once).
 
 Flexibility:
