@@ -7,7 +7,7 @@ from pathlib import Path
 import streamlit as st
 
 from archive_agent.core.ContextManager import ContextManager
-from archive_agent.util.text import replace_file_uris_with_markdown
+from archive_agent.util.text_util import replace_file_uris_with_markdown
 
 logger = logging.getLogger(__name__)
 

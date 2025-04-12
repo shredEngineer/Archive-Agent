@@ -2,31 +2,16 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import logging
-import re
 import os
-import tempfile
-import urllib.parse
-from typing import Set, List, Optional
+from typing import Set, Optional
 
-import spacy
 import pypandoc
 from charset_normalizer import from_path
 
 from archive_agent.util.format import format_file
+from archive_agent.util.text_util import utf8_tempfile
 
 logger = logging.getLogger(__name__)
-
-
-def utf8_tempfile(text: str, suffix: str = ".txt") -> str:
-    """
-    Write UTF-8 text into a temporary file.
-    :param text: Text content.
-    :param suffix: File extension (e.g., '.html', '.md').
-    :return: Path to temporary file.
-    """
-    with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=suffix, delete=False) as tmp:
-        tmp.write(text)
-        return tmp.name
 
 
 def is_text(file_path: str) -> bool:
@@ -55,16 +40,6 @@ def is_document(file_path: str) -> bool:
     :return: True if the file path has a valid document extension, False otherwise.
     """
     extensions: Set[str] = {".odt", ".docx", ".rtf", ".html", ".htm"}
-    return any(file_path.lower().endswith(ext) for ext in extensions)
-
-
-def is_pdf_document(file_path: str) -> bool:
-    """
-    Checks if the given file path has a valid PDF document extension.
-    :param file_path: File path.
-    :return: True if the file path has a valid PDF document extension, False otherwise.
-    """
-    extensions: Set[str] = {".pdf"}
     return any(file_path.lower().endswith(ext) for ext in extensions)
 
 
@@ -129,73 +104,10 @@ def load_document(file_path: str) -> Optional[str]:
         return None
 
     finally:
+        assert tmp_path is not None
+
         try:
             if "tmp_path" in locals():
                 os.remove(tmp_path)
         except Exception as e:
             logger.debug(f"Failed to delete temporary file {tmp_path}: {e}")
-
-
-def split_sentences(text: str) -> List[str]:
-    """
-    Split text into sentences.
-    :param text: Text.
-    :return: Sentences.
-    """
-    nlp = spacy.load("xx_sent_ud_sm")
-    doc = nlp(text)
-    return [sent.text.strip() for sent in doc.sents]
-
-
-def sanitize_sentences(sentences: List[str]) -> List[str]:
-    """
-    Sanitize sentences (strip whitespace, split on newlines, ignore empty lines).
-    :param sentences: Sentences.
-    :return: Sanitized sentences.
-    """
-    result = []
-    for sentence in sentences:
-        for part in sentence.splitlines():
-            result.append(part.strip())
-    return result
-
-
-def group_blocks_of_sentences(sentences: List[str], sentences_per_block: int) -> List[List[str]]:
-    """
-    Group sentences into blocks of multiple sentences.
-    :param sentences: Sentences.
-    :param sentences_per_block: Sentences per block.
-    :return: Blocks of multiple sentences.
-    """
-    return [
-        sentences[i:i + sentences_per_block]
-        for i in range(0, len(sentences), sentences_per_block)
-    ]
-
-
-def prepend_line_numbers(sentences: List[str]) -> List[str]:
-    """
-    Prepend line numbers to sentences.
-    :param sentences: Sentences.
-    :return: Sentences with line numbers.
-    """
-    return [
-        f"{line_number + 1:<4}{sentence}"
-        for line_number, sentence in enumerate(sentences)
-    ]
-
-
-def replace_file_uris_with_markdown(text: str) -> str:
-    """
-    Replace file:// URIs with Markdown links.
-    :param text: Text.
-    :return: Markdown.
-    """
-    pattern = re.compile(r'file://[^\s\])]+')
-
-    def replacer(match):
-        uri = match.group(0)
-        decoded_path = urllib.parse.unquote(uri.replace('file://', ''))
-        return f'[{decoded_path}]({uri})'
-
-    return pattern.sub(replacer, text)

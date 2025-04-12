@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "archive-agent"
-version = "2.2.0"
+version = "2.3.0"
 description = "Archive Agent: Smart Indexer with RAG Engine"
 authors = ["Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>"]
 readme = "README.md"

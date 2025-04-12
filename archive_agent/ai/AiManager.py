@@ -13,7 +13,7 @@ from archive_agent.ai_schema.VisionSchema import VisionSchema
 
 from archive_agent.util.CliManager import CliManager
 from archive_agent.util.RetryManager import RetryManager
-from archive_agent.util.text import prepend_line_numbers
+from archive_agent.util.text_util import prepend_line_numbers
 
 logger = logging.getLogger(__name__)
 

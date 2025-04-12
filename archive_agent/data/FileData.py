@@ -11,7 +11,8 @@ from qdrant_client.models import PointStruct
 
 from archive_agent.ai.AiManager import AiManager
 from archive_agent.util.format import format_file
-from archive_agent.util.text import is_text, load_text, is_pdf_document
+from archive_agent.util.text import is_text, load_text
+from archive_agent.util.pdf import is_pdf_document
 from archive_agent.util.pdf import load_pdf_document
 from archive_agent.util.image import is_image, image_from_file, image_resize_safe, image_to_base64
 from archive_agent.util.chunk import split_into_blocks, chunk_start_to_ranges, extract_chunks_and_carry

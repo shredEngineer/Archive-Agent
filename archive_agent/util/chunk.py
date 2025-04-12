@@ -3,8 +3,7 @@
 
 from typing import List, Tuple
 
-from archive_agent.util.text import sanitize_sentences, split_sentences, group_blocks_of_sentences
-
+from archive_agent.util.text_util import split_sentences, sanitize_sentences, group_blocks_of_sentences
 
 SentenceRange = Tuple[int, int]
 

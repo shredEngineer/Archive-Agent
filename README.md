@@ -341,6 +341,11 @@ To run unit tests, check types, and check style, run this:
 
 If you miss something or spot bad patterns, feel free to contribue and refactor!
 
+💡 **Good to know:** To enable the PDF image debugger window, run this in your current shell:
+```bash
+export ARCHIVE_AGENT_IMAGE_DEBUGGER=1
+```
+
 ---
 
 ## 🍀 Collaborators welcome
