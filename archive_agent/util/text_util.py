@@ -9,12 +9,12 @@ from typing import List
 import spacy
 
 
-def utf8_tempfile(text: str, suffix: str = ".txt") -> str:
+def utf8_tempfile(text: str, suffix: str) -> str:
     """
     Write UTF-8 text into a temporary file.
-    :param text: Text content.
-    :param suffix: File extension (e.g., '.html', '.md').
-    :return: Path to temporary file.
+    :param text: Text.
+    :param suffix: File extension.
+    :return: Temporary file path.
     """
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=suffix, delete=False) as tmp:
         tmp.write(text)

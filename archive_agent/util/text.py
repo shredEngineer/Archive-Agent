@@ -84,7 +84,7 @@ def load_document(file_path: str) -> Optional[str]:
     """
     Load document file via Pandoc, after ensuring it is UTF-8 encoded.
     :param file_path: File path.
-    :return: UTF-8 decoded text, or None if failed.
+    :return: UTF-8 decoded text if successful, None otherwise.
     """
     ext = os.path.splitext(file_path)[1].lower()
     tmp_path: Optional[str] = None
@@ -93,6 +93,10 @@ def load_document(file_path: str) -> Optional[str]:
         raw_text = load_plaintext(file_path)
         if raw_text is None:
             return None
+
+        # Pandoc refuses `.htm` extension, so make it `.html`.
+        if ext == ".htm":
+            ext = ".html"
 
         tmp_path = utf8_tempfile(raw_text, suffix=ext)
 
