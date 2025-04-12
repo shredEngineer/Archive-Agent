@@ -242,4 +242,3 @@ class QdrantManager:
         answer_text = self.cli.format_answer(query_result)
 
         return query_result, answer_text
-    

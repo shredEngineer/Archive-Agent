@@ -42,7 +42,7 @@ def is_document(file_path: str) -> bool:
     :param file_path: File path.
     :return: True if the file path has a valid document extension, False otherwise.
     """
-    extensions: Set[str] = {".odt", ".docx", ".rtf", ".html"}
+    extensions: Set[str] = {".odt", ".docx", ".rtf", ".html", ".htm"}
     return any(file_path.lower().endswith(ext) for ext in extensions)
 
 

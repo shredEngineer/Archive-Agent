@@ -107,7 +107,7 @@ The default settings profile is created on the first run. (See [Storage](#-stora
 **Archive Agent** currently supports these file types:
 - Text:
   - Plaintext: `.txt`, `.md`
-  - Documents: `.odt`, `.docx`, `.rtf`, `.html`
+  - Documents: `.odt`, `.docx`, `.rtf`, `.html`, `.htm`
   - PDF documents: `.pdf`
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
 

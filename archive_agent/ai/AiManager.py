@@ -4,9 +4,8 @@
 import logging
 from typing import cast, List
 
-from openai import OpenAI, OpenAIError
-
 from archive_agent.ai.AiResult import AiResult
+from archive_agent.ai_provider.OpenAiProvider import OpenAiProvider
 
 from archive_agent.schema.ChunkSchema import ChunkSchema
 from archive_agent.schema.QuerySchema import QuerySchema
@@ -19,7 +18,7 @@ from archive_agent.util.text import prepend_line_numbers
 logger = logging.getLogger(__name__)
 
 
-class AiManager(RetryManager):
+class AiManager(RetryManager, OpenAiProvider):
     """
     AI manager.
     """
@@ -185,14 +184,6 @@ class AiManager(RetryManager):
         :param chunk_lines_block: Number of lines per block for chunking.
         """
         self.cli = cli
-        self.model_chunk = model_chunk
-        self.model_embed = model_embed
-        self.model_query = model_query
-        self.model_vision = model_vision
-        self.temp_query = temp_query
-        self.chunk_lines_block = chunk_lines_block
-
-        self.client = OpenAI()
 
         self.total_tokens_chunk = 0
         self.total_tokens_embed = 0
@@ -206,6 +197,16 @@ class AiManager(RetryManager):
             delay_max=60,
             backoff_exponent=2,
             retries=10,
+        )
+
+        OpenAiProvider.__init__(
+            self,
+            model_chunk=model_chunk,
+            model_embed=model_embed,
+            model_query=model_query,
+            model_vision=model_vision,
+            temp_query=temp_query,
+            chunk_lines_block=chunk_lines_block,
         )
 
     def usage(self) -> None:
@@ -232,49 +233,10 @@ class AiManager(RetryManager):
         :return: ChunkSchema.
         """
         line_numbered_text = "\n".join(prepend_line_numbers(sentences))
-
         prompt = self.get_prompt_chunk(line_numbered_text)
+        callback = lambda: self.chunk_callback(prompt)
 
-        def callback():
-            response = self.client.responses.create(
-                model=self.model_chunk,
-                temperature=0,
-                input=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "input_text",
-                                "text": prompt,
-                            },
-                        ],
-                    },
-                ],
-                text={
-                    "format": {
-                        "type": "json_schema",
-                        "name": ChunkSchema.__name__,
-                        "schema": ChunkSchema.model_json_schema(),
-                        "strict": True,
-                    },
-                },
-            )
-
-            if getattr(response, "refusal", None):
-                raise OpenAIError(getattr(response, "refusal", None))
-
-            try:
-                parsed_schema = ChunkSchema.model_validate_json(response.output[0].content[0].text)
-            except Exception as e:
-                raise OpenAIError(f"Invalid JSON: {e}")
-
-            return AiResult(
-                total_tokens=response.usage.total_tokens if response.usage else 0,  # check makes pyright happy
-                output_text=response.output_text,
-                parsed_schema=parsed_schema,
-            )
-
-        result = self.cli.format_openai_chunk(lambda: self.retry(callback), line_numbered_text)
+        result: AiResult = self.cli.format_openai_chunk(lambda: self.retry(callback), line_numbered_text)
         self.total_tokens_chunk += result.total_tokens
 
         assert result.parsed_schema is not None
@@ -290,17 +252,9 @@ class AiManager(RetryManager):
         :param text: Text.
         :return: Embedding vector.
         """
-        def callback():
-            response = self.client.embeddings.create(
-                input=text,
-                model=self.model_embed,
-            )
-            return AiResult(
-                total_tokens=response.usage.total_tokens,
-                embedding=response.data[0].embedding,
-            )
+        callback = lambda: self.embed_callback(text)
 
-        result = self.cli.format_openai_embed(lambda: self.retry(callback), text)
+        result: AiResult = self.cli.format_openai_embed(lambda: self.retry(callback), text)
         self.total_tokens_embed += result.total_tokens
         assert result.embedding is not None
         return result.embedding
@@ -313,47 +267,9 @@ class AiManager(RetryManager):
         :return: QuerySchema.
         """
         prompt = self.get_prompt_query(question, context)
+        callback = lambda: self.query_callback(prompt)
 
-        def callback():
-            response = self.client.responses.create(
-                model=self.model_query,
-                temperature=self.temp_query,
-                input=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "input_text",
-                                "text": prompt,
-                            },
-                        ],
-                    },
-                ],
-                text={
-                    "format": {
-                        "type": "json_schema",
-                        "name": QuerySchema.__name__,
-                        "schema": QuerySchema.model_json_schema(),
-                        "strict": True,
-                    },
-                },
-            )
-
-            if getattr(response, "refusal", None):
-                raise OpenAIError(getattr(response, "refusal", None))
-
-            try:
-                parsed_schema = QuerySchema.model_validate_json(response.output[0].content[0].text)
-            except Exception as e:
-                raise OpenAIError(f"Invalid JSON: {e}")
-
-            return AiResult(
-                total_tokens=response.usage.total_tokens if response.usage else 0,  # check makes pyright happy
-                output_text=response.output_text,
-                parsed_schema=parsed_schema,
-            )
-
-        result = self.cli.format_openai_query(lambda: self.retry(callback), prompt)
+        result: AiResult = self.cli.format_openai_query(lambda: self.retry(callback), prompt)
         self.total_tokens_query += result.total_tokens
         assert result.parsed_schema is not None
         result.parsed_schema = cast(QuerySchema, result.parsed_schema)
@@ -365,53 +281,10 @@ class AiManager(RetryManager):
         :param image_base64: Image as UTF-8 encoded Base64 string.
         :return: VisionSchema.
         """
+        prompt = self.get_prompt_vision()
+        callback = lambda: self.vision_callback(prompt, image_base64)
 
-        def callback():
-            response = self.client.responses.create(
-                model=self.model_vision,
-                input=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "input_text",
-                                "text": self.get_prompt_vision()
-                            },
-                            {
-                                "type": "input_image",
-                                "image_url": f"data:image/jpeg;base64,{image_base64}",
-                            },
-                        ],
-                    },
-                ],
-                text={
-                    "format": {
-                        "type": "json_schema",
-                        "name": VisionSchema.__name__,
-                        "schema": VisionSchema.model_json_schema(),
-                        "strict": True,
-                    },
-                },
-            )
-
-            if response.status == 'incomplete':
-                raise OpenAIError("Vision response incomplete, probably due to token limits")
-
-            if getattr(response, "refusal", None):
-                raise OpenAIError(getattr(response, "refusal", None))
-
-            try:
-                parsed_schema = VisionSchema.model_validate_json(response.output[0].content[0].text)
-            except Exception as e:
-                raise OpenAIError(f"Invalid JSON: {e}")
-
-            return AiResult(
-                total_tokens=response.usage.total_tokens if response.usage else 0,  # check makes pyright happy
-                output_text=response.output_text,
-                parsed_schema=parsed_schema,
-            )
-
-        result = self.cli.format_openai_vision(lambda: self.retry(callback))
+        result: AiResult = self.cli.format_openai_vision(lambda: self.retry(callback))
         self.total_tokens_vision += result.total_tokens
         assert result.parsed_schema is not None
         result.parsed_schema = cast(VisionSchema, result.parsed_schema)
