@@ -115,7 +115,9 @@ def extract_text_from_images_per_page(
                         continue
 
                     logger.info(f"Image ({i + 1}) on page ({index + 1}): Converting to text")
+
                     text = image_to_text_callback(img)
+
                     if text:
                         page_image_texts.append(f"[Image] {text}")
                     else:

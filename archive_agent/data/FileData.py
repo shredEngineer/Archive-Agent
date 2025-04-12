@@ -70,6 +70,10 @@ class FileData:
         :param image: Image.
         :return: Text if successful, None otherwise.
         """
+        if image.mode != "RGB":
+            logger.info(f"Converted image from '{image.mode}' to 'RGB'")
+            image = image.convert("RGB")
+
         image_possibly_resized = image_resize_safe(image)
         if image_possibly_resized is None:
             logger.warning(f"Failed to resize {format_file(self.file_path)}")
