@@ -87,7 +87,7 @@ class QdrantManager:
             return False
 
         if len(data.points) == 0:
-            logger.warning(f"Failed to add empty file")
+            logger.warning(f"Failed to add EMPTY file")
             return False
 
         try:
