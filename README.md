@@ -360,12 +360,13 @@ export ARCHIVE_AGENT_IMAGE_DEBUGGER=1
 
 **Archive Agent** is fully functional right now and development is continuing. 
 
-Effectiveness:
-- [ ] Implement image vision cache (store image hash: image pairs, add only once). 
-
 Quality:
-- [ ] **Add strict OCR option for converting all PDF pages to JPG first.**  
+- [ ] **Add strict OCR option to convert all PDF pages to JPG first.**  
 - [X] Use overlapping blocks in smart chunking to prevent poorly cut trailing chunks.
+
+- Fail-Safe:
+- [ ] **Add relaxed OCR option to ignore rejected images.**
+- [ ] Implement image vision cache (store image hash: image pairs, add only once).
 
 Flexibility:
 - [ ] Use `llamaindex` to support more APIs beyond OpenAI (upgrade config).
