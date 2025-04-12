@@ -21,7 +21,7 @@ from archive_agent.ai.AiManager import AiManager
 from archive_agent.data.FileData import FileData
 from archive_agent.util.CliManager import CliManager
 from archive_agent.util.format import format_time, format_file
-from archive_agent.schema.QuerySchema import QuerySchema
+from archive_agent.ai_schema.QuerySchema import QuerySchema
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ class QdrantManager:
         :return: True if successful, False otherwise.
         """
         if not quiet:
-            logger.info(f"--  ADDING  {format_file(file_path)}")
+            logger.info(f"- ADDING {format_file(file_path)}")
 
         data = FileData(ai=self.ai, file_path=file_path, file_mtime=file_mtime)
         if not data.process():
@@ -132,7 +132,7 @@ class QdrantManager:
             return True
 
         if not quiet:
-            logger.info(f"--  REMOVING ({count}) chunk(s) of  {format_file(file_path)}")
+            logger.info(f"- REMOVING ({count}) chunk(s) of {format_file(file_path)}")
 
         try:
             self.qdrant.delete(
@@ -161,7 +161,7 @@ class QdrantManager:
         :param file_mtime: File modification time.
         :return: True if successful, False otherwise.
         """
-        logger.info(f"--  CHANGING  {format_file(file_path)}")
+        logger.info(f"- CHANGING {format_file(file_path)}")
 
         successful_remove = self.remove(file_path, quiet=True)
         if not successful_remove:

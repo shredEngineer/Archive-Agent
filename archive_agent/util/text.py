@@ -2,19 +2,31 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import logging
+import re
 import os
+import tempfile
+import urllib.parse
 from typing import Set, List, Optional
 
 import spacy
 import pypandoc
 from charset_normalizer import from_path
 
-import re
-import urllib.parse
-
 from archive_agent.util.format import format_file
 
 logger = logging.getLogger(__name__)
+
+
+def utf8_tempfile(text: str, suffix: str = ".txt") -> str:
+    """
+    Write UTF-8 text into a temporary file.
+    :param text: Text content.
+    :param suffix: File extension (e.g., '.html', '.md').
+    :return: Path to temporary file.
+    """
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=suffix, delete=False) as tmp:
+        tmp.write(text)
+        return tmp.name
 
 
 def is_text(file_path: str) -> bool:
@@ -95,17 +107,33 @@ def load_plaintext(file_path: str) -> Optional[str]:
 
 def load_document(file_path: str) -> Optional[str]:
     """
-    Load document.
+    Load document file via Pandoc, after ensuring it is UTF-8 encoded.
     :param file_path: File path.
-    :return: Text if successful, None otherwise.
+    :return: UTF-8 decoded text, or None if failed.
     """
-    ext = os.path.splitext(file_path)[1].lower().lstrip(".")
+    ext = os.path.splitext(file_path)[1].lower()
+    tmp_path: Optional[str] = None
+
     try:
-        text = pypandoc.convert_file(file_path, to='plain', format=ext, extra_args=["--wrap=preserve"])
-        return text.encode('utf-8', errors='replace').decode('utf-8')
+        raw_text = load_plaintext(file_path)
+        if raw_text is None:
+            return None
+
+        tmp_path = utf8_tempfile(raw_text, suffix=ext)
+
+        text = pypandoc.convert_file(tmp_path, to="plain", format=ext.lstrip("."), extra_args=["--wrap=preserve"])
+        return text.encode("utf-8", errors="replace").decode("utf-8")
+
     except Exception as e:
-        logger.warning(f"Failed to convert {format_file(file_path)}: {e}")
+        logger.warning(f"Failed to convert {format_file(file_path)} via Pandoc: {e}")
         return None
+
+    finally:
+        try:
+            if "tmp_path" in locals():
+                os.remove(tmp_path)
+        except Exception as e:
+            logger.debug(f"Failed to delete temporary file {tmp_path}: {e}")
 
 
 def split_sentences(text: str) -> List[str]:

@@ -6,9 +6,9 @@ from openai import OpenAI, OpenAIError
 from archive_agent.ai_provider.AiProvider import AiProvider
 from archive_agent.ai.AiResult import AiResult
 
-from archive_agent.schema.ChunkSchema import ChunkSchema
-from archive_agent.schema.QuerySchema import QuerySchema
-from archive_agent.schema.VisionSchema import VisionSchema
+from archive_agent.ai_schema.ChunkSchema import ChunkSchema
+from archive_agent.ai_schema.QuerySchema import QuerySchema
+from archive_agent.ai_schema.VisionSchema import VisionSchema
 
 
 class OpenAiProvider(AiProvider):

@@ -10,12 +10,11 @@ from PIL import Image
 from qdrant_client.models import PointStruct
 
 from archive_agent.ai.AiManager import AiManager
-from archive_agent.util.image import is_image
+from archive_agent.util.format import format_file
 from archive_agent.util.text import is_text, load_text, is_pdf_document
 from archive_agent.util.pdf import load_pdf_document
-from archive_agent.util.format import format_file
-from archive_agent.util.text import split_sentences, sanitize_sentences, group_blocks_of_sentences
-from archive_agent.util.image import image_from_file, image_resize_safe, image_to_base64
+from archive_agent.util.image import is_image, image_from_file, image_resize_safe, image_to_base64
+from archive_agent.util.chunk import split_into_blocks, chunk_start_to_ranges, extract_chunks_and_carry
 
 logger = logging.getLogger(__name__)
 
@@ -110,38 +109,36 @@ class FileData:
 
     def chunks(self, text: str) -> List[str]:
         """
-        Split text into chunks.
+        Split text into chunks, with soft merging between block boundaries.
         :param text: Text.
         :return: Chunks.
         """
-        sentences = sanitize_sentences(split_sentences(text))
+        blocks_of_sentences = split_into_blocks(text, self.chunk_lines_block)
 
-        blocks_of_sentences = group_blocks_of_sentences(sentences, self.chunk_lines_block)
+        chunks: List[str] = []
+        carry: str | None = None
 
-        chunks = []
         for block_index, block_of_sentences in enumerate(blocks_of_sentences):
             logger.info(
                 f"Chunking block ({block_index + 1}) / ({len(blocks_of_sentences)}) "
                 f"of {format_file(self.file_path)}"
             )
 
+            if carry:
+                logger.info(f"Carrying over ({len(carry.splitlines())}) lines")
+                block_of_sentences = carry.splitlines() + block_of_sentences
+
             chunk_result = self.ai.chunk(block_of_sentences)
 
-            # Append a sentinel value to simplify range slicing
-            start_lines = chunk_result.chunk_start_lines + [len(block_of_sentences) + 1]
+            ranges = chunk_start_to_ranges(chunk_result.chunk_start_lines, len(block_of_sentences))
 
-            block_chunks = [
-                "\n".join(block_of_sentences[start - 1:end - 1])
-                for start, end in zip(start_lines, start_lines[1:])
-            ]
-
-            for i, chunk in enumerate(block_chunks):
-                if len(chunk) > 5000:  # Adjust threshold as needed
-                    logger.warning(
-                        f"Chunk ({i + 1}) in block ({block_index + 1}) is very large: ({len(chunk)}) characters"
-                    )
+            block_chunks, carry = extract_chunks_and_carry(block_of_sentences, ranges)
 
             chunks += block_chunks
+
+        if carry:
+            logger.info(f"Appending final carry of ({len(carry.splitlines())}) lines")
+            chunks.append(carry)
 
         return chunks
 

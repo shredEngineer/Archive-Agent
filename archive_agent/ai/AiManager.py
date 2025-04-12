@@ -7,9 +7,9 @@ from typing import cast, List
 from archive_agent.ai.AiResult import AiResult
 from archive_agent.ai_provider.OpenAiProvider import OpenAiProvider
 
-from archive_agent.schema.ChunkSchema import ChunkSchema
-from archive_agent.schema.QuerySchema import QuerySchema
-from archive_agent.schema.VisionSchema import VisionSchema
+from archive_agent.ai_schema.ChunkSchema import ChunkSchema
+from archive_agent.ai_schema.QuerySchema import QuerySchema
+from archive_agent.ai_schema.VisionSchema import VisionSchema
 
 from archive_agent.util.CliManager import CliManager
 from archive_agent.util.RetryManager import RetryManager

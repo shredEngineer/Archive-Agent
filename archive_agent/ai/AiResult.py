@@ -4,9 +4,9 @@
 from typing import Optional, List
 from dataclasses import dataclass, field
 
-from archive_agent.schema.ChunkSchema import ChunkSchema
-from archive_agent.schema.QuerySchema import QuerySchema
-from archive_agent.schema.VisionSchema import VisionSchema
+from archive_agent.ai_schema.ChunkSchema import ChunkSchema
+from archive_agent.ai_schema.QuerySchema import QuerySchema
+from archive_agent.ai_schema.VisionSchema import VisionSchema
 
 
 @dataclass

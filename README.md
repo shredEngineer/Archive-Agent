@@ -127,6 +127,7 @@ Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
 - Decoded text is sanitized and split into sentences.
 - Sentences are grouped into reasonably-sized blocks.
 - **Each block is split into smaller chunks using an AI model.**
+  - Block boundaries are handled gracefully (last chunk carries over).
 - Each chunk is turned into a vector using AI embeddings.
 - Each vector is turned into a *point* with file metadata.
 - Each *point* is stored in the Qdrant database.
@@ -367,7 +368,7 @@ Performance:
 - [ ] Implement API request parallel processor for [OpenAI API](https://github.com/openai/openai-cookbook/blob/main/examples/api_request_parallel_processor.py) (or `llamaindex`).
 
 Quality:
-- [ ] Use overlapping blocks in smart chunking to prevent poorly cut trailing chunks.
+- [X] Use overlapping blocks in smart chunking to prevent poorly cut trailing chunks.
 
 Related to section [Launch Archive Agent GUI](#-launch-archive-agent-gui):
 - [ ] Extend GUI functionality beyond queries.

@@ -13,7 +13,7 @@ from qdrant_client.models import ScoredPoint
 
 from archive_agent.ai.AiResult import AiResult
 
-from archive_agent.schema.QuerySchema import QuerySchema
+from archive_agent.ai_schema.QuerySchema import QuerySchema
 
 from archive_agent.util.format import format_file, format_time
 
