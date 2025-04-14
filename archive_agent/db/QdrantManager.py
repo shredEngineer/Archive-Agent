@@ -95,7 +95,7 @@ class QdrantManager:
         total_points = len(data.points)
         for i in range(0, total_points, partial_size):
             points_partial = data.points[i:i + partial_size]
-            logger.info(f"Adding points [{i + 1} : {i + len(points_partial)}] / ({total_points})")
+            logger.info(f"Adding vector(s) [{i + 1} : {i + len(points_partial)}] / ({total_points})")
             try:
                 self.qdrant.upsert(collection_name=self.collection, points=points_partial)
             except UnexpectedResponse as e:
