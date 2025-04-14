@@ -90,11 +90,18 @@ class QdrantManager:
             logger.warning(f"Failed to add EMPTY file")
             return False
 
-        try:
-            self.qdrant.upsert(collection_name=self.collection, points=data.points)
-        except UnexpectedResponse as e:
-            logger.error(f"Qdrant add failed: '{e}'")
-            return False
+        partial_size = 100
+        num_points_added = 0
+        total_points = len(data.points)
+        for i in range(0, total_points, partial_size):
+            points_partial = data.points[i:i + partial_size]
+            logger.info(f"Adding points [{i + 1} : {i + len(points_partial)}] / ({total_points})")
+            try:
+                self.qdrant.upsert(collection_name=self.collection, points=points_partial)
+            except UnexpectedResponse as e:
+                logger.error(f"Qdrant add failed: {e}")
+                return False
+            num_points_added += len(points_partial)
 
         logger.info(f"({len(data.points)}) vector(s) added")
         return True
@@ -123,7 +130,7 @@ class QdrantManager:
             )
             count = count_result.count
         except UnexpectedResponse as e:
-            logger.error(f"Qdrant count failed: '{e}'")
+            logger.error(f"Qdrant count failed: {e}")
             return False
 
         if count == 0:
@@ -149,7 +156,7 @@ class QdrantManager:
                 ),
             )
         except UnexpectedResponse as e:
-            logger.error(f"Qdrant delete failed: '{e}'")
+            logger.error(f"Qdrant delete failed: {e}")
             return False
 
         return True
@@ -192,7 +199,7 @@ class QdrantManager:
                 with_payload=True,
             )
         except UnexpectedResponse as e:
-            logger.error(f"Qdrant query failed: '{e}'")
+            logger.error(f"Qdrant query failed: {e}")
             raise typer.Exit(code=1)
 
         self.cli.format_points(response.points)
@@ -217,7 +224,7 @@ class QdrantManager:
                 with_payload=True,
             )
         except UnexpectedResponse as e:
-            logger.error(f"Qdrant query failed: '{e}'")
+            logger.error(f"Qdrant query failed: {e}")
             raise typer.Exit(code=1)
 
         self.cli.format_points(response.points)
