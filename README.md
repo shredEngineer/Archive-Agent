@@ -28,6 +28,10 @@
 
 ---
 
+**Looking for the command reference? See: [Run Archive Agent](#-run-archive-agent)**
+
+---
+
 ## ⚙️ Install Requirements
 
 - [Docker](https://docs.docker.com/engine/install/) *(for running Qdrant server)*
@@ -117,7 +121,7 @@ docker pull qdrant/qdrant
 
 ---
 
-## 🚀 Run Archive Agent
+## 🧠 How Archive Agent works
 
 The default settings profile is created on the first run. (See [Storage](#-storage) section.)
 
@@ -131,11 +135,10 @@ The default settings profile is created on the first run. (See [Storage](#-stora
     - Binary documents: `.odt`, `.docx`
       - Embedded images are decoded to text
   - PDF documents: `.pdf`
-    - Embedded images are decoded to text
+    - Embedded foreground images are decoded to text
+    - Embedded background images are ignored; see [Notes on PDF documents](#-notes-on-pdfs)
+    - See: 
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
-
-📌 **Note:** Embedded background images in PDF documents are ignored.
-If you need full-page OCR, enable *strict OCR mode* in [settings](#-storage).
 
 Ultimately, **Archive Agent** decodes everything to text like this:
 - Text files are decoded to UTF-8, regardless of original encoding.
@@ -146,6 +149,16 @@ Ultimately, **Archive Agent** decodes everything to text like this:
 Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
 
 📌 **Note:** Unsupported files are tracked but not processed.
+
+### ℹ️ Notes on PDF documents
+
+Embedded background images in PDF documents are ignored.
+
+This is to avoid redundancy in the chunks generated from scanned documents where the background layer has a corresponding OCR text layer; usually, the OCR text layer already contains (most of) the required information.
+
+If you need full-page OCR, enable **strict OCR mode** in the [settings](#-storage).
+
+(By default, **strict OCR mode** is disabled to save time and tokens for AI vision.)
 
 ### ℹ️ How files are processed
 
@@ -189,6 +202,10 @@ There are *included patterns* and *excluded patterns*:
 - Hidden files are always ignored!
 
 This approach gives you the best control over the specific files or file types to track.
+
+---
+
+## 🚀 Run Archive Agent
 
 ### ⚡ List usage info
 
