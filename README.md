@@ -28,7 +28,7 @@
 
 ---
 
-**Looking for the command reference? See: [Run Archive Agent](#-run-archive-agent)**
+⚡ **Looking for the command reference? See: [Run Archive Agent](#-run-archive-agent)**
 
 ---
 
@@ -136,7 +136,7 @@ The default settings profile is created on the first run. (See [Storage](#-stora
       - Embedded images are decoded to text
   - PDF documents: `.pdf`
     - Embedded foreground images are decoded to text
-    - Embedded background images are ignored; see [Notes on PDF documents](#-notes-on-pdfs)
+    - Embedded background images are ignored; see [Notes on PDF documents](#-notes-on-pdf-documents)
     - See: 
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
 
