@@ -3,20 +3,19 @@
 
 from typing import List, Tuple
 
-from archive_agent.util.text_util import split_sentences, sanitize_sentences, group_blocks_of_sentences
+from archive_agent.util.text_util import split_sentences, group_blocks_of_sentences
 
 SentenceRange = Tuple[int, int]
 
 
 def split_into_blocks(text: str, lines_per_block: int) -> List[List[str]]:
     """
-    Sanitize and split text into blocks of sentences.
-
+    Split text into blocks of sentences.
     :param text: Raw text.
     :param lines_per_block: Number of lines per block.
     :return: List of blocks (each block is a list of sentences).
     """
-    sentences = sanitize_sentences(split_sentences(text))
+    sentences = split_sentences(text)
     return group_blocks_of_sentences(sentences, lines_per_block)
 
 

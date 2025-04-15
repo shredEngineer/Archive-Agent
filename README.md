@@ -269,6 +269,14 @@ archive-agent commit
   - Different file size
   - Different modification date
 
+### ⚡ Combined track and commit
+
+To `track` and then `commit` in one go, run this:
+
+```bash
+archive-agent update
+```
+
 ### ⚡ Search your files
 
 ```bash

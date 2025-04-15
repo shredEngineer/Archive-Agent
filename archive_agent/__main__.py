@@ -120,6 +120,20 @@ def commit() -> None:
 
 
 @app.command()
+def update() -> None:
+    """
+    `track` and then `commit` in one go.
+    """
+    context = ContextManager()
+
+    context.watchlist.track()
+
+    context.committer.commit()
+
+    context.ai.usage()
+
+
+@app.command()
 def search(question: str = typer.Argument(None)) -> None:
     """
     List files matching the question.

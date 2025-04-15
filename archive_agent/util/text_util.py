@@ -40,25 +40,21 @@ def replace_file_uris_with_markdown(text: str) -> str:
 def split_sentences(text: str) -> List[str]:
     """
     Split text into sentences.
+    All lines are joined into a single paragraph before splitting.
+    This avoids SpaCy treating line breaks as hard sentence stops.
     :param text: Text.
     :return: Sentences.
     """
     nlp = spacy.load("xx_sent_ud_sm")
-    doc = nlp(text)
-    return [sent.text.strip() for sent in doc.sents]
+    if not nlp.has_pipe("sentencizer"):
+        nlp.add_pipe("sentencizer")
 
+    # Join all non-empty lines with a space, flattening paragraphs.
+    flat_text = " ".join(line.strip() for line in text.splitlines() if line.strip())
 
-def sanitize_sentences(sentences: List[str]) -> List[str]:
-    """
-    Sanitize sentences (strip whitespace, split on newlines, ignore empty lines).
-    :param sentences: Sentences.
-    :return: Sanitized sentences.
-    """
-    result = []
-    for sentence in sentences:
-        for part in sentence.splitlines():
-            result.append(part.strip())
-    return result
+    doc = nlp(flat_text)
+    sentences = [sent.text.strip() for sent in doc.sents]
+    return sentences
 
 
 def group_blocks_of_sentences(sentences: List[str], sentences_per_block: int) -> List[List[str]]:
