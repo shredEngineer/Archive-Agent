@@ -142,7 +142,7 @@ The [default settings profile](#-storage) is created on the first run.
     - Embedded background images are ignored (see note below)
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
 
-📌 **Note:** Embedded background images in PDF documents are ignored. This is to avoid redundancy in the chunks generated from scanned documents where the background layer has a corresponding OCR text layer; usually, the OCR text layer already contains (most of) the required information. **If you need full-page OCR, enable *strict OCR mode* in the [settings](#-storage). Generally, *strict OCR mode* gives the best transcription results at the expense of time and tokens for AI vision.**
+📌 **Note:** Embedded background images in PDF documents are ignored. This is to avoid redundancy in the chunks generated from scanned documents where the background layer has a corresponding OCR text layer; usually, the OCR text layer already contains (most of) the required information. **However, if you do need full-page OCR, enable *strict OCR mode* in the [settings](#-storage). Generally, *strict OCR mode* gives the best transcription results, but consumes more time and tokens for AI vision.**
 
 ### ℹ️ How files are processed
 
