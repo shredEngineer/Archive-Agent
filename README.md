@@ -1,3 +1,5 @@
+🍀 **[BETA TESTERS WELCOME!](#-collaborators-welcome)**
+
 # 🧠 Archive Agent
 
 **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**
@@ -6,8 +8,6 @@
   - **Coming soon:** Support for further AI providers.
 - Qdrant *(running locally)* for storage and search 
 - Fast and effective semantic chunking (**smart chunking**)
-
-🍀 **[BETA TESTERS WELCOME!](#-collaborators-welcome)**
 
 ![Archive Agent Logo](archive_agent/assets/Archive-Agent-400x300.png)
 
