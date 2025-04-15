@@ -4,6 +4,8 @@
 import typer
 import logging
 
+from archive_agent.ai.AiManager import AiManager
+
 from archive_agent.data.FileData import FileData
 
 from archive_agent.db.QdrantManager import QdrantManager
@@ -20,13 +22,15 @@ class CommitManager:
     Commit manager.
     """
 
-    def __init__(self, watchlist: WatchlistManager, qdrant: QdrantManager):
+    def __init__(self, watchlist: WatchlistManager, ai: AiManager, qdrant: QdrantManager):
         """
         Initialize commit manager.
         :param watchlist: Watchlist manager.
+        :param ai: AI manager.
         :param qdrant: Qdrant manager.
         """
         self.watchlist = watchlist
+        self.ai = ai
         self.qdrant = qdrant
 
     def commit(self) -> None:
@@ -45,8 +49,13 @@ class CommitManager:
         """
         tracked = self.watchlist.diff_filter(diff_option)
 
-        tracked_unprocessable = {f: m for f, m in tracked.items() if not FileData.is_processable(f)}
-        tracked_processable = {f: m for f, m in tracked.items() if FileData.is_processable(f)}
+        tracked_file_data = [
+            FileData(ai=self.ai, file_path=file_path, file_meta=file_meta)
+            for file_path, file_meta in tracked.items()
+        ]
+
+        tracked_unprocessable = [file_data for file_data in tracked_file_data if not file_data.is_processable()]
+        tracked_processable = [file_data for file_data in tracked_file_data if file_data.is_processable()]
 
         if len(tracked) == 0:
             logger.info(f"No {cli_hint} files to commit")
@@ -54,25 +63,25 @@ class CommitManager:
         else:
             logger.info(f"Committing ({len(tracked)}) {cli_hint} file(s)...")
 
-            for file_path, meta in tracked_unprocessable.items():
-                logger.warning(f"Unprocessable {format_file(file_path)}")
-                if meta['diff'] == self.watchlist.DIFF_REMOVED:
-                    _success = self.qdrant.remove(file_path)
-                    self.watchlist.diff_mark_resolved(file_path)
+            for file_data in tracked_unprocessable:
+                logger.warning(f"IGNORING unprocessable {format_file(file_data.file_path)}")
+                if file_data.file_meta['diff'] == self.watchlist.DIFF_REMOVED:
+                    _success = self.qdrant.remove(file_data)
+                    self.watchlist.diff_mark_resolved(file_data)
 
-            for file_path, meta in tracked_processable.items():
+            for file_data in tracked_processable:
                 match diff_option:
                     case self.watchlist.DIFF_ADDED:
-                        if self.qdrant.add(file_path, meta['mtime']):
-                            self.watchlist.diff_mark_resolved(file_path)
+                        if self.qdrant.add(file_data):
+                            self.watchlist.diff_mark_resolved(file_data)
 
                     case self.watchlist.DIFF_CHANGED:
-                        if self.qdrant.change(file_path, meta['mtime']):
-                            self.watchlist.diff_mark_resolved(file_path)
+                        if self.qdrant.change(file_data):
+                            self.watchlist.diff_mark_resolved(file_data)
 
                     case self.watchlist.DIFF_REMOVED:
-                        if self.qdrant.remove(file_path):
-                            self.watchlist.diff_mark_resolved(file_path)
+                        if self.qdrant.remove(file_data):
+                            self.watchlist.diff_mark_resolved(file_data)
 
                     case _:
                         logger.error(f"Invalid diff option: '{diff_option}'")

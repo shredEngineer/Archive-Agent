@@ -11,11 +11,12 @@ class AiProvider(ABC):
     AI provider.
     """
 
-    def __init__(self):
+    def __init__(self, supports_vision: bool):
         """
         Initialize AI provider.
+        :param supports_vision: Flag to indicate whether the AI supports vision.
         """
-        pass
+        self.supports_vision = supports_vision
 
     @abstractmethod
     def chunk_callback(self, prompt) -> AiResult:

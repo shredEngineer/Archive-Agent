@@ -3,7 +3,7 @@
 
 import logging
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from PIL import Image
 
@@ -29,36 +29,34 @@ class FileData:
         self,
         ai: AiManager,
         file_path: str,
-        file_mtime: float,
+        file_meta: Dict[str, Any],
     ):
         """
         Initialize file data.
         :param ai: AI manager.
         :param file_path: File path.
-        :param file_mtime: File modification time.
+        :param file_meta: File metadata.
         """
         self.ai = ai
         self.chunk_lines_block = ai.chunk_lines_block
 
         self.file_path = file_path
-        self.file_mtime = file_mtime
+        self.file_meta = file_meta
 
         self.points: List[PointStruct] = []
 
-    @staticmethod
-    def is_processable(file_path: str) -> bool:
+    def is_processable(self) -> bool:
         """
-        Checks if the given file path is processable.
-        :param file_path: File path.
-        :return: True if the file path is processable, False otherwise.
+        Checks if the file is processable.
+        :return: True if the file is processable, False otherwise.
         """
-        if is_image(file_path):
+        if is_image(self.file_path) and self.ai.supports_vision:
             return True
 
-        elif is_text(file_path):
+        elif is_text(self.file_path):
             return True
 
-        elif is_pdf_document(file_path):
+        elif is_pdf_document(self.file_path):
             return True
 
         else:
@@ -172,7 +170,7 @@ class FileData:
                     vector=vector,
                     payload={
                         'file_path': self.file_path,
-                        'file_mtime': self.file_mtime,
+                        'file_mtime': self.file_meta['mtime'],
                         'chunk_index': chunk_index,
                         'chunks_total': len(chunks),
                         'chunk_text': chunk,

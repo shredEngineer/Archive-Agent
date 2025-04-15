@@ -30,11 +30,11 @@ class OpenAiProvider(AiProvider):
         :param model_chunk: Model for chunking.
         :param model_embed: Model for embeddings.
         :param model_query: Model for queries.
-        :param model_vision: Model for vision.
+        :param model_vision: Model for vision (leave empty to disable vision support).
         :param temp_query: Temperature of query model.
         :param chunk_lines_block: Number of lines per block for chunking.
         """
-        AiProvider.__init__(self)
+        AiProvider.__init__(self, supports_vision=model_vision != "")
 
         self.model_chunk = model_chunk
         self.model_embed = model_embed

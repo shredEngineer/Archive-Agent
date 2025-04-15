@@ -107,7 +107,9 @@ The default settings profile is created on the first run. (See [Storage](#-stora
 **Archive Agent** currently supports these file types:
 - Text:
   - Plaintext: `.txt`, `.md`
-  - Documents: `.odt`, `.docx`, `.rtf`, `.html`, `.htm`
+  - Documents:
+    - ASCII documents: `.html`, `.htm`
+    - Binary documents: `.odt`, `.docx`, `.rtf`
   - PDF documents: `.pdf`
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
 
@@ -363,9 +365,8 @@ export ARCHIVE_AGENT_IMAGE_DEBUGGER=1
 Quality:
 - [ ] **Add strict OCR option to convert all PDF pages to JPG first.**  
 - [ ] **Add option to convert background images of PDF pages as well.**
-- [X] Use overlapping blocks in smart chunking to prevent poorly cut trailing chunks.
 
-- Fail-Safe:
+Fail-Safe:
 - [ ] Implement image vision cache (store image hash: image pairs, add only once).
 
 Flexibility:

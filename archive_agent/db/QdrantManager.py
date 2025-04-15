@@ -70,31 +70,29 @@ class QdrantManager:
         else:
             logger.info(f"Connected to Qdrant collection: '{collection}'")
 
-    def add(self, file_path: str, file_mtime: float, quiet: bool = False) -> bool:
+    def add(self, file_data: FileData, quiet: bool = False) -> bool:
         """
         Add file to Qdrant collection.
-        :param file_path: File path.
-        :param file_mtime: File modification time.
+        :param file_data: File data.
         :param quiet: Quiet output if True.
         :return: True if successful, False otherwise.
         """
         if not quiet:
-            logger.info(f"- ADDING {format_file(file_path)}")
+            logger.info(f"- ADDING {format_file(file_data.file_path)}")
 
-        data = FileData(ai=self.ai, file_path=file_path, file_mtime=file_mtime)
-        if not data.process():
+        if not file_data.process():
             logger.warning(f"Failed to add file")
             return False
 
-        if len(data.points) == 0:
+        if len(file_data.points) == 0:
             logger.warning(f"Failed to add EMPTY file")
             return False
 
         partial_size = 100
         num_points_added = 0
-        total_points = len(data.points)
+        total_points = len(file_data.points)
         for i in range(0, total_points, partial_size):
-            points_partial = data.points[i:i + partial_size]
+            points_partial = file_data.points[i:i + partial_size]
             logger.info(f"Adding vector(s) [{i + 1} : {i + len(points_partial)}] / ({total_points})")
             try:
                 self.qdrant.upsert(collection_name=self.collection, points=points_partial)
@@ -103,17 +101,17 @@ class QdrantManager:
                 return False
             num_points_added += len(points_partial)
 
-        logger.info(f"({len(data.points)}) vector(s) added")
+        logger.info(f"({len(file_data.points)}) vector(s) added")
         return True
 
-    def remove(self, file_path: str, quiet: bool = False) -> bool:
+    def remove(self, file_data: FileData, quiet: bool = False) -> bool:
         """
         Remove file from Qdrant collection.
-        :param file_path: File path.
+        :param file_data: File data.
         :param quiet: Quiet output if True.
         :return: True if successful, False otherwise.
         """
-        logger.debug(f"Counting chunks for {format_file(file_path)}")
+        logger.debug(f"Counting chunks for {format_file(file_data.file_path)}")
 
         try:
             count_result = self.qdrant.count(
@@ -122,7 +120,7 @@ class QdrantManager:
                     must=[
                         FieldCondition(
                             key='file_path',
-                            match=MatchValue(value=file_path),
+                            match=MatchValue(value=file_data.file_path),
                         ),
                     ],
                 ),
@@ -135,11 +133,11 @@ class QdrantManager:
 
         if count == 0:
             if not quiet:
-                logger.warning(f"No chunks found for {format_file(file_path)}")
+                logger.warning(f"No chunks found for {format_file(file_data.file_path)}")
             return True
 
         if not quiet:
-            logger.info(f"- REMOVING ({count}) chunk(s) of {format_file(file_path)}")
+            logger.info(f"- REMOVING ({count}) chunk(s) of {format_file(file_data.file_path)}")
 
         try:
             self.qdrant.delete(
@@ -149,7 +147,7 @@ class QdrantManager:
                         must=[
                             FieldCondition(
                                 key='file_path',
-                                match=MatchValue(value=file_path),
+                                match=MatchValue(value=file_data.file_path),
                             ),
                         ],
                     ),
@@ -161,20 +159,19 @@ class QdrantManager:
 
         return True
 
-    def change(self, file_path: str, file_mtime: float) -> bool:
+    def change(self, file_data: FileData) -> bool:
         """
         Change file in Qdrant collection.
-        :param file_path: File path.
-        :param file_mtime: File modification time.
+        :param file_data: File data.
         :return: True if successful, False otherwise.
         """
-        logger.info(f"- CHANGING {format_file(file_path)}")
+        logger.info(f"- CHANGING {format_file(file_data.file_path)}")
 
-        successful_remove = self.remove(file_path, quiet=True)
+        successful_remove = self.remove(file_data, quiet=True)
         if not successful_remove:
             return False
 
-        successful_add = self.add(file_path, file_mtime, quiet=True)
+        successful_add = self.add(file_data, quiet=True)
         if not successful_add:
             return False
 

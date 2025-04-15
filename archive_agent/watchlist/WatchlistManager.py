@@ -8,6 +8,7 @@ from pathlib import Path
 from copy import deepcopy
 from typing import Dict, Any
 
+from archive_agent.data.FileData import FileData
 from archive_agent.util.StorageManager import StorageManager
 from archive_agent.util.format import format_file
 from archive_agent.util.pattern import validate_pattern, resolve_pattern
@@ -48,7 +49,7 @@ class WatchlistManager(StorageManager):
             logger.error("Overlapping included and excluded patterns")
             return False
 
-        if any(meta['diff'] not in self.DIFF_OPTIONS for meta in self.data['tracked'].values()):
+        if any(file_meta['diff'] not in self.DIFF_OPTIONS for file_meta in self.data['tracked'].values()):
             logger.error("Invalid diff option encountered")
             return False
 
@@ -226,7 +227,11 @@ class WatchlistManager(StorageManager):
         :param diff_option: Diff option to filter for.
         :return: Filtered files.
         """
-        return {file: meta for file, meta in self.data['tracked'].items() if meta['diff'] == diff_option}
+        return {
+            file_path: file_meta
+            for file_path, file_meta in self.data['tracked'].items()
+            if file_meta['diff'] == diff_option
+        }
 
     def diff(self) -> None:
         """
@@ -257,23 +262,23 @@ class WatchlistManager(StorageManager):
         else:
             logger.info("(0) removed file(s)")
 
-    def diff_mark_resolved(self, file_path) -> None:
+    def diff_mark_resolved(self, file_data: FileData) -> None:
         """
         Mark file in diff as resolved.
         If the file was deleted, untrack it completely.
-        :param file_path: File path.
+        :param file_data: File data.
         """
-        if file_path not in self.data['tracked']:
-            logger.error(f"Untracked {format_file(file_path)}")
+        if file_data.file_path not in self.data['tracked']:
+            logger.error(f"Untracked {format_file(file_data.file_path)}")
             raise typer.Exit(code=1)
 
-        if self.data['tracked'][file_path]['diff'] == self.DIFF_NONE:
-            logger.error(f"Already marked as resolved: {format_file(file_path)}")
+        if self.data['tracked'][file_data.file_path]['diff'] == self.DIFF_NONE:
+            logger.error(f"Already marked as resolved: {format_file(file_data.file_path)}")
             raise typer.Exit(code=1)
 
-        if self.data['tracked'][file_path]['diff'] == self.DIFF_REMOVED:
-            del self.data['tracked'][file_path]
+        if self.data['tracked'][file_data.file_path]['diff'] == self.DIFF_REMOVED:
+            del self.data['tracked'][file_data.file_path]
         else:
-            self.data['tracked'][file_path]['diff'] = self.DIFF_NONE
+            self.data['tracked'][file_data.file_path]['diff'] = self.DIFF_NONE
 
         self.save()

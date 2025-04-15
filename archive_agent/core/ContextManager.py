@@ -49,4 +49,4 @@ class ContextManager:
             chunks_max=self.config.data[self.config.QDRANT_CHUNKS_MAX],
         )
 
-        self.committer = CommitManager(self.watchlist, self.qdrant)
+        self.committer = CommitManager(self.watchlist, self.ai, self.qdrant)
