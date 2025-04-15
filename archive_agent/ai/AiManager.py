@@ -209,6 +209,9 @@ class AiManager(RetryManager, OpenAiProvider):
             chunk_lines_block=chunk_lines_block,
         )
 
+        if not self.supports_vision:
+            logger.warning(f"Image vision is DISABLED in your current configuration")
+
     def usage(self) -> None:
         """
         Show usage.

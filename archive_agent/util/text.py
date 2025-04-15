@@ -3,41 +3,20 @@
 
 import logging
 import os
-from typing import Set, Optional
+from typing import Set, Optional, List
 
+import io
+from PIL import Image
+import zipfile
 import pypandoc
 from charset_normalizer import from_path
 
 from archive_agent.util.format import format_file
+from archive_agent.util.image import ImageToTextCallback
+from archive_agent.util.image import is_image
 from archive_agent.util.text_util import utf8_tempfile
 
 logger = logging.getLogger(__name__)
-
-
-"""
-Identification:
-- is_text
-  - is_plaintext
-  - is_document
-    - is_ascii_document
-    - is_binary_document
-
-Loading:
-- load_text
-  - load_plaintext
-  - load_document
-    - load_ascii_document
-    - load_binary_document
-"""
-
-
-def is_text(file_path: str) -> bool:
-    """
-    Check for valid text extension.
-    :param file_path: File path.
-    :return: True if valid text extension, False otherwise.
-    """
-    return is_plaintext(file_path) or is_document(file_path)
 
 
 def is_plaintext(file_path: str) -> bool:
@@ -48,52 +27,6 @@ def is_plaintext(file_path: str) -> bool:
     """
     extensions: Set[str] = {".txt", ".md"}
     return any(file_path.lower().endswith(ext) for ext in extensions)
-
-
-def is_document(file_path: str) -> bool:
-    """
-    Check for valid document extension.
-    :param file_path: File path.
-    :return: True if valid document extension, False otherwise.
-    """
-    return is_ascii_document(file_path) or is_binary_document(file_path)
-
-
-def is_ascii_document(file_path: str) -> bool:
-    """
-    Check for valid ASCII document extension.
-    :param file_path: File path.
-    :return: True if valid ASCII document extension, False otherwise.
-    """
-    extensions: Set[str] = {".html", ".htm"}
-    return any(file_path.lower().endswith(ext) for ext in extensions)
-
-
-def is_binary_document(file_path: str) -> bool:
-    """
-    Check for valid binary document extension.
-    :param file_path: File path.
-    :return: True if valid binary document extension, False otherwise.
-    """
-    extensions: Set[str] = {".odt", ".docx", ".rtf"}
-    return any(file_path.lower().endswith(ext) for ext in extensions)
-
-
-def load_text(file_path: str) -> Optional[str]:
-    """
-    Load text.
-    :param file_path: File path.
-    :return: Text if successful, None otherwise.
-    """
-    if is_plaintext(file_path):
-        return load_plaintext(file_path)
-
-    elif is_document(file_path):
-        return load_document(file_path)
-
-    else:
-        logger.warning(f"Cannot load {format_file(file_path)}")
-        return None
 
 
 def load_plaintext(file_path: str) -> Optional[str]:
@@ -116,21 +49,14 @@ def load_plaintext(file_path: str) -> Optional[str]:
     return str(best_match)
 
 
-def load_document(file_path: str) -> Optional[str]:
+def is_ascii_document(file_path: str) -> bool:
     """
-    Load document (using Pandoc).
+    Check for valid ASCII document extension.
     :param file_path: File path.
-    :return: Text, None otherwise.
+    :return: True if valid ASCII document extension, False otherwise.
     """
-    if is_ascii_document(file_path):
-        return load_ascii_document(file_path)
-
-    elif is_binary_document(file_path):
-        return load_binary_document(file_path)
-
-    else:
-        logger.warning(f"Cannot load {format_file(file_path)}")
-        return None
+    extensions: Set[str] = {".html", ".htm"}
+    return any(file_path.lower().endswith(ext) for ext in extensions)
 
 
 def load_ascii_document(file_path: str) -> Optional[str]:
@@ -167,18 +93,67 @@ def load_ascii_document(file_path: str) -> Optional[str]:
             logger.debug(f"Failed to delete temporary file {tmp_path}: {e}")
 
 
-def load_binary_document(file_path: str) -> Optional[str]:
+def is_binary_document(file_path: str) -> bool:
+    """
+    Check for valid binary document extension.
+    :param file_path: File path.
+    :return: True if valid binary document extension, False otherwise.
+    """
+    extensions: Set[str] = {".odt", ".docx"}
+    return any(file_path.lower().endswith(ext) for ext in extensions)
+
+
+def load_binary_document(
+        file_path: str,
+        image_to_text_callback: Optional[ImageToTextCallback],
+) -> Optional[str]:
     """
     Load binary document (using Pandoc).
     :param file_path: File path.
+    :param image_to_text_callback: Optional image-to-text callback.
     :return: Text if successful, None otherwise.
     """
     file_ext = os.path.splitext(file_path)[1].lower()
 
     try:
         text = pypandoc.convert_file(file_path, to="plain", format=file_ext.lstrip("."), extra_args=["--wrap=preserve"])
-        return text.encode("utf-8", errors="replace").decode("utf-8")
+        text = text.encode("utf-8", errors="replace").decode("utf-8")
 
     except Exception as e:
         logger.warning(f"Failed to convert {format_file(file_path)} via Pandoc: {e}")
         return None
+
+    images = load_binary_document_images(file_path)
+
+    if image_to_text_callback is None:
+        logger.warning(f"IGNORING ({len(images)}) document image(s)")
+    else:
+        for image_index, image in enumerate(images):
+            logger.info(f"Converting document image ({image_index + 1}) / ({len(images)})...")
+            image_text = image_to_text_callback(image)
+            text += f"\n\n[Image] {image_text}"
+
+    return text
+
+
+def load_binary_document_images(file_path: str) -> List[Image.Image]:
+    """
+    Extract images from binary document.
+    :param file_path: File path.
+    :return: Images.
+    """
+    images = []
+
+    try:
+        with zipfile.ZipFile(file_path, "r") as archive:
+            for zip_file_path in archive.namelist():
+                if is_image(zip_file_path):
+                    with archive.open(zip_file_path) as image_stream:
+                        image = Image.open(io.BytesIO(image_stream.read()))
+                        image.load()  # Prevent lazy I/O; load into memory NOW.
+                        images.append(image)
+
+    except Exception as e:
+        logger.warning(f"Failed to extract images from {format_file(file_path)}: {e}")
+
+    return images

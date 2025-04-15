@@ -2,7 +2,7 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import logging
-from typing import Set, Optional
+from typing import Set, Optional, Callable
 
 import io
 import base64
@@ -11,6 +11,9 @@ from PIL import Image, UnidentifiedImageError
 from archive_agent.util.format import format_file
 
 logger = logging.getLogger(__name__)
+
+
+ImageToTextCallback = Callable[[Image.Image], Optional[str]]
 
 
 def is_image(file_path: str) -> bool:

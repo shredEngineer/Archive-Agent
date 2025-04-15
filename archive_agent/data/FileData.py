@@ -11,11 +11,12 @@ from qdrant_client.models import PointStruct
 
 from archive_agent.ai.AiManager import AiManager
 from archive_agent.util.format import format_file
-from archive_agent.util.text import is_text, load_text
-from archive_agent.util.pdf import is_pdf_document
-from archive_agent.util.pdf import load_pdf_document
+from archive_agent.util.pdf import is_pdf_document, load_pdf_document
 from archive_agent.util.image import is_image, image_from_file, image_resize_safe, image_to_base64
 from archive_agent.util.chunk import split_into_blocks, chunk_start_to_ranges, extract_chunks_and_carry
+from archive_agent.util.text import is_plaintext, load_plaintext
+from archive_agent.util.text import is_ascii_document, load_ascii_document
+from archive_agent.util.text import is_binary_document, load_binary_document
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,13 @@ class FileData:
         if is_image(self.file_path) and self.ai.supports_vision:
             return True
 
-        elif is_text(self.file_path):
+        elif is_plaintext(self.file_path):
+            return True
+
+        elif is_ascii_document(self.file_path):
+            return True
+
+        elif is_binary_document(self.file_path):
             return True
 
         elif is_pdf_document(self.file_path):
@@ -68,6 +75,7 @@ class FileData:
         :param image: Image.
         :return: Text if successful, None otherwise.
         """
+
         if image.mode != "RGB":
             logger.info(f"Converted image from '{image.mode}' to 'RGB'")
             image = image.convert("RGB")
@@ -102,8 +110,14 @@ class FileData:
 
             return self.image_to_text(image)
 
-        elif is_text(self.file_path):
-            return load_text(self.file_path)
+        elif is_plaintext(self.file_path):
+            return load_plaintext(self.file_path)
+
+        elif is_ascii_document(self.file_path):
+            return load_ascii_document(self.file_path)
+
+        elif is_binary_document(self.file_path):
+            return load_binary_document(self.file_path, self.image_to_text)
 
         elif is_pdf_document(self.file_path):
             return load_pdf_document(self.file_path, self.image_to_text)

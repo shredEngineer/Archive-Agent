@@ -124,7 +124,7 @@ The default settings profile is created on the first run. (See [Storage](#-stora
   - Plaintext: `.txt`, `.md`
   - Documents:
     - ASCII documents: `.html`, `.htm`
-    - Binary documents: `.odt`, `.docx`, `.rtf`
+    - Binary documents: `.odt`, `.docx`
   - PDF documents: `.pdf`
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
 

@@ -3,7 +3,7 @@
 
 import io
 import os
-from typing import Callable, Optional, List, Set, Tuple, Any
+from typing import Optional, List, Set, Tuple, Any
 
 # noinspection PyPackageRequirements
 import fitz
@@ -11,6 +11,7 @@ from PIL import Image
 
 from archive_agent.util.format import format_file
 from archive_agent.util.text import logger
+from archive_agent.util.image import ImageToTextCallback
 from archive_agent.util.image_debugger import show_images, IndexedImage
 from archive_agent.util.pdf_util import PdfPageContent, analyze_page_objects, log_page_analysis
 
@@ -34,12 +35,12 @@ def is_pdf_document(file_path: str) -> bool:
 
 def load_pdf_document(
         file_path: str,
-        image_to_text_callback: Callable[[Image.Image], Optional[str]]
+        image_to_text_callback: ImageToTextCallback,
 ) -> Optional[str]:
     """
     Load PDF document, extract layout text and images, convert images to text, and assemble the final document content.
-    :param file_path: File path to the PDF document.
-    :param image_to_text_callback: Callback converting a PIL.Image to text.
+    :param file_path: File path.
+    :param image_to_text_callback: Image-to-text callback.
     :return: Full document text if successful, None otherwise.
     """
     try:
@@ -91,12 +92,12 @@ def extract_page_contents_with_images(
 
 def extract_text_from_images_per_page(
         contents: List[PdfPageContent],
-        image_to_text_callback: Callable[[Image.Image], Optional[str]]
+        image_to_text_callback: ImageToTextCallback,
 ) -> List[List[str]]:
     """
     Extract image-based text descriptions for each page.
     :param contents: List of PageContent instances.
-    :param image_to_text_callback: Callback converting a PIL.Image to text.
+    :param image_to_text_callback: Image-to-text callback.
     :return: List of text results per page (one list of strings per page).
     """
     all_image_texts: List[List[str]] = []

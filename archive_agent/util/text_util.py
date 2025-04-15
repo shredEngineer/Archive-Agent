@@ -6,8 +6,6 @@ import tempfile
 import urllib.parse
 from typing import List
 
-import spacy
-
 
 def utf8_tempfile(text: str, suffix: str) -> str:
     """
@@ -35,26 +33,6 @@ def replace_file_uris_with_markdown(text: str) -> str:
         return f'[{decoded_path}]({uri})'
 
     return pattern.sub(replacer, text)
-
-
-def split_sentences(text: str) -> List[str]:
-    """
-    Split text into sentences.
-    All lines are joined into a single paragraph before splitting.
-    This avoids SpaCy treating line breaks as hard sentence stops.
-    :param text: Text.
-    :return: Sentences.
-    """
-    nlp = spacy.load("xx_sent_ud_sm")
-    if not nlp.has_pipe("sentencizer"):
-        nlp.add_pipe("sentencizer")
-
-    # Join all non-empty lines with a space, flattening paragraphs.
-    flat_text = " ".join(line.strip() for line in text.splitlines() if line.strip())
-
-    doc = nlp(flat_text)
-    sentences = [sent.text.strip() for sent in doc.sents]
-    return sentences
 
 
 def group_blocks_of_sentences(sentences: List[str], sentences_per_block: int) -> List[List[str]]:
