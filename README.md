@@ -70,7 +70,7 @@ echo "alias archive-agent='$(pwd)/archive-agent.sh'" >> ~/.bashrc && source ~/.b
 
 This will create a global `archive-agent` command for the current user.
 
-🟠 **NOTE:** Complete Qdrant server setup **before** using the `archive-agent` command.
+📌 **Note:** Complete Qdrant server setup **before** using the `archive-agent` command.
 
 ---
 
@@ -90,7 +90,7 @@ To launch Qdrant with persistent storage and auto-restart, run this once:
 
 This will download the Qdrant docker image on the first run.
 
-🟠 **Note:** In case you need to stop the Qdrant Docker image, run this:
+📌 **Note:** In case you need to stop the Qdrant Docker image, run this:
 
 ```bash
 docker stop archive-agent-qdrant-server
@@ -125,8 +125,12 @@ The default settings profile is created on the first run. (See [Storage](#-stora
   - Documents:
     - ASCII documents: `.html`, `.htm`
     - Binary documents: `.odt`, `.docx`
+      - Embedded images are decoded to text
   - PDF documents: `.pdf`
+    - Embedded images are decoded to text
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
+
+📌 **Note:** Embedded image support is experimental and might not work perfectly.
 
 Ultimately, **Archive Agent** decodes everything to text like this:
 - Text files are decoded to UTF-8, regardless of original encoding.
@@ -136,7 +140,7 @@ Ultimately, **Archive Agent** decodes everything to text like this:
 
 Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
 
-🟠 **Note:** Unsupported files are tracked but not processed.
+📌 **Note:** Unsupported files are tracked but not processed.
 
 ### ℹ️ How files are processed
 
@@ -197,7 +201,7 @@ To add one or more included patterns, run this:
 archive-agent include "~/Documents/*.txt"
 ```
 
-🟠 **Note:** **Always use quotes** for the the pattern argument (to prevent your shell's wildcard expansion),
+📌 **Note:** **Always use quotes** for the the pattern argument (to prevent your shell's wildcard expansion),
 **or skip it** to get an interactive prompt.
 
 ### ⚡ Add excluded patterns
@@ -208,7 +212,7 @@ To add one or more excluded patterns, run this:
 archive-agent exclude "~/Documents/*.txt"
 ```
 
-🟠 **Note:** **Always use quotes** for the the pattern argument (to prevent your shell's wildcard expansion),
+📌 **Note:** **Always use quotes** for the the pattern argument (to prevent your shell's wildcard expansion),
 **or skip it** to get an interactive prompt.
 
 ### ⚡ Remove included / excluded patterns
@@ -219,7 +223,7 @@ To remove one or more previously included / excluded patterns, run this:
 archive-agent remove "~/Documents/*.txt"
 ```
 
-🟠 **Note:** **Always use quotes** for the the pattern argument (to prevent your shell's wildcard expansion),
+📌 **Note:** **Always use quotes** for the the pattern argument (to prevent your shell's wildcard expansion),
 **or skip it** to get an interactive prompt.
 
 ### ⚡ List included / excluded patterns
@@ -285,7 +289,7 @@ archive-agent search "Which files mention donuts?"
 
 Lists files matching the question.
 
-🟠 **Note:** **Always use quotes** for the question argument, **or skip it** to get an interactive prompt.
+📌 **Note:** **Always use quotes** for the question argument, **or skip it** to get an interactive prompt.
 
 ### ⚡ Query your files
 
@@ -295,7 +299,7 @@ archive-agent query "Which files mention donuts?"
 
 Answers your question using RAG.
 
-🟠 **Note:** **Always use quotes** for the question argument, **or skip it** to get an interactive prompt.
+📌 **Note:** **Always use quotes** for the question argument, **or skip it** to get an interactive prompt.
 
 ### ⚡ Launch Archive Agent GUI
 
@@ -305,7 +309,7 @@ To launch the **Archive Agent** GUI in your browser, run this:
 archive-agent gui
 ```
 
-🟠 **Note:** Press `CTRL+C` in the console to close the GUI server.
+📌 **Note:** Press `CTRL+C` in the console to close the GUI server.
 
 ---
 
@@ -336,7 +340,7 @@ The default settings profile is located in `default/`:
 
 The Qdrant database is stored in `~/.archive-agent-qdrant-storage/`.
 
-🟠 **Note:** This folder is created by the Qdrant Docker image running as root.
+📌 **Note:** This folder is created by the Qdrant Docker image running as root.
 
 💡 **Good to know:** Visit your [Qdrant dashboard](http://localhost:6333/dashboard#/collections) to manage collections and snapshots.
 
