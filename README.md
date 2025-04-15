@@ -146,7 +146,7 @@ The [default settings profile](#-storage) is created on the first run.
 This is to avoid redundancy in the chunks generated from scanned documents
 where the background layer has a corresponding OCR text layer;
 usually, the OCR text layer already contains (most of) the required information.
-**Enable *strict OCR mode* in the [settings](#-storage) if you do need full-page OCR for better transcriptions, e.g. of formulae.
+**Enable *strict OCR mode* in the [settings](#-storage) if you do need full-page OCR for better transcriptions (e.g. for formulae).
 (Consumes more time and tokens for AI vision.)**
 
 ### ℹ️ How files are processed
