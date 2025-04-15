@@ -1,6 +1,7 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
+import logging
 import io
 import os
 from typing import Optional, List, Set, Tuple, Any
@@ -10,10 +11,11 @@ import fitz
 from PIL import Image
 
 from archive_agent.util.format import format_file
-from archive_agent.util.text import logger
 from archive_agent.util.image import ImageToTextCallback
 from archive_agent.util.image_debugger import show_images, IndexedImage
 from archive_agent.util.pdf_util import PdfPageContent, analyze_page_objects, log_page_analysis
+
+logger = logging.getLogger(__name__)
 
 
 IMAGE_DEBUGGER: bool = True if os.environ.get("ARCHIVE_AGENT_IMAGE_DEBUGGER", False) else False
@@ -35,18 +37,44 @@ def is_pdf_document(file_path: str) -> bool:
 
 def load_pdf_document(
         file_path: str,
-        image_to_text_callback: ImageToTextCallback,
+        image_to_text_callback: Optional[ImageToTextCallback],
+        ocr_mode_strict: bool,
 ) -> Optional[str]:
     """
     Load PDF document, extract layout text and images, convert images to text, and assemble the final document content.
     :param file_path: File path.
-    :param image_to_text_callback: Image-to-text callback.
+    :param image_to_text_callback: Optional image-to-text callback.
+    :param ocr_mode_strict: Enable to treat PDF pages as images.
     :return: Full document text if successful, None otherwise.
     """
     try:
         doc: fitz.Document = fitz.open(file_path)
 
-        page_contents, indexed_images = extract_page_contents_with_images(doc)
+        if ocr_mode_strict:
+            page_contents: List[PdfPageContent] = []
+            indexed_images: List[IndexedImage] = []
+
+            pages: List[Any] = [page for page in doc]
+
+            for page_index, page in enumerate(pages):
+                try:
+                    pix = page.get_pixmap(dpi=300)
+                    img_bytes = pix.tobytes()
+                    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+
+                    # Create a fake page content with only one full-page image
+                    content = PdfPageContent(text="", layout_image_bytes=[img_bytes])
+                    page_contents.append(content)
+
+                    # Include in visual debugger images
+                    indexed_images.append((img, page_index + 1, 1))
+                except Exception as e:
+                    logger.warning(f"OCR strict mode: Failed to process page ({page_index + 1}): {e}")
+                    # Add empty fallback content
+                    page_contents.append(PdfPageContent(text="", layout_image_bytes=[]))
+
+        else:
+            page_contents, indexed_images = extract_page_contents_with_images(doc)
 
         for index, content in enumerate(page_contents):
             log_page_analysis(index, len(page_contents), content)
@@ -54,7 +82,14 @@ def load_pdf_document(
         if IMAGE_DEBUGGER and indexed_images:
             show_images(indexed_images)
 
-        image_texts_per_page = extract_text_from_images_per_page(page_contents, image_to_text_callback)
+        image_texts_per_page = None
+
+        if len(indexed_images) > 0:
+            if image_to_text_callback is None:
+                logger.warning(f"Image vision is DISABLED in your current configuration")
+                logger.warning(f"IGNORING ({len(indexed_images)}) PDF document image(s)")
+            else:
+                image_texts_per_page = extract_text_from_images_per_page(page_contents, image_to_text_callback)
 
         return build_document_text_from_pages(page_contents, image_texts_per_page)
 
@@ -133,22 +168,25 @@ def extract_text_from_images_per_page(
 
 def build_document_text_from_pages(
         contents: List[PdfPageContent],
-        image_texts_per_page: List[List[str]]
+        image_texts_per_page: Optional[List[List[str]]] = None
 ) -> Optional[str]:
     """
     Build the final document text by combining layout text and image-derived text.
+
     :param contents: List of PageContent instances.
-    :param image_texts_per_page: Image text results per page (must align by index).
-    :return: Text if successful, None otherwise.
+    :param image_texts_per_page: Optional image text results per page (must align by index if provided).
+    :return: Text.
     """
     result_parts: List[str] = []
 
-    assert len(contents) == len(image_texts_per_page)
+    if image_texts_per_page is not None:
+        assert len(contents) == len(image_texts_per_page)
 
-    for content, page_image_texts in zip(contents, image_texts_per_page):
+    for idx, content in enumerate(contents):
         page_parts: List[str] = []
 
-        page_parts.extend(page_image_texts)
+        if image_texts_per_page is not None:
+            page_parts.extend(image_texts_per_page[idx])
 
         if content.text:
             page_parts.append(content.text)
@@ -156,4 +194,4 @@ def build_document_text_from_pages(
         if page_parts:
             result_parts.append("\n\n".join(page_parts))
 
-    return "\n\n".join(result_parts) if result_parts else None
+    return "\n\n".join(result_parts) if result_parts else ""

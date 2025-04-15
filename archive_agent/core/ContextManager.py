@@ -5,6 +5,7 @@ from pathlib import Path
 
 from archive_agent.util.CliManager import CliManager
 from archive_agent.config.ConfigManager import ConfigManager
+from archive_agent.config.DecoderSettings import DecoderSettings
 from archive_agent.watchlist.WatchlistManager import WatchlistManager
 from archive_agent.ai.AiManager import AiManager
 from archive_agent.db.QdrantManager import QdrantManager
@@ -39,6 +40,10 @@ class ContextManager:
             chunk_lines_block=self.config.data[self.config.CHUNK_LINES_BLOCK],
         )
 
+        self.decoder_settings = DecoderSettings(
+            ocr_mode_strict=self.config.data[self.config.OCR_MODE_STRICT],
+        )
+
         self.qdrant = QdrantManager(
             cli=self.cli,
             ai=self.ai,
@@ -49,4 +54,4 @@ class ContextManager:
             chunks_max=self.config.data[self.config.QDRANT_CHUNKS_MAX],
         )
 
-        self.committer = CommitManager(self.watchlist, self.ai, self.qdrant)
+        self.committer = CommitManager(self.watchlist, self.ai, self.decoder_settings, self.qdrant)

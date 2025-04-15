@@ -24,7 +24,10 @@ class WatchlistManager(StorageManager):
     Watchlist manager.
     """
 
+    WATCHLIST_VERSION = 'watchlist_version'
+
     DEFAULT_WATCHLIST = {
+        WATCHLIST_VERSION: 2,
         'included': [],
         'excluded': [],
         'tracked': {},
@@ -42,6 +45,22 @@ class WatchlistManager(StorageManager):
         :param profile_path: Profile path.
         """
         StorageManager.__init__(self, profile_path / "watchlist.json", deepcopy(self.DEFAULT_WATCHLIST))
+
+    def upgrade(self) -> bool:
+        """
+        Upgrade data.
+        :return: True if data upgraded, False otherwise.
+        """
+        upgraded = False
+
+        version = self.data.get(self.WATCHLIST_VERSION, 1)
+
+        if version < 2:
+            logger.warning(f"Upgrading watchlist (v2): {format_file(self.file_path)}")
+            self.data[self.WATCHLIST_VERSION] = 2
+            upgraded = True
+
+        return upgraded
 
     def validate(self) -> bool:
         """

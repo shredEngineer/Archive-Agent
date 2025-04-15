@@ -6,6 +6,8 @@ import logging
 
 from archive_agent.ai.AiManager import AiManager
 
+from archive_agent.config.DecoderSettings import DecoderSettings
+
 from archive_agent.data.FileData import FileData
 
 from archive_agent.db.QdrantManager import QdrantManager
@@ -22,15 +24,23 @@ class CommitManager:
     Commit manager.
     """
 
-    def __init__(self, watchlist: WatchlistManager, ai: AiManager, qdrant: QdrantManager):
+    def __init__(
+            self,
+            watchlist: WatchlistManager,
+            ai: AiManager,
+            decoder_settings: DecoderSettings,
+            qdrant: QdrantManager,
+    ):
         """
         Initialize commit manager.
         :param watchlist: Watchlist manager.
         :param ai: AI manager.
+        :param decoder_settings: Decoder settings.
         :param qdrant: Qdrant manager.
         """
         self.watchlist = watchlist
         self.ai = ai
+        self.decoder_settings = decoder_settings
         self.qdrant = qdrant
 
     def commit(self) -> None:
@@ -75,7 +85,7 @@ class CommitManager:
         :param tracked_files: Tracked files.
         """
         tracked_file_data = [
-            FileData(ai=self.ai, file_path=file_path, file_meta=file_meta)
+            FileData(ai=self.ai, decoder_settings=self.decoder_settings, file_path=file_path, file_meta=file_meta)
             for file_path, file_meta in tracked_files.items()
         ]
 

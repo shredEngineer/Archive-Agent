@@ -1,12 +1,14 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
-from dataclasses import dataclass
+
+import logging
+from dataclasses import dataclass, field
 from typing import Dict, Any, Tuple, List
 
 # noinspection PyPackageRequirements
 import fitz
 
-from archive_agent.util.text import logger
+logger = logging.getLogger(__name__)
 
 
 LayoutBlock = Dict[str, Any]
@@ -19,13 +21,13 @@ class PdfPageContent:
     PDF page content.
     """
 
-    text_blocks: List[LayoutBlock]
-    image_blocks: List[LayoutBlock]
-    vector_blocks: List[LayoutBlock]
-    other_blocks: List[LayoutBlock]
-    image_objects: List[ImageObject]
-    text: str
-    layout_image_bytes: List[bytes]
+    text_blocks: List[LayoutBlock] = field(default_factory=list)
+    image_blocks: List[LayoutBlock] = field(default_factory=list)
+    vector_blocks: List[LayoutBlock] = field(default_factory=list)
+    other_blocks: List[LayoutBlock] = field(default_factory=list)
+    image_objects: List[ImageObject] = field(default_factory=list)
+    text: str = ""
+    layout_image_bytes: List[bytes] = field(default_factory=list)
 
 
 def analyze_page_objects(page: fitz.Page) -> PdfPageContent:

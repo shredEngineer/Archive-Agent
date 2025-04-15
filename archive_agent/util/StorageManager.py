@@ -61,6 +61,8 @@ class StorageManager(ABC):
         with open(self.file_path, "r", encoding="utf-8") as f:
             self.data = json.load(f)
 
+        upgraded = self.upgrade()
+
         missing_keys = self.default.keys() - self.data.keys()
         if missing_keys:
             logger.error(f"Missing keys in {format_file(self.file_path)}: {missing_keys}")
@@ -71,6 +73,10 @@ class StorageManager(ABC):
             raise typer.Exit(code=1)
 
         logger.debug(f"Loaded existing {format_file(self.file_path)}")
+
+        if upgraded:
+            logger.debug(f"Upgraded existing {format_file(self.file_path)}")
+            self.save()
 
     def save(self) -> None:
         """
@@ -89,6 +95,14 @@ class StorageManager(ABC):
         shutil.move(temp_path, self.file_path)
 
         logger.debug(f"Saved {format_file(self.file_path)}")
+
+    @abstractmethod
+    def upgrade(self) -> bool:
+        """
+        Upgrade data.
+        :return: True if data upgraded, False otherwise.
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def validate(self) -> bool:

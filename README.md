@@ -130,7 +130,8 @@ The default settings profile is created on the first run. (See [Storage](#-stora
     - Embedded images are decoded to text
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
 
-📌 **Note:** Embedded image support is experimental and might not work perfectly.
+📌 **Note:** Embedded background images in PDF documents are ignored.
+If you need full-page OCR, enable *strict OCR mode* in [settings](#-storage).
 
 Ultimately, **Archive Agent** decodes everything to text like this:
 - Text files are decoded to UTF-8, regardless of original encoding.
@@ -324,7 +325,7 @@ The default settings profile is located in `default/`:
 - `config.json`:
   - `openai_model_embed`: OpenAI model for embedding
   - `openai_model_query`: OpenAI model for query
-  - `openai_model_vision`: OpenAI model for vision
+  - `openai_model_vision`: OpenAI model for vision (`""` disables vision)
   - `openai_temp_query`: Temperature of query model
   - `qdrant_collection`: Qdrant collection name
   - `qdrant_server_url`: Qdrant server URL
@@ -332,10 +333,12 @@ The default settings profile is located in `default/`:
   - `qdrant_score_min`: Minimum score of retrieved chunks (`0`...`1`)
   - `qdrant_chunks_max`: Maximum number of retrieved chunks
   - `chunk_lines_block`: Number of lines per block for chunking
+  - `ocr_mode_strict`: Enable to treat PDF pages as images (default: `false`)
+
 
 - `watchlist.json`:
-  - Managed via the `include` / `exclude` / `remove` / `track` / `commit` commands.
-
+  - Managed via the `include` / `exclude` / `remove` / `track` / `commit` / `update` commands.
+  
 ### ℹ️ Qdrant database
 
 The Qdrant database is stored in `~/.archive-agent-qdrant-storage/`.
@@ -375,6 +378,8 @@ If you miss something or spot bad patterns, feel free to contribue and refactor!
 export ARCHIVE_AGENT_IMAGE_DEBUGGER=1
 ```
 
+(PDF image debugger windows must be closed manually in order to proceed.)
+
 ---
 
 ## 🍀 Collaborators welcome
@@ -389,18 +394,8 @@ export ARCHIVE_AGENT_IMAGE_DEBUGGER=1
 
 **Archive Agent** is fully functional right now and development is continuing. 
 
-Quality:
-- [ ] **Add strict OCR option to convert all PDF pages to JPG first.**  
-- [ ] **Add option to convert background images of PDF pages as well.**
-
-Fail-Safe:
-- [ ] Implement image vision cache (store image hash: image pairs, add only once).
-
 Flexibility:
 - [ ] Use `llamaindex` to support more APIs beyond OpenAI (upgrade config).
-
-Modularity:
-- [ ] Split **Archive Agent** into FastAPI server and CLI / GUI clients.
 
 Performance:
 - [ ] Implement API request parallel processor for [OpenAI API](https://github.com/openai/openai-cookbook/blob/main/examples/api_request_parallel_processor.py) (or `llamaindex`).

@@ -125,13 +125,15 @@ def load_binary_document(
 
     images = load_binary_document_images(file_path)
 
-    if image_to_text_callback is None:
-        logger.warning(f"IGNORING ({len(images)}) document image(s)")
-    else:
-        for image_index, image in enumerate(images):
-            logger.info(f"Converting document image ({image_index + 1}) / ({len(images)})...")
-            image_text = image_to_text_callback(image)
-            text += f"\n\n[Image] {image_text}"
+    if len(images) > 0:
+        if image_to_text_callback is None:
+            logger.warning(f"Image vision is DISABLED in your current configuration")
+            logger.warning(f"IGNORING ({len(images)}) document image(s)")
+        else:
+            for image_index, image in enumerate(images):
+                logger.info(f"Converting document image ({image_index + 1}) / ({len(images)})...")
+                image_text = image_to_text_callback(image)
+                text += f"\n\n[Image] {image_text}"
 
     return text
 

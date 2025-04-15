@@ -6,6 +6,7 @@ from pathlib import Path
 from copy import deepcopy
 
 from archive_agent.util.StorageManager import StorageManager
+from archive_agent.util.format import format_file
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,7 @@ class ConfigManager(StorageManager):
     Config manager.
     """
 
+    CONFIG_VERSION = 'config_version'
     OPENAI_MODEL_CHUNK = 'openai_model_chunk'
     OPENAI_MODEL_EMBED = 'openai_model_embed'
     OPENAI_MODEL_QUERY = 'openai_model_query'
@@ -26,8 +28,10 @@ class ConfigManager(StorageManager):
     QDRANT_SCORE_MIN = 'qdrant_score_min'
     QDRANT_CHUNKS_MAX = 'qdrant_chunks_max'
     CHUNK_LINES_BLOCK = 'chunk_lines_block'
+    OCR_MODE_STRICT = 'ocr_mode_strict'
 
     DEFAULT_CONFIG = {
+        CONFIG_VERSION: 2,
         OPENAI_MODEL_CHUNK: "gpt-4o-2024-08-06",
         OPENAI_MODEL_EMBED: "text-embedding-3-small",
         OPENAI_MODEL_QUERY: "gpt-4o-2024-08-06",
@@ -39,6 +43,7 @@ class ConfigManager(StorageManager):
         QDRANT_SCORE_MIN: .2,
         QDRANT_CHUNKS_MAX: 20,
         CHUNK_LINES_BLOCK: 50,
+        OCR_MODE_STRICT: 'false',
     }
 
     def __init__(self, profile_path: Path) -> None:
@@ -47,6 +52,23 @@ class ConfigManager(StorageManager):
         :param profile_path: Profile path.
         """
         StorageManager.__init__(self, profile_path / "config.json", deepcopy(self.DEFAULT_CONFIG))
+
+    def upgrade(self) -> bool:
+        """
+        Upgrade data.
+        :return: True if data upgraded, False otherwise.
+        """
+        upgraded = False
+
+        version = self.data.get(self.CONFIG_VERSION, 1)
+
+        if version < 2:
+            logger.warning(f"Upgrading config (v2): {format_file(self.file_path)}")
+            self.data[self.CONFIG_VERSION] = 2
+            self.data[self.OCR_MODE_STRICT] = self.DEFAULT_CONFIG[self.OCR_MODE_STRICT]
+            upgraded = True
+
+        return upgraded
 
     def validate(self) -> bool:
         """
