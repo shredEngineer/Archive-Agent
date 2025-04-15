@@ -16,6 +16,9 @@ from archive_agent.util.pattern import validate_pattern, resolve_pattern
 logger = logging.getLogger(__name__)
 
 
+FilteredFiles = Dict[str, Dict[str, Any]]
+
+
 class WatchlistManager(StorageManager):
     """
     Watchlist manager.
@@ -221,7 +224,7 @@ class WatchlistManager(StorageManager):
         else:
             logger.info("(0) tracked file(s)")
 
-    def diff_filter(self, diff_option: str) -> Dict[str, Dict[str, Any]]:
+    def diff_filter(self, diff_option: str) -> FilteredFiles:
         """
         Filter tracked files for diff option.
         :param diff_option: Diff option to filter for.

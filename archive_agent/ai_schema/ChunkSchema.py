@@ -2,11 +2,10 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 from typing import List
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ChunkSchema(BaseModel):
     chunk_start_lines: List[int]
 
-    class Config:
-        extra = "forbid"  # Ensures additionalProperties: false
+    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false

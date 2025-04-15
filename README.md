@@ -373,7 +373,7 @@ Flexibility:
 - [ ] Use `llamaindex` to support more APIs beyond OpenAI (upgrade config).
 
 Modularity:
-- [ ] Implement **Archive Agent** FastAPI server, make CLI and GUI clients.
+- [ ] Split **Archive Agent** into FastAPI server and CLI / GUI clients.
 
 Performance:
 - [ ] Implement API request parallel processor for [OpenAI API](https://github.com/openai/openai-cookbook/blob/main/examples/api_request_parallel_processor.py) (or `llamaindex`).
