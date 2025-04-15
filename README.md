@@ -8,7 +8,7 @@
 
 ![Archive Agent Logo](archive_agent/assets/Archive-Agent-400x300.png)
 
-**Archive Agent** is a **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**
+**Archive Agent** is a **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**, using a modern tech stack:
 
 - OpenAI API for embeddings and queries
   ([more providers coming soon](https://github.com/shredEngineer/Archive-Agent/issues/6))
