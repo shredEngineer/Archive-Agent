@@ -1,4 +1,6 @@
-🍀 **[BETA TESTERS WELCOME!](#-collaborators-welcome)**
+🍀 **[Beta testers welcome!](#-collaborators-welcome)**
+
+---
 
 # 🧠 Archive Agent
 
