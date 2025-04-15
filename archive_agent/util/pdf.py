@@ -120,7 +120,10 @@ def extract_page_contents_with_images(
                 img = Image.open(io.BytesIO(b)).convert("RGB")
                 indexed_images.append((img, page_index + 1, image_index + 1))
             except Exception as e:
-                logger.warning(f"Failed to decode image ({image_index + 1}) on page ({page_index + 1}): {e}")
+                logger.warning(
+                    f"Failed to decode image ({image_index + 1}) "
+                    f"on page ({page_index + 1}) / ({len(pages)}): {e}"
+                )
 
     return page_contents, indexed_images
 
@@ -145,21 +148,30 @@ def extract_text_from_images_per_page(
                 with Image.open(io.BytesIO(img_bytes)) as img:
                     if img.width <= TINY_IMAGE_WIDTH_THRESHOLD or img.height <= TINY_IMAGE_HEIGHT_THRESHOLD:
                         logger.warning(
-                            f"Image ({i + 1}) on page ({index + 1}): "
+                            f"Image ({i + 1}) on page ({index + 1}) / ({len(contents)}): "
                             f"Ignored because it's tiny ({img.width} x {img.height} px)"
                         )
                         continue
 
-                    logger.info(f"Image ({i + 1}) on page ({index + 1}): Converting to text")
+                    logger.info(
+                        f"Image ({i + 1}) on page ({index + 1}) / ({len(contents)}): "
+                        f"Converting to text"
+                    )
 
                     text = image_to_text_callback(img)
 
                     if text:
                         page_image_texts.append(f"[Image] {text}")
                     else:
-                        logger.warning(f"Image ({i + 1}) on page ({index + 1}): Returned no text")
+                        logger.warning(
+                            f"Image ({i + 1}) on page ({index + 1}) / ({len(contents)}): "
+                            f"Returned no text"
+                        )
             except Exception as e:
-                logger.warning(f"Image ({i + 1}) on page ({index + 1}): Failed to extract text: {e}")
+                logger.warning(
+                    f"Image ({i + 1}) on page ({index + 1}) / ({len(contents)}): "
+                    f"Failed to extract text: {e}"
+                )
 
         all_image_texts.append(page_image_texts)
 

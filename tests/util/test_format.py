@@ -9,4 +9,7 @@ def test_format_time():
 
 
 def test_format_file():
-    assert format_file("/home/user/Hello World.md") == "file:///home/user/Hello%20World.md"
+    assert format_file("/home/user/Hello World.md") in [
+        "file:///home/user/Hello%20World.md",  # Linux
+        "file:///System/Volumes/Data/home/user/Hello%20World.md",  # Mac OS X
+    ]
