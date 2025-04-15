@@ -136,9 +136,11 @@ The default settings profile is created on the first run. (See [Storage](#-stora
       - Embedded images are decoded to text
   - PDF documents: `.pdf`
     - Embedded foreground images are decoded to text
-    - Embedded background images are ignored; see [Notes on PDF documents](#-notes-on-pdf-documents)
+    - Embedded background images are ignored (see note below)
     - See: 
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
+
+📌 **Note:** Embedded background images in PDF documents are ignored. This is to avoid redundancy in the chunks generated from scanned documents where the background layer has a corresponding OCR text layer; usually, the OCR text layer already contains (most of) the required information. If you need full-page OCR, enable **strict OCR mode** in the [settings](#-storage). By default, **strict OCR mode** is disabled to save time and tokens for AI vision.
 
 Ultimately, **Archive Agent** decodes everything to text like this:
 - Text files are decoded to UTF-8, regardless of original encoding.
@@ -149,16 +151,6 @@ Ultimately, **Archive Agent** decodes everything to text like this:
 Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
 
 📌 **Note:** Unsupported files are tracked but not processed.
-
-### ℹ️ Notes on PDF documents
-
-Embedded background images in PDF documents are ignored.
-
-This is to avoid redundancy in the chunks generated from scanned documents where the background layer has a corresponding OCR text layer; usually, the OCR text layer already contains (most of) the required information.
-
-If you need full-page OCR, enable **strict OCR mode** in the [settings](#-storage).
-
-(By default, **strict OCR mode** is disabled to save time and tokens for AI vision.)
 
 ### ℹ️ How files are processed
 
