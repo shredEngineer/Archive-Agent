@@ -4,17 +4,16 @@
 
 # 🧠 Archive Agent
 
-**Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**
+**Archive Agent** tracks your files, syncs changes, and powers smart queries.  
+
+![Archive Agent Logo](archive_agent/assets/Archive-Agent-400x300.png)
+
+**Archive Agent** is a **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**
 
 - OpenAI API for embeddings and queries
   ([more providers coming soon](https://github.com/shredEngineer/Archive-Agent/issues/6))
 - Qdrant *(running locally)* for storage and search 
 - Fast and effective semantic chunking (**smart chunking**)
-
-![Archive Agent Logo](archive_agent/assets/Archive-Agent-400x300.png)
-
-**Archive Agent** tracks your files, syncs changes, and powers smart queries.  
-
 - Supports command-line interface (CLI) using *Typer*
 - Supports graphical user interface (GUI) using *Streamlit*
 
