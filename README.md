@@ -18,6 +18,12 @@
 - Supports command-line interface (CLI) using *Typer*
 - Supports graphical user interface (GUI) using *Streamlit*
 
+---
+
+⚡ **Looking for the command reference? See: [Run Archive Agent](#-run-archive-agent)**
+
+---
+
 **Screenshot of CLI:**
 
 ![](archive_agent/assets/Screenshot-CLI.png)
@@ -27,10 +33,6 @@
 ![](archive_agent/assets/Screenshot-GUI.png)
 
 [(enlarge screenshot to see details)](archive_agent/assets/Screenshot-GUI.png)
-
----
-
-⚡ **Looking for the command reference? See: [Run Archive Agent](#-run-archive-agent)**
 
 ---
 
