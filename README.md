@@ -98,6 +98,21 @@ docker stop archive-agent-qdrant-server
 
 ---
 
+## 🔄 Update Archive Agent
+
+To update your **Archive Agent** installation, run this:
+
+```bash
+docker stop archive-agent-qdrant-server
+git pull
+poetry install
+poetry run python -m spacy download xx_sent_ud_sm
+docker pull qdrant/qdrant
+./ensure-qdrant.sh
+```
+
+---
+
 ## 🚀 Run Archive Agent
 
 The default settings profile is created on the first run. (See [Storage](#-storage) section.)
