@@ -34,7 +34,11 @@
 - [Python](https://www.python.org/downloads/) **>= 3.10, < 3.13** *(core runtime)*
 - [Poetry](https://python-poetry.org/docs/#installation) *(dependency management)*
 
+
 - **Tested with Ubuntu 24.04**
+
+
+- Experimental [install instructions for Mac OS X](macod.md) are available.
 
 ---
 
