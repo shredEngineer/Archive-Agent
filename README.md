@@ -38,7 +38,7 @@
 - **Tested with Ubuntu 24.04**
 
 
-- Experimental [install instructions for Mac OS X](macod.md) are available.
+- Experimental [install instructions for Mac OS X](macos.md) are available.
 
 ---
 
