@@ -127,7 +127,7 @@ docker pull qdrant/qdrant
 
 ## 🧠 How Archive Agent works
 
-The default settings profile is created on the first run. (See [Storage](#-storage) section.)
+The [default settings profile](#-storage) is created on the first run.
 
 ### ℹ️ Which files are processed
 
@@ -143,7 +143,7 @@ The default settings profile is created on the first run. (See [Storage](#-stora
     - Embedded background images are ignored (see note below)
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
 
-📌 **Note:** Embedded background images in PDF documents are ignored. This is to avoid redundancy in the chunks generated from scanned documents where the background layer has a corresponding OCR text layer; usually, the OCR text layer already contains (most of) the required information. If you need full-page OCR, enable **strict OCR mode** in the [settings](#-storage). By default, **strict OCR mode** is disabled to save time and tokens for AI vision.
+📌 **Note:** Embedded background images in PDF documents are ignored. This is to avoid redundancy in the chunks generated from scanned documents where the background layer has a corresponding OCR text layer; usually, the OCR text layer already contains (most of) the required information. **If you need full-page OCR, enable *strict OCR mode* in the [settings](#-storage). By default, *strict OCR mode* is disabled to save time and tokens for AI vision.**
 
 ### ℹ️ How files are processed
 
@@ -405,29 +405,6 @@ export ARCHIVE_AGENT_IMAGE_DEBUGGER=1
 **You are invited to contribute to this open source project!**
 
 **Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues) and [submit pull requests](https://github.com/shredEngineer/Archive-Agent/pulls) anytime.**
-
----
-
-## 📝 ToDo
-
-**Archive Agent** is fully functional right now and development is continuing. 
-
-Performance:
-- [ ] Implement API request parallel processor for [OpenAI API](https://github.com/openai/openai-cookbook/blob/main/examples/api_request_parallel_processor.py) (or `llamaindex`).
-
-Related to section [Launch Archive Agent GUI](#-launch-archive-agent-gui):
-- [ ] Extend GUI functionality beyond queries.
-
-Related to section [Storage](#-storage):
-- [ ] Command: Switch profiles (use folder other than `default/`).
-- [ ] Save answers to "answers" bucket (feed back).
-
-Chain-of-Thought mechanism:
-- [ ] Save follow-up questions to "questions" bucket.
-- [ ] Command `auto [N]`: Query random question(s) from question bucket.
-
-Code Quality:
-- [ ] Improve test coverage
 
 ---
 
