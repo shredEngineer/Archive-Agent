@@ -7,7 +7,7 @@
 **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**
 
 - OpenAI API for embeddings and queries
-  - **Coming soon:** Support for further AI providers.
+  ([more providers coming soon](https://github.com/shredEngineer/Archive-Agent/issues/6))
 - Qdrant *(running locally)* for storage and search 
 - Fast and effective semantic chunking (**smart chunking**)
 
@@ -409,9 +409,6 @@ export ARCHIVE_AGENT_IMAGE_DEBUGGER=1
 ## 📝 ToDo
 
 **Archive Agent** is fully functional right now and development is continuing. 
-
-Flexibility:
-- [ ] Use `llamaindex` to support more APIs beyond OpenAI (upgrade config).
 
 Performance:
 - [ ] Implement API request parallel processor for [OpenAI API](https://github.com/openai/openai-cookbook/blob/main/examples/api_request_parallel_processor.py) (or `llamaindex`).
