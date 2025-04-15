@@ -24,11 +24,11 @@
 
 ---
 
-**Screenshot of CLI:**
+📷 **Screenshot of CLI:**
 
 ![](archive_agent/assets/Screenshot-CLI.png)
 
-**Screenshot of GUI:**
+📷 **Screenshot of GUI:**
 
 ![](archive_agent/assets/Screenshot-GUI.png)
 
