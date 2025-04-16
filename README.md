@@ -126,8 +126,6 @@ docker pull qdrant/qdrant
 
 ## 🧠 How Archive Agent works
 
-The [default settings profile](#-storage) is created on the first run.
-
 ### ℹ️ Which files are processed
 
 **Archive Agent** currently supports these file types:
@@ -135,26 +133,29 @@ The [default settings profile](#-storage) is created on the first run.
   - Plaintext: `.txt`, `.md`
   - Documents:
     - ASCII documents: `.html`, `.htm`
-    - Binary documents: `.odt`, `.docx`
-      - Embedded images are decoded to text
-  - PDF documents: `.pdf`
-    - Embedded foreground images are decoded to text
-    - Embedded background images are ignored (see note below)
+    - Binary documents: `.odt`, `.docx` (including images)
+  - PDF documents: `.pdf` (including images, see note below)
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
 
-📌 **Note:** Embedded background images in PDF documents are ignored.
-This is to avoid redundancy in the chunks generated from scanned documents
-where the background layer has a corresponding OCR text layer;
-usually, the OCR text layer already contains (most of) the required information.
-**Enable *strict OCR mode* in the [settings](#-storage) if you do need full-page OCR for better transcriptions (e.g. for formulae) — 
-at the cost of consuming more time and tokens for AI vision.**
+📌 **Note:** Customize how PDF pages are handled in the [Archive Agent settings](#%EF%B8%8F-archive-agent-settings):
+
+- Strict OCR mode **disabled** (default):
+  - OCR text layer is extracted.
+  - Forground images are decoded,  background images are ignored.
+  - Cheap and fast, but less accurate.
+
+- Strict OCR mode **enabled**:
+  - OCR text layer is ignored.
+  - PDF pages are treated as images.
+  - Expensive and slow, but more accurate.
 
 ### ℹ️ How files are processed
 
 Ultimately, **Archive Agent** decodes everything to text like this:
-- Text files are decoded to UTF-8, regardless of original encoding.
-- Non-OCR PDF pages are treated as images.
-- Image files are decoded to text using AI vision.
+- Plaintext files are decoded to UTF-8.
+- Documents are converted to plaintext, images are extracted.
+- PDF documents are decoded according to strict OCR mode setting.
+- Images are decoded to text using AI vision.
   - The vision model will reject unintelligible images.
 
 Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
@@ -336,9 +337,7 @@ archive-agent gui
 
 ---
 
-## 📁 Storage
-
-### ℹ️ Archive Agent settings
+## 🛠️ Archive Agent settings
 
 **Archive Agent** settings are stored in `~/.archive-agent-settings/`. 
 
@@ -360,8 +359,10 @@ The default settings profile is located in `default/`:
 
 - `watchlist.json`:
   - Managed via the `include` / `exclude` / `remove` / `track` / `commit` / `update` commands.
-  
-### ℹ️ Qdrant database
+
+---
+
+## 🛢 Qdrant database
 
 The Qdrant database is stored in `~/.archive-agent-qdrant-storage/`.
 
