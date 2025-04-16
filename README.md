@@ -141,7 +141,7 @@ docker pull qdrant/qdrant
 
 - Strict OCR mode **disabled** (default):
   - OCR text layer is extracted.
-  - Embedded background images in PDF documents are ignored.
+  - Forground images are decoded,  background images are ignored.
   - Cheap and fast, but less accurate.
 
 - Strict OCR mode **enabled**:
@@ -152,9 +152,10 @@ docker pull qdrant/qdrant
 ### ℹ️ How files are processed
 
 Ultimately, **Archive Agent** decodes everything to text like this:
-- Text files are decoded to UTF-8, regardless of original encoding.
-- Non-OCR PDF pages are treated as images.
-- Image files are decoded to text using AI vision.
+- Plaintext files are decoded to UTF-8.
+- Documents are converted to plaintext, images are extracted.
+- PDF documents are decoded according to strict OCR mode setting.
+- Images are decoded to text using AI vision.
   - The vision model will reject unintelligible images.
 
 Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
