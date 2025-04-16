@@ -140,13 +140,13 @@ docker pull qdrant/qdrant
 📌 **Note:** Customize how PDF pages are handled in the [Archive Agent settings](#%EF%B8%8F-archive-agent-settings):
 
 - Strict OCR mode **disabled** (default):
+  - OCR text layer is extracted.
   - Embedded background images in PDF documents are ignored.
-  - Avoids redundancy for scanned documents with OCR text layer.
   - Cheap and fast, but less accurate.
 
 - Strict OCR mode **enabled**:
-  - PDF pages are treated as images.
   - OCR text layer is ignored.
+  - PDF pages are treated as images.
   - Expensive and slow, but more accurate.
 
 ### ℹ️ How files are processed
