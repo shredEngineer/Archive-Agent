@@ -3,7 +3,7 @@
 To install **Archive Agent** on Mac OS, run this:
 
 ```bash
-brew install pyenv poetry pandoc git docker
+brew install git pyenv poetry pandoc tkinter docker
 
 pyenv install 3.10.13
 pyenv global 3.10.13

@@ -89,7 +89,11 @@ def load_pdf_document(
                 logger.warning(f"Image vision is DISABLED in your current configuration")
                 logger.warning(f"IGNORING ({len(indexed_images)}) PDF document image(s)")
             else:
-                image_texts_per_page = extract_text_from_images_per_page(page_contents, image_to_text_callback)
+                image_texts_per_page = extract_text_from_images_per_page(
+                    file_path,
+                    page_contents,
+                    image_to_text_callback,
+                )
 
         return build_document_text_from_pages(page_contents, image_texts_per_page)
 
@@ -129,11 +133,13 @@ def extract_page_contents_with_images(
 
 
 def extract_text_from_images_per_page(
+        file_path: str,
         contents: List[PdfPageContent],
         image_to_text_callback: ImageToTextCallback,
 ) -> List[List[str]]:
     """
     Extract image-based text descriptions for each page.
+    :param file_path: File path (used for logging only).
     :param contents: List of PageContent instances.
     :param image_to_text_callback: Image-to-text callback.
     :return: List of text results per page (one list of strings per page).
@@ -142,6 +148,7 @@ def extract_text_from_images_per_page(
 
     for index, content in enumerate(contents):
         page_image_texts: List[str] = []
+        logger.info(f"Processing {format_file(file_path)}...")
 
         for i, img_bytes in enumerate(content.layout_image_bytes):
             try:

@@ -36,7 +36,6 @@ class CliManager:
         """
         Initialize CLI manager.
         """
-        # Console with markup disabled to avoid Rich parsing crashes.
         self.console = Console(markup=False)
 
     def format_json(self, text: str) -> None:
@@ -47,9 +46,9 @@ class CliManager:
         try:
             data = json.loads(text)
             pretty = Pretty(data, expand_all=True)
-            self.console.print(Panel(pretty, title="Structured output", border_style="white"))
+            self.console.print(Panel(pretty, title="Structured output", style="blue", border_style="blue"))
         except json.JSONDecodeError:
-            self.console.print(Panel(f"{text}", title="Raw output", border_style="red"))
+            self.console.print(Panel(f"{text}", title="Raw output", style="red", border_style="red"))
 
     def format_openai_chunk(
             self,
@@ -57,7 +56,7 @@ class CliManager:
             line_numbered_text: str,
     ) -> AiResult:
         """
-        Format AI result of chunk callback.
+        Format text to be chunked and AI result of chunk callback.
         :param callback: Chunk callback returning AI result.
         :param line_numbered_text: Text with line numbers.
         :return: AI result.
@@ -65,7 +64,7 @@ class CliManager:
         logger.info(f"Chunking...")
 
         if CliManager.VERBOSE_CHUNK:
-            self.console.print(Panel(f"{line_numbered_text}", title="Text", border_style="white"))
+            self.console.print(Panel(f"{line_numbered_text}", title="Text", style="blue", border_style="blue"))
 
         result = callback()
 
@@ -83,7 +82,7 @@ class CliManager:
             chunk: str,
     ) -> AiResult:
         """
-        Format AI result of embed callback.
+        Format chunk to be embedded.
         :param callback: Embed callback returning AI result.
         :param chunk: Chunk.
         :return: AI result.
@@ -106,7 +105,7 @@ class CliManager:
             prompt: str,
     ) -> AiResult:
         """
-        Format AI result of query callback.
+        Format prompt and AI result of query callback.
         :param callback: Query callback returning AI result.
         :param prompt: Prompt.
         :return: AI result.
@@ -114,7 +113,7 @@ class CliManager:
         logger.info(f"Querying...")
 
         if CliManager.VERBOSE_QUERY:
-            self.console.print(Panel(f"{prompt}", title="Query", border_style="white"))
+            self.console.print(Panel(f"{prompt}", title="Query", style="red", border_style="red"))
 
         result = callback()
 
@@ -173,14 +172,14 @@ class CliManager:
         Format chunk.
         :param chunk: Chunk.
         """
-        self.console.print(Panel(f"{chunk}", title="Chunk", border_style="white"))
+        self.console.print(Panel(f"{chunk}", title="Chunk", style="orange3", border_style="orange3"))
 
     def format_question(self, question: str) -> None:
         """
         Format question.
         :param question: Question.
         """
-        self.console.print(Panel(f"{question}", title="Question", border_style="red"))
+        self.console.print(Panel(f"{question}", title="Question", style="red", border_style="red"))
 
     def format_answer(self, query_result: QuerySchema) -> str:
         """
@@ -190,7 +189,7 @@ class CliManager:
         """
         if query_result.reject:
             self.console.print(
-                Panel(f"{query_result.rejection_reason}", title="Query rejected", border_style="red")
+                Panel(f"{query_result.rejection_reason}", title="Query rejected", style="red", border_style="red")
             )
             return ""
 
@@ -222,6 +221,6 @@ class CliManager:
             f"{follow_up_list_text}",
         ])
 
-        self.console.print(Panel(f"{answer_text}", title="Answer", border_style="green"))
+        self.console.print(Panel(f"{answer_text}", title="Answer", style="green", border_style="green"))
 
         return answer_text

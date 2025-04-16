@@ -74,7 +74,7 @@ git clone https://github.com/shredEngineer/Archive-Agent
 cd Archive-Agent
 poetry install
 poetry run python -m spacy download xx_sent_ud_sm
-sudo apt install pandoc
+sudo apt install -y pandoc python3-tk
 chmod +x *.sh
 echo "alias archive-agent='$(pwd)/archive-agent.sh'" >> ~/.bashrc && source ~/.bashrc
 ```
@@ -137,7 +137,7 @@ docker pull qdrant/qdrant
   - PDF documents: `.pdf` (including images, see note below)
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
 
-📌 **Note:** Customize how PDF pages are handled in the [Archive Agent settings](#%EF%B8%8F-archive-agent-settings):
+📌 **Note:** Customize how PDF pages are handled in the [Archive Agent settings](#-archive-agent-settings):
 
 - Strict OCR mode **disabled** (default):
   - OCR text layer is extracted.
@@ -274,6 +274,8 @@ To show the full list of tracked files, run this:
 archive-agent list
 ```
 
+📌 **Note:** Don't forget to `track` your files first.
+
 ### ⚡ List changed files
 
 To show the list of changed files, run this: 
@@ -281,6 +283,8 @@ To show the list of changed files, run this:
 ```bash
 archive-agent diff
 ```
+
+📌 **Note:** Don't forget to `track` your files first.
 
 ### ⚡ Commit changed files to database
 
@@ -296,6 +300,8 @@ archive-agent commit
 - File changed:
   - Different file size
   - Different modification date
+
+📌 **Note:** Don't forget to `track` your files first.
 
 ### ⚡ Combined track and commit
 
