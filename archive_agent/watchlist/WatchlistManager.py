@@ -166,6 +166,20 @@ class WatchlistManager(StorageManager):
         else:
             logger.info("(0) excluded pattern(s)")
 
+    def get_included_patterns(self) -> list[str]:
+        """
+        Return the list of included file patterns.
+        :return: List of included patterns.
+        """
+        return self.data['included']
+
+    def get_excluded_patterns(self) -> list[str]:
+        """
+        Return the list of excluded file patterns.
+        :return: List of excluded patterns.
+        """
+        return self.data['excluded']
+
     def track(self):
         """
         Resolve all patterns and track changed files.

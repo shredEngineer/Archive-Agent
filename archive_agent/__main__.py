@@ -180,7 +180,7 @@ def mcp() -> None:
     Start MCP server.
     """
     context = ContextManager()
-    mcp = McpServer(port=context.config.data[context.config.MCP_SERVER_PORT])
+    mcp = McpServer(context=context, port=context.config.data[context.config.MCP_SERVER_PORT])
     mcp.start()
     context.ai.usage()
 

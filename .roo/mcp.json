@@ -1,3 +1,9 @@
 {
-  "mcpServers": {}
+  "servers": [
+    {
+      "name": "ArchiveAgent",
+      "transport": "sse",
+      "url": "http://localhost:8008/mcp"
+    }
+  ]
 }

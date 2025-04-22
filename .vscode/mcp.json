@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "ArchiveAgent": {
+      "type": "sse",
+      "url": "http://localhost:8008"
+    }
+  }
+}

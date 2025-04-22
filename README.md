@@ -362,6 +362,32 @@ In other words, any IDE [supporting MCP](https://modelcontextprotocol.io/clients
 
 📌 **Note:** Press `CTRL+C` in the console to close the MCP server.
 
+### 🔌 MCP Commands
+
+Archive Agent exposes these read-only commands via MCP:
+
+- `query <question>`: Answer questions about tracked files using RAG.
+  - Returns: Answer, detailed points, source references, follow-up questions
+  - Example: `query "What does the code do?"`
+
+- `search <term>`: Find files matching semantic search criteria.
+  - Returns: Matching files with relevance scores
+  - Example: `search "Authentication flow"`
+
+- `list`: Show all currently tracked files.
+  - Returns: List of tracked files with metadata
+  - Example: `list`
+
+- `diff`: Show files that have changed since last commit.
+  - Returns: Added, modified, deleted files
+  - Example: `diff`
+
+- `patterns`: List current include/exclude patterns.
+  - Returns: Active include and exclude patterns
+  - Example: `patterns`
+
+💡 **Good to know:** For security, the MCP interface only provides read-only operations. File system modifications require using the CLI.
+
 ---
 
 ## 🛠️ Archive Agent settings
