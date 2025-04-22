@@ -29,6 +29,7 @@ class GuiManager:
         """
         Run GUI.
         """
+        logger.info("Press CTRL+C to stop the GUI server.")
         self._render_layout()
 
     def _render_layout(self) -> None:

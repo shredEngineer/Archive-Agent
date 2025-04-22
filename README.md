@@ -10,10 +10,11 @@
 
 **Archive Agent** is a **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**, using this tech stack:
 
+- **MCP server for automation with 3rd party AI agents**
+- Fast and effective semantic chunking (**smart chunking**)
+- Qdrant vector DB *(running locally)* for storage and search 
 - OpenAI API for embeddings and queries
   ([more providers coming soon](https://github.com/shredEngineer/Archive-Agent/issues/6))
-- Qdrant *(running locally)* for storage and search 
-- Fast and effective semantic chunking (**smart chunking**)
 - Command-line interface (CLI) using *Typer*
 - Graphical user interface (GUI) using *Streamlit*
 
@@ -294,7 +295,7 @@ To sync changes to your files with the Qdrant database, run this:
 archive-agent commit
 ```
 
-💡 **Good to know:**  Changes are triggered by:
+💡 **Good to know:** Changes are triggered by:
 - File added
 - File removed
 - File changed:
@@ -341,6 +342,26 @@ archive-agent gui
 
 📌 **Note:** Press `CTRL+C` in the console to close the GUI server.
 
+### ⚡ Start MCP Server
+
+To start the **Archive Agent** MCP server, run this:
+
+```bash
+archive-agent mcp
+```
+
+💡 **Good to know:**
+
+> Model Context Protocol is a standardized interface for managing, sharing, and persisting context across AI model interactions.
+
+In other words, any IDE [supporting MCP](https://modelcontextprotocol.io/clients) can *remote control* **Archive Agent**:
+
+- How to [Add an MCP server](https://code.visualstudio.com/docs/copilot/chat/mcp-servers#_add-an-mcp-server) in [GitHub Copilot agent mode (VS Code)](https://code.visualstudio.com/blogs/2025/02/24/introducing-copilot-agent-mode)
+
+- How to [Add an MCP server](https://apidog.com/blog/mcp-server-roo-code/#3-model-context-protocol-mcp-the-key-to-extensibility) in [Roo Code (VS Code extension)](https://marketplace.visualstudio.com/items?itemName=RooVeterinaryInc.roo-cline)
+
+📌 **Note:** Press `CTRL+C` in the console to close the MCP server.
+
 ---
 
 ## 🛠️ Archive Agent settings
@@ -361,6 +382,7 @@ The default settings profile is located in `default/`:
   - `qdrant_chunks_max`: Maximum number of retrieved chunks
   - `chunk_lines_block`: Number of lines per block for chunking
   - `ocr_mode_strict`: Enable to treat PDF pages as images (default: `false`)
+  - `mcp_server_port`: MCP server port (default: `8008`)
 
 
 - `watchlist.json`:

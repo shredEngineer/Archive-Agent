@@ -3,6 +3,8 @@
 
 import typer
 import logging
+import tempfile
+import fcntl
 
 from archive_agent.ai.AiManager import AiManager
 
@@ -15,6 +17,8 @@ from archive_agent.db.QdrantManager import QdrantManager
 from archive_agent.watchlist.WatchlistManager import FilteredFiles, WatchlistManager
 
 from archive_agent.util.format import format_file
+
+from archive_agent.util.lock import file_lock
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +47,7 @@ class CommitManager:
         self.decoder_settings = decoder_settings
         self.qdrant = qdrant
 
+    @file_lock("archive_agent_commit")
     def commit(self) -> None:
         """
         Commit all tracked files.

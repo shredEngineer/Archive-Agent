@@ -29,6 +29,7 @@ class ConfigManager(StorageManager):
     QDRANT_CHUNKS_MAX = 'qdrant_chunks_max'
     CHUNK_LINES_BLOCK = 'chunk_lines_block'
     OCR_MODE_STRICT = 'ocr_mode_strict'
+    MCP_SERVER_PORT = 'mcp_server_port'
 
     DEFAULT_CONFIG = {
         CONFIG_VERSION: 2,
@@ -44,6 +45,7 @@ class ConfigManager(StorageManager):
         QDRANT_CHUNKS_MAX: 20,
         CHUNK_LINES_BLOCK: 50,
         OCR_MODE_STRICT: 'false',
+        MCP_SERVER_PORT: 8008,
     }
 
     def __init__(self, profile_path: Path) -> None:
@@ -62,10 +64,18 @@ class ConfigManager(StorageManager):
 
         version = self.data.get(self.CONFIG_VERSION, 1)
 
+        # Option(s) added in v2: `ocr_mode_strict`
         if version < 2:
             logger.warning(f"Upgrading config (v2): {format_file(self.file_path)}")
             self.data[self.CONFIG_VERSION] = 2
             self.data[self.OCR_MODE_STRICT] = self.DEFAULT_CONFIG[self.OCR_MODE_STRICT]
+            upgraded = True
+
+        # Option(s) added in v3: `mcp_server_port`
+        if version < 3:
+            logger.warning(f"Upgrading config (v3): {format_file(self.file_path)}")
+            self.data[self.CONFIG_VERSION] = 3
+            self.data[self.MCP_SERVER_PORT] = self.DEFAULT_CONFIG[self.MCP_SERVER_PORT]
             upgraded = True
 
         return upgraded

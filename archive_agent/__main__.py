@@ -13,6 +13,8 @@ logger.info("Starting...")
 
 from archive_agent.core.ContextManager import ContextManager
 
+from archive_agent.mcp.McpServer import McpServer
+
 
 app = typer.Typer(
     add_completion=False,
@@ -170,6 +172,17 @@ def gui() -> None:
     """
     gui_path = pathlib.Path(__file__).parent / "core" / "GuiManager.py"
     subprocess.run(["streamlit", "run", str(gui_path)])
+
+
+@app.command()
+def mcp() -> None:
+    """
+    Start MCP server.
+    """
+    context = ContextManager()
+    mcp = McpServer(port=context.config.data[context.config.MCP_SERVER_PORT])
+    mcp.start()
+    context.ai.usage()
 
 
 if __name__ == "__main__":
