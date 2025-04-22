@@ -63,7 +63,13 @@ class McpServer:
                     if is_jsonrpc and jsonrpc_method == "initialize":
                         logger.info("[MCP] Responding to JSON-RPC initialize handshake")
                         result = {
-                            "capabilities": {"chat": True, "completion": True},
+                            "capabilities": {
+                                "chat": True,
+                                "completion": True,
+                                "tools": True,
+                                "tools/list": True,
+                                "invoke": True
+                            },
                             "model": {
                                 "id": "archive-agent-gpt4",
                                 "name": "Archive Agent GPT-4.1",
@@ -75,6 +81,21 @@ class McpServer:
                             "id": jsonrpc_id,
                             "result": result
                         }
+                    
+                    # Handle notifications/initialized
+                    if is_jsonrpc and jsonrpc_method == "notifications/initialized":
+                        logger.info("[MCP] Client initialization completed")
+                        return {}  # Return empty response for notifications as per JSON-RPC spec
+                    
+                    # Handle JSON-RPC tools/list
+                    if is_jsonrpc and jsonrpc_method == "tools/list":
+                        logger.info("[MCP] Responding to JSON-RPC tools/list request")
+                        return {
+                            "jsonrpc": req_json["jsonrpc"],
+                            "id": jsonrpc_id,
+                            "result": {"tools": self._list_tools()}
+                        }
+
                     # Handle classic MCP initialize
                     if msg_type == "initialize":
                         logger.info("[MCP] Responding to classic MCP initialize handshake")
@@ -93,17 +114,8 @@ class McpServer:
                     # For other message types, stream SSE events
                     async def stream():
                         try:
-                            # JSON-RPC tool list
-                            if is_jsonrpc and jsonrpc_method == "list":
-                                logger.info("[MCP] Handling JSON-RPC 'list' tools request")
-                                payload = {
-                                    "jsonrpc": req_json["jsonrpc"],
-                                    "id": jsonrpc_id,
-                                    "result": {"tools": self._list_tools()}
-                                }
-                                yield f"data: {json.dumps(payload)}\r\n\r\n"
                             # JSON-RPC tool invoke
-                            elif is_jsonrpc and jsonrpc_method == "invoke":
+                            if is_jsonrpc and jsonrpc_method == "invoke":
                                 tool = req_json.get("params", {}).get("tool")
                                 args = req_json.get("params", {}).get("input", {})
                                 logger.info(f"[MCP] Invoking tool (JSON-RPC): {tool} with args: {args}")
