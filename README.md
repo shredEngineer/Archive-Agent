@@ -357,8 +357,10 @@ archive-agent mcp
 In other words, any IDE [supporting MCP](https://modelcontextprotocol.io/clients) can *remote control* **Archive Agent**:
 
 - How to [Add an MCP server](https://code.visualstudio.com/docs/copilot/chat/mcp-servers#_add-an-mcp-server) in [GitHub Copilot agent mode (VS Code)](https://code.visualstudio.com/blogs/2025/02/24/introducing-copilot-agent-mode)
+  - See [`.vscode/mcp.json`](.vscode/mcp.json)
 
 - How to [Add an MCP server](https://apidog.com/blog/mcp-server-roo-code/#3-model-context-protocol-mcp-the-key-to-extensibility) in [Roo Code (VS Code extension)](https://marketplace.visualstudio.com/items?itemName=RooVeterinaryInc.roo-cline)
+  - See [`.roo/mcp.json`](.roo/mcp.json)
 
 📌 **Note:** Press `CTRL+C` in the console to close the MCP server.
 
