@@ -15,7 +15,6 @@ from archive_agent.ai_schema.QuerySchema import QuerySchema
 from qdrant_client.models import ScoredPoint
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 
 class McpServer:
@@ -25,9 +24,9 @@ class McpServer:
 
     def __init__(self, context: ContextManager, port: int):
         """
-        Initialize the MCP server.
-        :param context: Application context manager.
-        :param port: Port to listen on.
+        Initialize MCP server.
+        :param context: Context manager.
+        :param port: Port.
         """
         self.context = context
         self.port = port
@@ -36,14 +35,14 @@ class McpServer:
 
     def start(self) -> None:
         """
-        Start the Uvicorn server to serve MCP endpoints.
+        Start MCP server.
         """
         logger.info(f"MCP server running on http://localhost:{self.port}/")
         uvicorn.run(self.app, host="0.0.0.0", port=self.port, log_level="info")
 
     def _setup_routes(self) -> None:
         """
-        Define the HTTP routes for JSON-RPC and streaming GET.
+        Setup HTTP routes for JSON-RPC and streaming GET.
         """
         @self.app.get("/")
         async def sse_keepalive():
@@ -57,7 +56,7 @@ class McpServer:
         @self.app.post("/")
         async def mcp_handler(request: Request):
             req_json = await request.json()
-            logger.info(f"[MCP] POST body: {json.dumps(req_json)}")
+            logger.info(f"[MCP] Request: {json.dumps(req_json)}")
 
             method = req_json.get("method")
             jsonrpc_id = req_json.get("id")
@@ -75,18 +74,18 @@ class McpServer:
                             "id": jsonrpc_id,
                             "result": {
                                 "capabilities": {
-                                    "chat": True,
-                                    "completion": True,
+                                    "chat": False,
+                                    "completion": False,
                                     "tools": True,
                                     "tools/list": True,
                                     "invoke": True
                                 },
                                 "model": {
-                                    "id": "archive-agent-gpt4",
-                                    "name": "Archive Agent GPT-4.1",
-                                    "description": "Archive Agent powered by GPT-4.1"
-                                }
-                            }
+                                    "id": "archive-agent",
+                                    "name": "Archive Agent",
+                                    "description": "Archive Agent",
+                                },
+                            },
                         }
 
                     case "notifications/initialized":
@@ -114,7 +113,7 @@ class McpServer:
                             "id": jsonrpc_id,
                             "result": result,
                         }
-                        logger.info(f"[MCP] Tool '{tool_name}' response: {json.dumps(response)}")
+                        logger.info(f"[MCP] Response: {json.dumps(response)}")
                         return response
 
                     case _:
@@ -130,6 +129,7 @@ class McpServer:
         :param id_: JSON-RPC request ID.
         :param code: Error code.
         :param message: Error message.
+        :return: JSON-RPC error response.
         """
         return {
             "jsonrpc": "2.0",
@@ -143,124 +143,110 @@ class McpServer:
     def _list_tools(self) -> List[Dict[str, Any]]:
         """
         List all available MCP tools.
+        :return: JSON.
         """
         return [
             {
                 "name": "patterns",
                 "description": "Get the list of included / excluded patterns.",
-                "parameters": {"type": "object"}
+                "parameters": {"type": "object"},
             },
             {
                 "name": "list",
                 "description": "Get the list of tracked files.",
-                "parameters": {"type": "object"}
+                "parameters": {"type": "object"},
             },
             {
                 "name": "diff",
                 "description": "Get the list of changed files.",
-                "parameters": {"type": "object"}
+                "parameters": {"type": "object"},
             },
             {
                 "name": "search",
-                "description": "Lists files matching the question.",
+                "description": "Get files matching the question.",
                 "parameters": {
                     "type": "object",
                     "properties": {"question": {"type": "string"}},
-                    "required": ["question"]
-                }
+                    "required": ["question"],
+                },
             },
             {
                 "name": "query",
-                "description": "Answers your question using RAG.",
+                "description": "Get answer using RAG.",
                 "parameters": {
                     "type": "object",
                     "properties": {"question": {"type": "string"}},
-                    "required": ["question"]
-                }
+                    "required": ["question"],
+                },
             },
-            {
-                "name": "test",
-                "description": "Returns the string 'Test'.",
-                "parameters": {"type": "object"}
-            }
         ]
-
-    async def _tool_test(self) -> Dict[str, Any]:
-        """
-        Return a fixed test string inside a proper JSON-RPC result structure.
-        """
-        return {
-            "content": [
-                {"type": "text", "text": "Test"}
-            ]
-        }
 
     async def _tool_patterns(self) -> Dict[str, Any]:
         """
         Get the list of included / excluded patterns.
+        :return: JSON.
         """
+        result = {
+            "included": self.context.watchlist.get_included_patterns(),
+            "excluded": self.context.watchlist.get_excluded_patterns()
+        }
         return {
             "content": [
                 {
                     "type": "text",
-                    "text": json.dumps({
-                        "included": self.context.watchlist.get_included_patterns(),
-                        "excluded": self.context.watchlist.get_excluded_patterns()
-                    }, indent=2)
-                }
-            ]
+                    "text": json.dumps(result, indent=2),
+                },
+            ],
         }
 
     async def _tool_list(self) -> Dict[str, Any]:
         """
         Get the list of tracked files.
+        :return: JSON.
         """
-        tracked = self.context.watchlist.get_tracked_files() or {}
-        result = [
-            {
-                "filepath": path,
-                "size": meta.get("size", 0),
-                "mtime": meta.get("mtime", 0)
-            }
-            for path, meta in tracked.items()
-        ]
+        result = {
+            "tracked": list(self.context.watchlist.get_tracked_files()),
+        }
         return {
             "content": [
                 {
                     "type": "text",
-                    "text": json.dumps(result, indent=2)
-                }
-            ]
+                    "text": json.dumps(result, indent=2),
+                },
+            ],
         }
 
     async def _tool_diff(self) -> Dict[str, Any]:
         """
         Get the list of changed files.
+        :return: JSON.
         """
-        diff = {
+        result = {
             "added": list(self.context.watchlist.get_diff_files(self.context.watchlist.DIFF_ADDED).keys()),
             "changed": list(self.context.watchlist.get_diff_files(self.context.watchlist.DIFF_CHANGED).keys()),
-            "removed": list(self.context.watchlist.get_diff_files(self.context.watchlist.DIFF_REMOVED).keys())
+            "removed": list(self.context.watchlist.get_diff_files(self.context.watchlist.DIFF_REMOVED).keys()),
         }
         return {
             "content": [
                 {
                     "type": "text",
-                    "text": json.dumps(diff, indent=2)
-                }
-            ]
+                    "text": json.dumps(result, indent=2),
+                },
+            ],
         }
 
     async def _tool_search(self, question: str) -> Dict[str, Any]:
         """
-        Lists files matching the question.
+        Get files matching the question.
+        :param question: Question.
+        :return: JSON.
         """
         points: List[ScoredPoint] = self.context.qdrant.search(question)
         result = [
             {
                 "filepath": point.payload["file_path"],
                 "relevance": point.score,
-                "last_modified": point.payload["file_mtime"]
+                "last_modified": point.payload["file_mtime"],
             }
             for point in points if point.payload
         ]
@@ -268,30 +254,32 @@ class McpServer:
             "content": [
                 {
                     "type": "text",
-                    "text": json.dumps(result, indent=2)
-                }
-            ]
+                    "text": json.dumps(result, indent=2),
+                },
+            ],
         }
 
     async def _tool_query(self, question: str) -> Dict[str, Any]:
         """
-        Answers your question using RAG.
+        Get answer using RAG.
+        :param question: Question.
+        :return: JSON.
         """
-        query_result, _ = self.context.qdrant.query(question)
+        query_result, _answer = self.context.qdrant.query(question)
         query_result = cast(QuerySchema, query_result)
         result = {
-            "answer": query_result.answer_conclusion,
-            "details": query_result.answer_list,
-            "sources": query_result.chunk_ref_list,
-            "follow_ups": query_result.further_questions_list,
-            "rejected": query_result.reject,
-            "rejection_reason": query_result.rejection_reason
+            "answer_conclusion": query_result.answer_conclusion,
+            "answer_list": query_result.answer_list,
+            "chunk_ref_list": query_result.chunk_ref_list,
+            "further_questions_list": query_result.further_questions_list,
+            "reject": query_result.reject,
+            "rejection_reason": query_result.rejection_reason,
         }
         return {
             "content": [
                 {
                     "type": "text",
                     "text": json.dumps(result, indent=2)
-                }
-            ]
+                },
+            ],
         }
