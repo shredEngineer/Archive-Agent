@@ -14,7 +14,7 @@ from archive_agent.data.FileData import FileData
 
 from archive_agent.db.QdrantManager import QdrantManager
 
-from archive_agent.watchlist.WatchlistManager import FilteredFiles, WatchlistManager
+from archive_agent.watchlist.WatchlistManager import TrackedFiles, WatchlistManager
 
 from archive_agent.util.format import format_file
 
@@ -53,7 +53,7 @@ class CommitManager:
         Commit all tracked files.
         """
         # Added files
-        added_files = self.watchlist.diff_filter(self.watchlist.DIFF_ADDED)
+        added_files = self.watchlist.get_diff_files(self.watchlist.DIFF_ADDED)
         if len(added_files) == 0:
             logger.info(f"No added files to commit")
         else:
@@ -61,7 +61,7 @@ class CommitManager:
             self.commit_diff(added_files)
 
         # Changed files
-        changed_files = self.watchlist.diff_filter(self.watchlist.DIFF_CHANGED)
+        changed_files = self.watchlist.get_diff_files(self.watchlist.DIFF_CHANGED)
         if len(changed_files) == 0:
             logger.info(f"No changed files to commit")
         else:
@@ -69,7 +69,7 @@ class CommitManager:
             self.commit_diff(changed_files)
 
         # Removed files
-        removed_files = self.watchlist.diff_filter(self.watchlist.DIFF_REMOVED)
+        removed_files = self.watchlist.get_diff_files(self.watchlist.DIFF_REMOVED)
         if len(removed_files) == 0:
             logger.info(f"No removed files to commit")
         else:
@@ -84,7 +84,7 @@ class CommitManager:
             else:
                 self.commit_diff(removed_files)
 
-    def commit_diff(self, tracked_files: FilteredFiles) -> None:
+    def commit_diff(self, tracked_files: TrackedFiles) -> None:
         """
         Commit tracked files.
         :param tracked_files: Tracked files.

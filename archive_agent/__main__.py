@@ -92,7 +92,7 @@ def track() -> None:
 @app.command()
 def list() -> None:
     """
-    Show the full list of tracked files.
+    Show the list of tracked files.
     """
     context = ContextManager()
 

@@ -9,10 +9,10 @@ from typing import Dict, Any, List, cast
 from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 import uvicorn
-from qdrant_client.models import ScoredPoint
 
 from archive_agent.core.ContextManager import ContextManager
 from archive_agent.ai_schema.QuerySchema import QuerySchema
+from qdrant_client.models import ScoredPoint
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -20,14 +20,14 @@ logging.basicConfig(level=logging.INFO)
 
 class McpServer:
     """
-    Model Context Protocol (MCP) server using HTTP SSE transport.
-    Compatible with VS Code and Roo Code Agent Mode.
+    JSON-RPC MCP server with SSE keep-alive.
     """
+
     def __init__(self, context: ContextManager, port: int):
         """
         Initialize the MCP server.
         :param context: Application context manager.
-        :param port: Port for the HTTP server.
+        :param port: Port to listen on.
         """
         self.context = context
         self.port = port
@@ -36,261 +36,262 @@ class McpServer:
 
     def start(self) -> None:
         """
-        Start the MCP server using Uvicorn.
+        Start the Uvicorn server to serve MCP endpoints.
         """
         logger.info(f"MCP server running on http://localhost:{self.port}/")
         uvicorn.run(self.app, host="0.0.0.0", port=self.port, log_level="info")
 
     def _setup_routes(self) -> None:
         """
-        Set up the root endpoint for both GET and POST to handle MCP protocol.
+        Define the HTTP routes for JSON-RPC and streaming GET.
         """
-        @self.app.api_route("/", methods=["GET", "POST"])
-        async def mcp_handler(request: Request):
-            logger.info(f"[MCP] {request.method} {request.url.path} from {request.client.host}:{request.client.port}")
-            if request.method == "POST":
-                try:
-                    req_json = await request.json()
-                    logger.info(f"[MCP] POST body: {json.dumps(req_json)}")
-                    # Support both classic MCP and JSON-RPC 2.0 (VS Code)
-                    msg_type = req_json.get("type")
-                    jsonrpc_method = req_json.get("method")
-                    jsonrpc_id = req_json.get("id")
-                    is_jsonrpc = "jsonrpc" in req_json and jsonrpc_method is not None
-                    logger.info(f"[MCP] Handling message type: {msg_type or jsonrpc_method}")
+        @self.app.get("/")
+        async def sse_keepalive():
+            logger.info("[MCP] GET (SSE keep-alive)")
+            async def stream():
+                while True:
+                    await asyncio.sleep(30)
+                    yield ": keep-alive\r\n\r\n"
+            return StreamingResponse(stream(), media_type="text/event-stream")
 
-                    # Handle JSON-RPC initialize
-                    if is_jsonrpc and jsonrpc_method == "initialize":
-                        logger.info("[MCP] Responding to JSON-RPC initialize handshake")
-                        result = {
-                            "capabilities": {
-                                "chat": True,
-                                "completion": True,
-                                "tools": True,
-                                "tools/list": True,
-                                "invoke": True
-                            },
-                            "model": {
-                                "id": "archive-agent-gpt4",
-                                "name": "Archive Agent GPT-4.1",
-                                "description": "Archive Agent powered by GPT-4.1"
+        @self.app.post("/")
+        async def mcp_handler(request: Request):
+            req_json = await request.json()
+            logger.info(f"[MCP] POST body: {json.dumps(req_json)}")
+
+            method = req_json.get("method")
+            jsonrpc_id = req_json.get("id")
+            params = req_json.get("params", {})
+            is_jsonrpc = req_json.get("jsonrpc") == "2.0"
+
+            if not is_jsonrpc or not method:
+                return self._error_response(jsonrpc_id, -32600, "Invalid JSON-RPC request")
+
+            try:
+                match method:
+                    case "initialize":
+                        return {
+                            "jsonrpc": "2.0",
+                            "id": jsonrpc_id,
+                            "result": {
+                                "capabilities": {
+                                    "chat": True,
+                                    "completion": True,
+                                    "tools": True,
+                                    "tools/list": True,
+                                    "invoke": True
+                                },
+                                "model": {
+                                    "id": "archive-agent-gpt4",
+                                    "name": "Archive Agent GPT-4.1",
+                                    "description": "Archive Agent powered by GPT-4.1"
+                                }
                             }
                         }
+
+                    case "notifications/initialized":
+                        return {"jsonrpc": "2.0", "id": jsonrpc_id, "result": {}}
+
+                    case "tools/list":
                         return {
-                            "jsonrpc": req_json["jsonrpc"],
-                            "id": jsonrpc_id,
-                            "result": result
-                        }
-                    
-                    # Handle notifications/initialized
-                    if is_jsonrpc and jsonrpc_method == "notifications/initialized":
-                        logger.info("[MCP] Client initialization completed")
-                        return {}  # Return empty response for notifications as per JSON-RPC spec
-                    
-                    # Handle JSON-RPC tools/list
-                    if is_jsonrpc and jsonrpc_method == "tools/list":
-                        logger.info("[MCP] Responding to JSON-RPC tools/list request")
-                        return {
-                            "jsonrpc": req_json["jsonrpc"],
+                            "jsonrpc": "2.0",
                             "id": jsonrpc_id,
                             "result": {"tools": self._list_tools()}
                         }
 
-                    # Handle classic MCP initialize
-                    if msg_type == "initialize":
-                        logger.info("[MCP] Responding to classic MCP initialize handshake")
-                        return {
-                            "type": "initialize",
-                            "capabilities": {
-                                "chat": True,
-                                "completion": True
-                            },
-                            "model": {
-                                "id": "archive-agent-gpt4",
-                                "name": "Archive Agent GPT-4.1",
-                                "description": "Archive Agent powered by GPT-4.1"
-                            }
+                    case "tools/call":
+                        tool_name = params.get("name")
+                        tool_args = params.get("arguments", {})
+
+                        if not hasattr(self, f"_tool_{tool_name}"):
+                            return self._error_response(jsonrpc_id, -32601, f"Tool not found: {tool_name}")
+
+                        tool_method = getattr(self, f"_tool_{tool_name}")
+
+                        result = await tool_method(**tool_args)
+                        response = {
+                            "jsonrpc": "2.0",
+                            "id": jsonrpc_id,
+                            "result": result,
                         }
-                    # For other message types, stream SSE events
-                    async def stream():
-                        try:
-                            # JSON-RPC tool invoke
-                            if is_jsonrpc and jsonrpc_method == "invoke":
-                                tool = req_json.get("params", {}).get("tool")
-                                args = req_json.get("params", {}).get("input", {})
-                                logger.info(f"[MCP] Invoking tool (JSON-RPC): {tool} with args: {args}")
-                                result = self._invoke(tool, args)
-                                payload = {
-                                    "jsonrpc": req_json["jsonrpc"],
-                                    "id": jsonrpc_id,
-                                    "result": {"tool": tool, "output": result}
-                                }
-                                yield f"data: {json.dumps(payload)}\r\n\r\n"
-                            # Classic MCP list
-                            elif msg_type == "list":
-                                logger.info("[MCP] Handling 'list' tools request")
-                                payload = {
-                                    "type": "list",
-                                    "tools": self._list_tools()
-                                }
-                                yield f"data: {json.dumps(payload)}\r\n\r\n"
-                            # Classic MCP invoke
-                            elif msg_type == "invoke":
-                                tool = req_json.get("tool")
-                                args = req_json.get("input", {})
-                                logger.info(f"[MCP] Invoking tool: {tool} with args: {args}")
-                                result = self._invoke(tool, args)
-                                payload = {
-                                    "type": "invoke_result",
-                                    "tool": tool,
-                                    "output": result
-                                }
-                                yield f"data: {json.dumps(payload)}\r\n\r\n"
-                            else:
-                                logger.info(f"[MCP] Unsupported message type: {msg_type or jsonrpc_method}")
-                                error_payload = {"error": "Unsupported message type"}
-                                if is_jsonrpc:
-                                    error_payload = {
-                                        "jsonrpc": req_json["jsonrpc"],
-                                        "id": jsonrpc_id,
-                                        "error": {"code": -32601, "message": "Unsupported method"}
-                                    }
-                                yield f"data: {json.dumps(error_payload)}\r\n\r\n"
-                        except Exception as e:
-                            logger.exception("[MCP] Error handling MCP request")
-                            yield f"data: {json.dumps({'error': str(e)})}\r\n\r\n"
-                        # Keep connection open for SSE clients
-                        while True:
-                            await asyncio.sleep(30)
-                            yield ": keep-alive\r\n\r\n"
-                    return StreamingResponse(stream(), media_type="text/event-stream")
-                except Exception as e:
-                    logger.exception("[MCP] Invalid JSON in MCP POST")
-                    async def error_stream():
-                        yield f"data: {json.dumps({'error': 'Invalid JSON'})}\r\n\r\n"
-                        while True:
-                            await asyncio.sleep(30)
-                            yield ": keep-alive\r\n\r\n"
-                    return StreamingResponse(error_stream(), media_type="text/event-stream")
-            # GET: keep SSE connection alive
-            logger.info("[MCP] GET (SSE keep-alive)")
-            async def noop_stream():
-                while True:
-                    await asyncio.sleep(30)
-                    yield ": keep-alive\r\n\r\n"
-            return StreamingResponse(noop_stream(), media_type="text/event-stream")
+                        logger.info(f"[MCP] Tool '{tool_name}' response: {json.dumps(response)}")
+                        return response
+
+                    case _:
+                        return self._error_response(jsonrpc_id, -32601, f"Unsupported method: {method}")
+
+            except Exception as e:
+                logger.exception("[MCP] Tool execution error")
+                return self._error_response(jsonrpc_id, -32603, str(e))
+
+    def _error_response(self, id_: Any, code: int, message: str) -> Dict[str, Any]:
+        """
+        Format a JSON-RPC error response.
+        :param id_: JSON-RPC request ID.
+        :param code: Error code.
+        :param message: Error message.
+        """
+        return {
+            "jsonrpc": "2.0",
+            "id": id_,
+            "error": {
+                "code": code,
+                "message": message
+            }
+        }
 
     def _list_tools(self) -> List[Dict[str, Any]]:
         """
-        Return the list of available MCP tools.
+        List all available MCP tools.
         """
         return [
             {
-                "name": "query",
-                "description": "Ask a question via RAG",
-                "parameters": {
-                    "type": "object",
-                    "properties": {"question": {"type": "string"}},
-                    "required": ["question"],
-                },
+                "name": "patterns",
+                "description": "Get the list of included / excluded patterns.",
+                "parameters": {"type": "object"}
+            },
+            {
+                "name": "list",
+                "description": "Get the list of tracked files.",
+                "parameters": {"type": "object"}
+            },
+            {
+                "name": "diff",
+                "description": "Get the list of changed files.",
+                "parameters": {"type": "object"}
             },
             {
                 "name": "search",
-                "description": "Search semantic files",
+                "description": "Lists files matching the question.",
                 "parameters": {
                     "type": "object",
-                    "properties": {"term": {"type": "string"}},
-                    "required": ["term"],
-                },
+                    "properties": {"question": {"type": "string"}},
+                    "required": ["question"]
+                }
             },
-            {"name": "list", "description": "List tracked files", "parameters": {"type": "object"}},
-            {"name": "diff", "description": "Show changed files", "parameters": {"type": "object"}},
-            {"name": "patterns", "description": "List include/exclude patterns", "parameters": {"type": "object"}},
+            {
+                "name": "query",
+                "description": "Answers your question using RAG.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"question": {"type": "string"}},
+                    "required": ["question"]
+                }
+            },
+            {
+                "name": "test",
+                "description": "Returns the string 'Test'.",
+                "parameters": {"type": "object"}
+            }
         ]
 
-    def _invoke(self, tool: str, args: Dict[str, Any]) -> Dict[str, Any]:
+    async def _tool_test(self) -> Dict[str, Any]:
         """
-        Invoke the specified tool with arguments and return the result.
+        Return a fixed test string inside a proper JSON-RPC result structure.
         """
-        match tool:
-            case "query":
-                return self.query(args.get("question", ""))
-            case "search":
-                return self.search(args.get("term", ""))
-            case "list":
-                return self.list()
-            case "diff":
-                return self.diff()
-            case "patterns":
-                return self.patterns()
-            case _:
-                return {"error": f"Unknown tool: {tool}"}
+        return {
+            "content": [
+                {"type": "text", "text": "Test"}
+            ]
+        }
 
-    def query(self, question: str) -> Dict[str, Any]:
+    async def _tool_patterns(self) -> Dict[str, Any]:
         """
-        Handle the 'query' tool: answer a question using RAG.
+        Get the list of included / excluded patterns.
+        """
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps({
+                        "included": self.context.watchlist.get_included_patterns(),
+                        "excluded": self.context.watchlist.get_excluded_patterns()
+                    }, indent=2)
+                }
+            ]
+        }
+
+    async def _tool_list(self) -> Dict[str, Any]:
+        """
+        Get the list of tracked files.
+        """
+        tracked = self.context.watchlist.get_tracked_files() or {}
+        result = [
+            {
+                "filepath": path,
+                "size": meta.get("size", 0),
+                "mtime": meta.get("mtime", 0)
+            }
+            for path, meta in tracked.items()
+        ]
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps(result, indent=2)
+                }
+            ]
+        }
+
+    async def _tool_diff(self) -> Dict[str, Any]:
+        """
+        Get the list of changed files.
+        """
+        diff = {
+            "added": list(self.context.watchlist.get_diff_files(self.context.watchlist.DIFF_ADDED).keys()),
+            "changed": list(self.context.watchlist.get_diff_files(self.context.watchlist.DIFF_CHANGED).keys()),
+            "removed": list(self.context.watchlist.get_diff_files(self.context.watchlist.DIFF_REMOVED).keys())
+        }
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps(diff, indent=2)
+                }
+            ]
+        }
+
+    async def _tool_search(self, question: str) -> Dict[str, Any]:
+        """
+        Lists files matching the question.
+        """
+        points: List[ScoredPoint] = self.context.qdrant.search(question)
+        result = [
+            {
+                "filepath": point.payload["file_path"],
+                "relevance": point.score,
+                "last_modified": point.payload["file_mtime"]
+            }
+            for point in points if point.payload
+        ]
+        return {
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps(result, indent=2)
+                }
+            ]
+        }
+
+    async def _tool_query(self, question: str) -> Dict[str, Any]:
+        """
+        Answers your question using RAG.
         """
         query_result, _ = self.context.qdrant.query(question)
         query_result = cast(QuerySchema, query_result)
-        return {
+        result = {
             "answer": query_result.answer_conclusion,
             "details": query_result.answer_list,
             "sources": query_result.chunk_ref_list,
             "follow_ups": query_result.further_questions_list,
             "rejected": query_result.reject,
-            "rejection_reason": query_result.rejection_reason,
+            "rejection_reason": query_result.rejection_reason
         }
-
-    def search(self, term: str) -> Dict[str, Any]:
-        """
-        Handle the 'search' tool: search for files semantically.
-        """
-        points: List[ScoredPoint] = self.context.qdrant.search(term)
         return {
-            "matches": [
+            "content": [
                 {
-                    "filepath": point.payload["file_path"],
-                    "relevance": point.score,
-                    "last_modified": point.payload["file_mtime"],
+                    "type": "text",
+                    "text": json.dumps(result, indent=2)
                 }
-                for point in points
-                if point.payload is not None
             ]
-        }
-
-    def list(self) -> Dict[str, Any]:
-        """
-        Handle the 'list' tool: list tracked files.
-        """
-        files = self.context.watchlist.list()
-        return {
-            "files": [
-                {
-                    "filepath": file_data.file_path,
-                    "size": file_data.size,
-                    "mtime": file_data.mtime,
-                    "tracked": True,
-                }
-                for file_data in files
-            ]
-        }
-
-    def diff(self) -> Dict[str, Any]:
-        """
-        Handle the 'diff' tool: show changed files.
-        """
-        result = self.context.watchlist.diff()
-        return {
-            "added": [str(p) for p in result.added],
-            "modified": [str(p) for p in result.modified],
-            "deleted": [str(p) for p in result.deleted],
-        }
-
-    def patterns(self) -> Dict[str, Any]:
-        """
-        Handle the 'patterns' tool: list include/exclude patterns.
-        """
-        return {
-            "included": self.context.watchlist.get_included_patterns(),
-            "excluded": self.context.watchlist.get_excluded_patterns(),
         }

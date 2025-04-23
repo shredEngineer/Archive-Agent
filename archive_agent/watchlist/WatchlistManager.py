@@ -16,7 +16,7 @@ from archive_agent.util.pattern import validate_pattern, resolve_pattern
 logger = logging.getLogger(__name__)
 
 
-FilteredFiles = Dict[str, Dict[str, Any]]
+TrackedFiles = Dict[str, Dict[str, Any]]  # {file_path: file_meta}
 
 
 class WatchlistManager(StorageManager):
@@ -168,14 +168,14 @@ class WatchlistManager(StorageManager):
 
     def get_included_patterns(self) -> list[str]:
         """
-        Return the list of included file patterns.
+        Get the list of included patterns.
         :return: List of included patterns.
         """
         return self.data['included']
 
     def get_excluded_patterns(self) -> list[str]:
         """
-        Return the list of excluded file patterns.
+        Get the list of excluded patterns.
         :return: List of excluded patterns.
         """
         return self.data['excluded']
@@ -246,22 +246,29 @@ class WatchlistManager(StorageManager):
         self.data['tracked'] = tracked_dict_new
         self.save()
 
+    def get_tracked_files(self) -> TrackedFiles:
+        """
+        Get the list of tracked files.
+        :return: List of tracked files.
+        """
+        return self.data['tracked']
+
     def list(self) -> None:
         """
-        Show the full list of tracked files.
+        Show the list of tracked files.
         """
         if len(self.data['tracked']) > 0:
-            logger.info(f"({len(self.data['included'])}) tracked files(s):")
+            logger.info(f"({len(self.data['tracked'])}) tracked files(s):")
             for file in self.data['tracked'].keys():
                 logger.info(f"- {file}")
         else:
             logger.info("(0) tracked file(s)")
 
-    def diff_filter(self, diff_option: str) -> FilteredFiles:
+    def get_diff_files(self, diff_option: str) -> TrackedFiles:
         """
-        Filter tracked files for diff option.
-        :param diff_option: Diff option to filter for.
-        :return: Filtered files.
+        Get the list of tracked files filtered by diff option.
+        :param diff_option: Diff option.
+        :return: List of tracked files filtered by diff option.
         """
         return {
             file_path: file_meta
@@ -273,9 +280,9 @@ class WatchlistManager(StorageManager):
         """
         Show the list of changed files.
         """
-        added_files = self.diff_filter(self.DIFF_ADDED)
-        changed_files = self.diff_filter(self.DIFF_CHANGED)
-        removed_files = self.diff_filter(self.DIFF_REMOVED)
+        added_files = self.get_diff_files(self.DIFF_ADDED)
+        changed_files = self.get_diff_files(self.DIFF_CHANGED)
+        removed_files = self.get_diff_files(self.DIFF_REMOVED)
 
         if len(added_files) > 0:
             logger.info(f"({len(added_files)}) added files(s):")
