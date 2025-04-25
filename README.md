@@ -24,6 +24,10 @@
 
 ---
 
+⚡ **Looking for the MCP tool reference? See: [Run Archive Agent](#-mcp-tools)**
+
+---
+
 📷 **Screenshot of CLI:**
 
 ![](archive_agent/assets/Screenshot-CLI.png)
