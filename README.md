@@ -24,7 +24,7 @@
 
 ---
 
-⚡ **Looking for the MCP tool reference? See: [Run Archive Agent](#-mcp-tools)**
+⚡ **Looking for the MCP tool reference? See: [MCP Tools](#-mcp-tools)**
 
 ---
 
