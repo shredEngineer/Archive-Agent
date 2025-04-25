@@ -10,7 +10,7 @@
 
 **Archive Agent** is a **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**, using this tech stack:
 
-- **MCP server for automation with 3rd party AI agents**
+- **MCP server for automation through IDE or AI extension**
 - Fast and effective semantic chunking (**smart chunking**)
 - Qdrant vector DB *(running locally)* for storage and search 
 - OpenAI API for embeddings and queries
@@ -318,7 +318,7 @@ archive-agent update
 archive-agent search "Which files mention donuts?"
 ```
 
-Lists files matching the question.
+Lists files relevant to the question.
 
 📌 **Note:** **Always use quotes** for the question argument, **or skip it** to get an interactive prompt.
 
@@ -350,31 +350,28 @@ To start the **Archive Agent** MCP server, run this:
 archive-agent mcp
 ```
 
-💡 **Good to know:**
-
-> Model Context Protocol is a standardized interface for managing, sharing, and persisting context across AI model interactions.
-
-In other words, any IDE [supporting MCP](https://modelcontextprotocol.io/clients) can *remote control* **Archive Agent**:
-
-- How to [Add an MCP server](https://code.visualstudio.com/docs/copilot/chat/mcp-servers#_add-an-mcp-server) in [GitHub Copilot agent mode (VS Code)](https://code.visualstudio.com/blogs/2025/02/24/introducing-copilot-agent-mode)
-  - See [`.vscode/mcp.json`](.vscode/mcp.json)
-
-- How to [Add an MCP server](https://apidog.com/blog/mcp-server-roo-code/#3-model-context-protocol-mcp-the-key-to-extensibility) in [Roo Code (VS Code extension)](https://marketplace.visualstudio.com/items?itemName=RooVeterinaryInc.roo-cline)
-  - See [`.roo/mcp.json`](.roo/mcp.json)
-
 📌 **Note:** Press `CTRL+C` in the console to close the MCP server.
 
-### 🔌 MCP Commands
+💡 **Good to know:** Use these MCP configurations to let your IDE or AI extension automate **Archive Agent**:
 
-Archive Agent exposes these read-only commands via MCP:
+- [`.vscode/mcp.json`](.vscode/mcp.json) for [GitHub Copilot agent mode (VS Code)](https://code.visualstudio.com/blogs/2025/02/24/introducing-copilot-agent-mode): 
+- [`.roo/mcp.json`](.roo/mcp.json) for [Roo Code (VS Code extension)](https://marketplace.visualstudio.com/items?itemName=RooVeterinaryInc.roo-cline)
 
-- `patterns`
-- `list`
-- `diff`
-- `search`
-- `query`
+### 🔌 MCP Tools
 
-💡 **Good to know:** For security, the MCP interface only provides read-only operations. File system modifications require using the CLI.
+**Archive Agent** exposes these tools via MCP:
+
+| MCP tool            | Equivalent CLI command(s) | Argument(s) | Description                                   |
+|---------------------|---------------------------|-------------|-----------------------------------------------|
+| `get_patterns`      | `patterns`                | None        | Get the list of included / excluded patterns. |
+| `get_files_tracked` | `track` and then `list`   | None        | Get the list of tracked files.                |
+| `get_files_changed` | `track` and then `diff`   | None        | Get the list of changed files.                |
+| `get_search_result` | `search`                  | `question`  | Get list of files relevant to the question.   |
+| `get_answer_rag`    | `query`                   | `question`  | Get answer to question using RAG.             |
+
+📌 **Note:** These commands are **read-only**, preventing the AI from changing your Qdrant database.
+
+💡 **Good to know:** Just type `#get_answer_rag` (e.g.) in your IDE or AI extension to call the tool directly.
 
 ---
 

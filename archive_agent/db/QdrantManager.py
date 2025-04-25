@@ -179,7 +179,7 @@ class QdrantManager:
 
     def search(self, question: str) -> List[ScoredPoint]:
         """
-        Get points matching the question.
+        Get points relevant to the question.
         :param question: Question.
         :return: Points.
         """

@@ -13,7 +13,7 @@ logger.info("Starting...")
 
 from archive_agent.core.ContextManager import ContextManager
 
-from archive_agent.mcp.McpServer import McpServer
+from archive_agent.mcp_server.McpServer import McpServer
 
 
 app = typer.Typer(
@@ -138,7 +138,7 @@ def update() -> None:
 @app.command()
 def search(question: str = typer.Argument(None)) -> None:
     """
-    List files matching the question.
+    List files relevant to the question.
     """
     context = ContextManager()
 
@@ -180,8 +180,11 @@ def mcp() -> None:
     Start MCP server.
     """
     context = ContextManager()
-    mcp = McpServer(context=context, port=context.config.data[context.config.MCP_SERVER_PORT])
-    mcp.start()
+
+    # TODO: Allow for graceful CTRL+C shutdown without the `asyncio.exceptions.CancelledError`
+    mcp_server = McpServer(context=context, port=context.config.data[context.config.MCP_SERVER_PORT])
+    mcp_server.start()
+
     context.ai.usage()
 
 

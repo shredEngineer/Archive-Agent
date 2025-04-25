@@ -91,6 +91,7 @@ def load_ascii_document(file_path: str) -> Optional[str]:
                 os.remove(tmp_path)
         except Exception as e:
             logger.debug(f"Failed to delete temporary file {tmp_path}: {e}")
+            return None
 
 
 def is_binary_document(file_path: str) -> bool:

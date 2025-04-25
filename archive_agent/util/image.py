@@ -27,12 +27,12 @@ def is_image(file_path: str) -> bool:
 def load_image(
         file_path: str,
         image_to_text_callback: Optional[ImageToTextCallback],
-) -> Optional[Image.Image]:
+) -> Optional[str]:
     """
-    Load image.
+    Load image as text.
     :param file_path: File path.
     :param image_to_text_callback: Optional image-to-text callback.
-    :return: Image data if successful, None otherwise.
+    :return: Text if successful, None otherwise.
     """
     try:
         image = Image.open(file_path).convert("RGB")

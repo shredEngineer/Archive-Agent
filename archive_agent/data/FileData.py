@@ -23,6 +23,9 @@ from archive_agent.util.text import is_binary_document, load_binary_document
 logger = logging.getLogger(__name__)
 
 
+DecoderCallable = Callable[[], Optional[str]]
+
+
 class FileData:
     """
     File data.
@@ -54,9 +57,9 @@ class FileData:
 
         self.image_to_text_callback = self.image_to_text if self.ai.supports_vision else None
 
-        self.decoder_func: Optional[Callable[[], Optional[str]]] = self.get_decoder_func()
+        self.decoder_func: Optional[DecoderCallable] = self.get_decoder_func()
 
-    def get_decoder_func(self) -> Optional[Callable[[], Optional[str]]]:
+    def get_decoder_func(self) -> Optional[DecoderCallable]:
         """
         Get decoder function for file.
         :return: Decoder function if available, None otherwise.

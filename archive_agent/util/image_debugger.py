@@ -89,6 +89,7 @@ def _run_viewer(images: List[IndexedImage]) -> None:
         container = ttk.Frame(scroll_frame, padding=8, borderwidth=1, relief="solid")
         container.pack(padx=12, pady=8, fill="x", expand=True)
 
+        # noinspection PyTypeChecker
         label_image = ttk.Label(container, image=tk_img)
         label_image.pack()
 

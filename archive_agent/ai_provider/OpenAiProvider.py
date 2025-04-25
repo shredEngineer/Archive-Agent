@@ -52,6 +52,7 @@ class OpenAiProvider(AiProvider):
         :param prompt: Prompt.
         :return: AI result.
         """
+        # noinspection PyTypeChecker
         response = self.client.responses.create(
             model=self.model_chunk,
             temperature=0,
@@ -111,6 +112,7 @@ class OpenAiProvider(AiProvider):
         :param prompt: Prompt.
         :return: AI result.
         """
+        # noinspection PyTypeChecker
         response = self.client.responses.create(
             model=self.model_query,
             temperature=self.temp_query,
@@ -156,6 +158,7 @@ class OpenAiProvider(AiProvider):
         :param image_base64: Image as UTF-8 encoded Base64 string.
         :return: AI result.
         """
+        # noinspection PyTypeChecker
         response = self.client.responses.create(
             model=self.model_vision,
             input=[

@@ -1,8 +1,14 @@
 {
   "mcpServers": {
-    "ArchiveAgent": {
-      "transport": "sse",
-      "url": "http://localhost:8008"
+    "remote-server": {
+      "url": "http://127.0.0.1:8008/sse",
+      "headers": {
+        "Authorization": "Bearer your-token"
+      },
+      "alwaysAllow": [
+        "get_state"
+      ],
+      "disabled": false
     }
   }
 }

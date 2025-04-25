@@ -3,8 +3,6 @@
 
 import typer
 import logging
-import tempfile
-import fcntl
 
 from archive_agent.ai.AiManager import AiManager
 
