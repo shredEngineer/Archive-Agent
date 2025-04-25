@@ -14,6 +14,7 @@ class DecoderSettings:
     def __init__(self, ocr_mode_strict: str):
         """
         Initialize decoder settings.
+        :param ocr_mode_strict: Strict OCR mode option value (will be parsed to bool).
         """
         self.ocr_mode_strict: bool = ocr_mode_strict.strip().lower() == "true"
 
