@@ -3,7 +3,7 @@
 
 import logging
 import uuid
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Callable
 
 from PIL import Image
 
@@ -52,28 +52,53 @@ class FileData:
 
         self.points: List[PointStruct] = []
 
+        self.image_to_text_callback = self.image_to_text if self.ai.supports_vision else None
+
+        self.decoder_func: Optional[Callable[[], Optional[str]]] = self.get_decoder_func()
+
+    def get_decoder_func(self) -> Optional[Callable[[], Optional[str]]]:
+        """
+        Get decoder function for file.
+        :return: Decoder function if available, None otherwise.
+        """
+        if is_image(self.file_path):
+            return lambda: load_image(
+                self.file_path,
+                self.image_to_text_callback,
+            )
+
+        elif is_plaintext(self.file_path):
+            return lambda: load_plaintext(
+                self.file_path,
+            )
+
+        elif is_ascii_document(self.file_path):
+            return lambda: load_ascii_document(
+                self.file_path,
+            )
+
+        elif is_binary_document(self.file_path):
+            return lambda: load_binary_document(
+                self.file_path,
+                self.image_to_text_callback,
+            )
+
+        elif is_pdf_document(self.file_path):
+            return lambda: load_pdf_document(
+                self.file_path,
+                self.image_to_text_callback,
+                self.decoder_settings.ocr_mode_strict,
+            )
+
+        else:
+            return None
+
     def is_processable(self) -> bool:
         """
         Checks if the file is processable.
         :return: True if the file is processable, False otherwise.
         """
-        if is_image(self.file_path):
-            return True
-
-        elif is_plaintext(self.file_path):
-            return True
-
-        elif is_ascii_document(self.file_path):
-            return True
-
-        elif is_binary_document(self.file_path):
-            return True
-
-        elif is_pdf_document(self.file_path):
-            return True
-
-        else:
-            return False
+        return self.decoder_func is not None
 
     def image_to_text(self, image: Image.Image) -> Optional[str]:
         """
@@ -108,23 +133,8 @@ class FileData:
         Decode file data to text.
         :return: Text if successful, None otherwise.
         """
-        image_to_text_callback = self.image_to_text if self.ai.supports_vision else None
-
-        if is_image(self.file_path):
-            return load_image(self.file_path, image_to_text_callback)
-
-        elif is_plaintext(self.file_path):
-            return load_plaintext(self.file_path)
-
-        elif is_ascii_document(self.file_path):
-            return load_ascii_document(self.file_path)
-
-        elif is_binary_document(self.file_path):
-            return load_binary_document(self.file_path, image_to_text_callback)
-
-        elif is_pdf_document(self.file_path):
-            return load_pdf_document(self.file_path, image_to_text_callback, self.decoder_settings.ocr_mode_strict)
-
+        if self.decoder_func is not None:
+            return self.decoder_func()
         else:
             logger.warning(f"Cannot process {format_file(self.file_path)}")
             return None
@@ -138,7 +148,7 @@ class FileData:
         blocks_of_sentences = split_into_blocks(text, self.chunk_lines_block)
 
         chunks: List[str] = []
-        carry: str | None = None
+        carry: Optional[str] = None
 
         for block_index, block_of_sentences in enumerate(blocks_of_sentences):
             logger.info(
