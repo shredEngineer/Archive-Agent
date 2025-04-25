@@ -20,7 +20,7 @@
 
 ---
 
-⚡ **Looking for the command reference? See: [Run Archive Agent](#-run-archive-agent)**
+⚡ **Looking for the CLI command reference? See: [Run Archive Agent](#-run-archive-agent)**
 
 ---
 
