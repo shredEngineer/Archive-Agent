@@ -6,7 +6,6 @@
         "Authorization": "Bearer your-token"
       },
       "alwaysAllow": [
-        "get_state"
       ],
       "disabled": false
     }
