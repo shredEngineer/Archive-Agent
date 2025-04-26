@@ -6,6 +6,8 @@
 
 **Archive Agent** tracks your files, syncs changes, and powers smart queries.  
 
+*Watch me explain it here:* https://www.youtube.com/watch?v=dyKovjez4-g
+
 ![Archive Agent Logo](archive_agent/assets/Archive-Agent-400x300.png)
 
 **Archive Agent** is a **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**, using this tech stack:
