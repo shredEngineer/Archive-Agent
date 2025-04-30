@@ -85,7 +85,7 @@ class ContextManager:
         }
 
         if ai_provider_name not in ai_provider_mapping:
-            raise ValueError(f"Invalid AI provider: {ai_provider_name} (must be one of {ai_provider_mapping.keys()})")
+            raise ValueError(f"Invalid AI provider: '{ai_provider_name}' (must be one of {ai_provider_mapping.keys()})")
 
         ai_provider_class = ai_provider_mapping[ai_provider_name]
 
@@ -97,5 +97,5 @@ class ContextManager:
             temperature_query=self.config.data[self.config.AI_TEMPERATURE_QUERY],
         )
 
-        logger.info(f"Using AI provider: {ai_provider_name}")
+        logger.info(f"Using AI provider: '{ai_provider_name}'")
         return ai_provider

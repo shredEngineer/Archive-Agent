@@ -24,4 +24,4 @@ class DecoderSettings:
         """
         self.ocr_strategy = ocr_strategy
 
-        logger.info(f"Using OCR strategy: {self.ocr_strategy}")
+        logger.info(f"Using OCR strategy: '{self.ocr_strategy}'")
