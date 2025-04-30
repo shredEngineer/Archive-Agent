@@ -40,11 +40,11 @@
 
 ---
 
-## Structure
+## 🗂️ Structure
 
 <!-- TOC -->
 * [🧠 Archive Agent](#-archive-agent)
-  * [Structure](#structure)
+  * [🗂️ Structure](#-structure)
   * [⚙️ Install requirements](#-install-requirements)
   * [⚙️ AI provider setup](#-ai-provider-setup)
     * [OpenAI provider setup](#openai-provider-setup)
