@@ -133,7 +133,7 @@ class QdrantManager:
 
         if count == 0:
             if not quiet:
-                logger.info(f"No chunks to remove for {format_file(file_data.file_path)}")
+                logger.info(f"- NO CHUNKS to remove for {format_file(file_data.file_path)}")
             return True
 
         if not quiet:
