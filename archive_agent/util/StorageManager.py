@@ -43,7 +43,7 @@ class StorageManager(ABC):
             else:
                 self.load()
         except Exception as e:
-            logger.error(f"Failed to load {format_file(self.file_path)}: {e}")
+            logger.exception(f"Failed to load {format_file(self.file_path)}: {e}")
             raise typer.Exit(code=1)
 
     def create(self) -> None:

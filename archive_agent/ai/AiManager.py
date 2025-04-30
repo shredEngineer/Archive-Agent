@@ -226,25 +226,42 @@ class AiManager(RetryManager):
         else:
             logger.info(f"No AI API tokens used")
 
-    def chunk(self, sentences: List[str]) -> ChunkSchema:
+    def chunk(self, sentences: List[str], retries: int = 10) -> ChunkSchema:
         """
         Get chunks of sentences.
         :param sentences: Sentences.
+        :param retries: Number of retries.
         :return: ChunkSchema.
         """
         line_numbered_text = "\n".join(prepend_line_numbers(sentences))
         prompt = self.get_prompt_chunk(line_numbered_text)
         callback = lambda: self.ai_provider.chunk_callback(prompt)
 
-        result: AiResult = self.cli.format_openai_chunk(lambda: self.retry(callback), line_numbered_text)
-        self.total_tokens_chunk += result.total_tokens
+        for _ in range(retries):
+            try:
+                result: AiResult = self.cli.format_openai_chunk(lambda: self.retry(callback), line_numbered_text)
+                self.total_tokens_chunk += result.total_tokens
 
-        assert result.parsed_schema is not None
-        result.parsed_schema = cast(ChunkSchema, result.parsed_schema)
-        if len(result.parsed_schema.chunk_start_lines) == 0 or result.parsed_schema.chunk_start_lines[0] != 1:
-            raise RuntimeError(f"Invalid chunk start lines: {result.parsed_schema.chunk_start_lines}")
+                if result.parsed_schema is None:
+                    raise RuntimeError("No parsed schema returned")
 
-        return result.parsed_schema
+                result.parsed_schema = cast(ChunkSchema, result.parsed_schema)
+
+                if len(result.parsed_schema.chunk_start_lines) == 0:
+                    raise RuntimeError(f"Missing chunk start lines: {result.parsed_schema.chunk_start_lines}")
+
+                # Let's allow some slack from weaker of overloaded LLMs here...
+                if result.parsed_schema.chunk_start_lines[0] != 1:
+                    result.parsed_schema.chunk_start_lines.insert(0, 1)
+                    logger.warning(f"Fixed first chunk start lines: {result.parsed_schema.chunk_start_lines}")
+
+                return result.parsed_schema
+
+            except Exception as e:
+                logger.exception(f"Chunking error: {e}")
+                continue  # Retry
+
+        raise RuntimeError("Failed to recover from chunking errors")
 
     def embed(self, text: str) -> List[float]:
         """

@@ -97,7 +97,7 @@ class QdrantManager:
             try:
                 self.qdrant.upsert(collection_name=self.collection, points=points_partial)
             except UnexpectedResponse as e:
-                logger.error(f"Qdrant add failed: {e}")
+                logger.exception(f"Qdrant add failed: {e}")
                 return False
             num_points_added += len(points_partial)
 
@@ -128,7 +128,7 @@ class QdrantManager:
             )
             count = count_result.count
         except UnexpectedResponse as e:
-            logger.error(f"Qdrant count failed: {e}")
+            logger.exception(f"Qdrant count failed: {e}")
             return False
 
         if count == 0:
@@ -154,7 +154,7 @@ class QdrantManager:
                 ),
             )
         except UnexpectedResponse as e:
-            logger.error(f"Qdrant delete failed: {e}")
+            logger.exception(f"Qdrant delete failed: {e}")
             return False
 
         return True
@@ -196,7 +196,7 @@ class QdrantManager:
                 with_payload=True,
             )
         except UnexpectedResponse as e:
-            logger.error(f"Qdrant query failed: {e}")
+            logger.exception(f"Qdrant query failed: {e}")
             raise typer.Exit(code=1)
 
         self.cli.format_points(response.points)
@@ -221,7 +221,7 @@ class QdrantManager:
                 with_payload=True,
             )
         except UnexpectedResponse as e:
-            logger.error(f"Qdrant query failed: {e}")
+            logger.exception(f"Qdrant query failed: {e}")
             raise typer.Exit(code=1)
 
         self.cli.format_points(response.points)
