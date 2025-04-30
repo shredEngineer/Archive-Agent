@@ -4,16 +4,15 @@
 
 # 🧠 Archive Agent
 
-**Archive Agent** tracks your files, syncs changes, and powers smart queries.  
+**Archive Agent** is an open-source semantic file tracker with OCR + AI search.  
 
 *Watch me explain it here:* https://www.youtube.com/watch?v=dyKovjez4-g
 
 ![Archive Agent Logo](archive_agent/assets/Archive-Agent-400x300.png)
 
-**Archive Agent** is a **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**, using this tech stack:
-
+- **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**
 - **Supported AI providers: [OpenAI](https://platform.openai.com/docs/overview), [Ollama](https://ollama.com/)**
-- **MCP server for automation through IDE or AI extension**
+- **[MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension**
 - Fast and effective semantic chunking (**smart chunking**)
 - Qdrant vector DB *(running locally)* for storage and search 
 - Command-line interface (CLI) using *Typer*

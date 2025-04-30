@@ -19,7 +19,7 @@ from archive_agent.mcp_server.McpServer import McpServer
 app = typer.Typer(
     invoke_without_command=True,
     add_completion=False,
-    help="Archive Agent tracks your files, syncs changes, and powers smart queries.",
+    help="Archive Agent is an open-source semantic file tracker with OCR + AI search.",
 )
 
 
