@@ -40,6 +40,52 @@
 
 ---
 
+## Structure
+
+<!-- TOC -->
+* [🧠 Archive Agent](#-archive-agent)
+  * [Structure](#structure)
+  * [⚙️ Install requirements](#-install-requirements)
+  * [⚙️ AI provider setup](#-ai-provider-setup)
+    * [OpenAI provider setup](#openai-provider-setup)
+    * [Ollama provider setup](#ollama-provider-setup)
+  * [⚙️ Install Archive Agent](#-install-archive-agent)
+  * [⚙️ Setup Qdrant server](#-setup-qdrant-server)
+  * [🔄 Update Archive Agent](#-update-archive-agent)
+  * [🧠 How Archive Agent works](#-how-archive-agent-works)
+    * [ℹ️ Which files are processed](#ℹ-which-files-are-processed)
+    * [ℹ️ How files are processed](#ℹ-how-files-are-processed)
+    * [ℹ️ How smart chunking works](#ℹ-how-smart-chunking-works)
+    * [ℹ️ How chunks are retrieved](#ℹ-how-chunks-are-retrieved)
+    * [ℹ️ How files are selected for tracking](#ℹ-how-files-are-selected-for-tracking)
+  * [🚀 Run Archive Agent](#-run-archive-agent)
+    * [⚡ List usage info](#-list-usage-info)
+    * [⚡ Create or switch profile](#-create-or-switch-profile)
+    * [⚡ Add included patterns](#-add-included-patterns)
+    * [⚡ Add excluded patterns](#-add-excluded-patterns)
+    * [⚡ Remove included / excluded patterns](#-remove-included--excluded-patterns)
+    * [⚡ List included / excluded patterns](#-list-included--excluded-patterns)
+    * [⚡ Resolve patterns and track files](#-resolve-patterns-and-track-files)
+    * [⚡ List tracked files](#-list-tracked-files)
+    * [⚡ List changed files](#-list-changed-files)
+    * [⚡ Commit changed files to database](#-commit-changed-files-to-database)
+    * [⚡ Combined track and commit](#-combined-track-and-commit)
+    * [⚡ Search your files](#-search-your-files)
+    * [⚡ Query your files](#-query-your-files)
+    * [⚡ Launch Archive Agent GUI](#-launch-archive-agent-gui)
+    * [⚡ Start MCP Server](#-start-mcp-server)
+    * [🔌 MCP Tools](#-mcp-tools)
+  * [🔧 Archive Agent settings](#-archive-agent-settings)
+  * [🛢 Qdrant database](#-qdrant-database)
+  * [🔬 Testing and code analysis](#-testing-and-code-analysis)
+  * [📖 Developer's guide](#-developers-guide)
+  * [🍀 Collaborators welcome](#-collaborators-welcome)
+  * [🐞 Known bugs](#-known-bugs)
+  * [📜 License: GNU GPL v3.0](#-license-gnu-gpl-v30)
+<!-- TOC -->
+
+---
+
 ## ⚙️ Install requirements
 
 - [Docker](https://docs.docker.com/engine/install/) *(for running Qdrant server)*
