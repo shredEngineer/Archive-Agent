@@ -1,9 +1,10 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-from openai import OpenAI, OpenAIError
+from openai import OpenAI
 
 from archive_agent.ai_provider.AiProvider import AiProvider
+from archive_agent.ai_provider.AiProviderError import AiProviderError
 from archive_agent.ai.AiResult import AiResult
 
 from archive_agent.ai_schema.ChunkSchema import ChunkSchema
@@ -22,8 +23,7 @@ class OpenAiProvider(AiProvider):
             model_embed: str,
             model_query: str,
             model_vision: str,
-            temp_query: float,
-            chunk_lines_block: int,
+            temperature_query: float,
     ):
         """
         Initialize OpenAI provider.
@@ -31,8 +31,7 @@ class OpenAiProvider(AiProvider):
         :param model_embed: Model for embeddings.
         :param model_query: Model for queries.
         :param model_vision: Model for vision (leave empty to disable vision support).
-        :param temp_query: Temperature of query model.
-        :param chunk_lines_block: Number of lines per block for chunking.
+        :param temperature_query: Temperature of query model.
         """
         AiProvider.__init__(self, supports_vision=model_vision != "")
 
@@ -40,9 +39,8 @@ class OpenAiProvider(AiProvider):
         self.model_embed = model_embed
         self.model_query = model_query
         self.model_vision = model_vision
-        self.temp_query = temp_query
 
-        self.chunk_lines_block = chunk_lines_block
+        self.temperature_query = temperature_query
 
         self.client = OpenAI()
 
@@ -51,6 +49,7 @@ class OpenAiProvider(AiProvider):
         Chunk callback.
         :param prompt: Prompt.
         :return: AI result.
+        :raises AiProviderError: On error.
         """
         # noinspection PyTypeChecker
         response = self.client.responses.create(
@@ -78,12 +77,13 @@ class OpenAiProvider(AiProvider):
         )
 
         if getattr(response, "refusal", None):
-            raise OpenAIError(getattr(response, "refusal", None))
+            raise AiProviderError(getattr(response, "refusal", None))
 
+        json_raw = response.output[0].content[0].text
         try:
-            parsed_schema = ChunkSchema.model_validate_json(response.output[0].content[0].text)
+            parsed_schema = ChunkSchema.model_validate_json(json_raw)
         except Exception as e:
-            raise OpenAIError(f"Invalid JSON: {e}")
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
 
         return AiResult(
             total_tokens=response.usage.total_tokens if response.usage else 0,  # check makes pyright happy
@@ -96,6 +96,7 @@ class OpenAiProvider(AiProvider):
         Embed callback.
         :param text: Text.
         :return: AI result.
+        :raises AiProviderError: On error.
         """
         response = self.client.embeddings.create(
             input=text,
@@ -111,11 +112,12 @@ class OpenAiProvider(AiProvider):
         Query callback.
         :param prompt: Prompt.
         :return: AI result.
+        :raises AiProviderError: On error.
         """
         # noinspection PyTypeChecker
         response = self.client.responses.create(
             model=self.model_query,
-            temperature=self.temp_query,
+            temperature=self.temperature_query,
             input=[
                 {
                     "role": "user",
@@ -138,12 +140,13 @@ class OpenAiProvider(AiProvider):
         )
 
         if getattr(response, "refusal", None):
-            raise OpenAIError(getattr(response, "refusal", None))
+            raise AiProviderError(getattr(response, "refusal", None))
 
+        json_raw = response.output[0].content[0].text
         try:
-            parsed_schema = QuerySchema.model_validate_json(response.output[0].content[0].text)
+            parsed_schema = QuerySchema.model_validate_json(json_raw)
         except Exception as e:
-            raise OpenAIError(f"Invalid JSON: {e}")
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
 
         return AiResult(
             total_tokens=response.usage.total_tokens if response.usage else 0,  # check makes pyright happy
@@ -157,6 +160,7 @@ class OpenAiProvider(AiProvider):
         :param prompt: Prompt.
         :param image_base64: Image as UTF-8 encoded Base64 string.
         :return: AI result.
+        :raises AiProviderError: On error.
         """
         # noinspection PyTypeChecker
         response = self.client.responses.create(
@@ -187,15 +191,16 @@ class OpenAiProvider(AiProvider):
         )
 
         if response.status == 'incomplete':
-            raise OpenAIError("Vision response incomplete, probably due to token limits")
+            raise AiProviderError("Vision response incomplete, probably due to token limits")
 
         if getattr(response, "refusal", None):
-            raise OpenAIError(getattr(response, "refusal", None))
+            raise AiProviderError(getattr(response, "refusal", None))
 
+        json_raw = response.output[0].content[0].text
         try:
-            parsed_schema = VisionSchema.model_validate_json(response.output[0].content[0].text)
+            parsed_schema = VisionSchema.model_validate_json(json_raw)
         except Exception as e:
-            raise OpenAIError(f"Invalid JSON: {e}")
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
 
         return AiResult(
             total_tokens=response.usage.total_tokens if response.usage else 0,  # check makes pyright happy

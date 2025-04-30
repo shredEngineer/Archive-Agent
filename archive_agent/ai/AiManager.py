@@ -5,7 +5,7 @@ import logging
 from typing import cast, List
 
 from archive_agent.ai.AiResult import AiResult
-from archive_agent.ai_provider.OpenAiProvider import OpenAiProvider
+from archive_agent.ai_provider.AiProvider import AiProvider
 
 from archive_agent.ai_schema.ChunkSchema import ChunkSchema
 from archive_agent.ai_schema.QuerySchema import QuerySchema
@@ -18,13 +18,13 @@ from archive_agent.util.text_util import prepend_line_numbers
 logger = logging.getLogger(__name__)
 
 
-class AiManager(RetryManager, OpenAiProvider):
+class AiManager(RetryManager):
     """
     AI manager.
     """
 
     @staticmethod
-    def get_prompt_chunk(line_numbered_text: str):
+    def get_prompt_chunk(line_numbered_text: str) -> str:
         return "\n".join([
             "Act as a chunking agent for a semantic retrieval system (Retrieval-Augmented Generation / RAG).",
             "Your task is to segment the text into semantically coherent chunks.",
@@ -46,7 +46,7 @@ class AiManager(RetryManager, OpenAiProvider):
             "- Only create a new chunk if there is a clear semantic shift or topic boundary.",
             "- Review the entire text before selecting chunk boundaries. Do NOT chunk line by line.",
             "",
-            "Text with line numbers:\n\"\"\"\n" + line_numbered_text + "\n\"\"\""
+            "Text with line numbers:\n\"\"\"\n" + line_numbered_text + "\n\"\"\"",
         ])
 
     @staticmethod
@@ -80,7 +80,7 @@ class AiManager(RetryManager, OpenAiProvider):
             "    DO NOT shorten or omit any part of the file URI.",
             "    DO NOT include any chunk references anywhere else except in this list.",
             "",
-            "- `further_questions_list`:",
+            "- `follow_up_list`:",
             "    A list of specific, well-formed follow-up questions that build on the material.",
             "    Each question must be self-contained;",
             "    do NOT reference 'the answer', 'the context', or prior responses.",
@@ -97,14 +97,14 @@ class AiManager(RetryManager, OpenAiProvider):
             "",
             "IMPORTANT GLOBAL CONSTRAINTS:",
             "- DO NOT mention chunk numbers, chunk IDs, or file paths in `answer_list`, `answer_conclusion`,",
-            "    or `further_questions_list`.",
+            "    or `follow_up_list`.",
             "- DO NOT cite, explain, or hint at which chunk supports which answer.",
             "- The only valid place to refer to chunks is the `chunk_ref_list` field.",
             "- Every field must follow its format exactly. No extra commentary, no schema deviations.",
             "",
             "Context:\n\"\"\"\n" + context + "\n\"\"\"\n\n",
             "Question:\n\"\"\"\n" + question + "\n\"\"\"\n\n",
-            "Answer:"
+            "Answer:",
         ])
 
     @staticmethod
@@ -171,30 +171,26 @@ class AiManager(RetryManager, OpenAiProvider):
             "- Only set `reject: true` if the image is technically unreadable or corrupted, and cannot be interpreted",
             "  meaningfully (e.g. blurred, distorted, broken file).",
             "",
-            "Image input is provided separately."
+            "Image input is provided separately.",
         ])
 
     def __init__(
             self,
+            ai_provider: AiProvider,
             cli: CliManager,
-            model_chunk: str,
-            model_embed: str,
-            model_query: str,
-            model_vision: str,
-            temp_query: float,
             chunk_lines_block: int,
     ):
         """
         Initialize AI manager.
+        :param ai_provider: AI provider.
         :param cli: CLI manager.
-        :param model_chunk: Model for chunking.
-        :param model_embed: Model for embeddings.
-        :param model_query: Model for queries.
-        :param model_vision: Model for vision.
-        :param temp_query: Temperature of query model.
         :param chunk_lines_block: Number of lines per block for chunking.
         """
+        self.ai_provider = ai_provider
+
         self.cli = cli
+
+        self.chunk_lines_block = chunk_lines_block
 
         self.total_tokens_chunk = 0
         self.total_tokens_embed = 0
@@ -210,17 +206,7 @@ class AiManager(RetryManager, OpenAiProvider):
             retries=10,
         )
 
-        OpenAiProvider.__init__(
-            self,
-            model_chunk=model_chunk,
-            model_embed=model_embed,
-            model_query=model_query,
-            model_vision=model_vision,
-            temp_query=temp_query,
-            chunk_lines_block=chunk_lines_block,
-        )
-
-        if not self.supports_vision:
+        if not self.ai_provider.supports_vision:
             logger.warning(f"Image vision is DISABLED in your current configuration")
 
     def usage(self) -> None:
@@ -248,7 +234,7 @@ class AiManager(RetryManager, OpenAiProvider):
         """
         line_numbered_text = "\n".join(prepend_line_numbers(sentences))
         prompt = self.get_prompt_chunk(line_numbered_text)
-        callback = lambda: self.chunk_callback(prompt)
+        callback = lambda: self.ai_provider.chunk_callback(prompt)
 
         result: AiResult = self.cli.format_openai_chunk(lambda: self.retry(callback), line_numbered_text)
         self.total_tokens_chunk += result.total_tokens
@@ -266,7 +252,7 @@ class AiManager(RetryManager, OpenAiProvider):
         :param text: Text.
         :return: Embedding vector.
         """
-        callback = lambda: self.embed_callback(text)
+        callback = lambda: self.ai_provider.embed_callback(text)
 
         result: AiResult = self.cli.format_openai_embed(lambda: self.retry(callback), text)
         self.total_tokens_embed += result.total_tokens
@@ -281,7 +267,7 @@ class AiManager(RetryManager, OpenAiProvider):
         :return: QuerySchema.
         """
         prompt = self.get_prompt_query(question, context)
-        callback = lambda: self.query_callback(prompt)
+        callback = lambda: self.ai_provider.query_callback(prompt)
 
         result: AiResult = self.cli.format_openai_query(lambda: self.retry(callback), prompt)
         self.total_tokens_query += result.total_tokens
@@ -296,7 +282,7 @@ class AiManager(RetryManager, OpenAiProvider):
         :return: VisionSchema.
         """
         prompt = self.get_prompt_vision()
-        callback = lambda: self.vision_callback(prompt, image_base64)
+        callback = lambda: self.ai_provider.vision_callback(prompt, image_base64)
 
         result: AiResult = self.cli.format_openai_vision(lambda: self.retry(callback))
         self.total_tokens_vision += result.total_tokens

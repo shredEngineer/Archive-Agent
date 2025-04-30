@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "archive-agent"
-version = "3.0.0"
+version = "3.1.0"
 description = "Archive Agent: Smart Indexer with RAG Engine"
 authors = ["Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>"]
 readme = "README.md"
@@ -25,6 +25,7 @@ pymupdf4llm = ">=0.0.21,<0.0.22"
 fastapi = "^0.115.12"
 uvicorn = "^0.34.2"
 mcp = "^1.6.0"
+ollama = "^0.4.8"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"

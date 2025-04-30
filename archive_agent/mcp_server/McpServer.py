@@ -72,7 +72,7 @@ async def get_files_changed() -> Dict[str, Any]:
 @mcp.tool()
 async def get_search_result(question: str) -> Dict[str, Any]:
     """
-    Get list of files relevant to the question.
+    Get the list of files relevant to the question.
     :param question: Question.
     :return: {file_path: relevance_score, ...}.
     """

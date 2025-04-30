@@ -10,6 +10,7 @@ from typing import Optional, List, Set, Tuple, Any
 import fitz
 from PIL import Image
 
+from archive_agent.config.DecoderSettings import OcrStrategy
 from archive_agent.util.format import format_file
 from archive_agent.util.image import ImageToTextCallback
 from archive_agent.util.image_debugger import show_images, IndexedImage
@@ -38,19 +39,21 @@ def is_pdf_document(file_path: str) -> bool:
 def load_pdf_document(
         file_path: str,
         image_to_text_callback: Optional[ImageToTextCallback],
-        ocr_mode_strict: bool,
+        ocr_strategy: OcrStrategy,
 ) -> Optional[str]:
     """
     Load PDF document, extract layout text and images, convert images to text, and assemble the final document content.
     :param file_path: File path.
     :param image_to_text_callback: Optional image-to-text callback.
-    :param ocr_mode_strict: Enable to treat PDF pages as images.
+    :param ocr_strategy: OCR strategy.
     :return: Full document text if successful, None otherwise.
     """
     try:
         doc: fitz.Document = fitz.open(file_path)
 
-        if ocr_mode_strict:
+        logger.info(f"Processing: OCR strategy: {ocr_strategy}")
+
+        if ocr_strategy == OcrStrategy.STRICT.value:
             page_contents: List[PdfPageContent] = []
             indexed_images: List[IndexedImage] = []
 
@@ -69,12 +72,15 @@ def load_pdf_document(
                     # Include in visual debugger images
                     indexed_images.append((img, page_index + 1, 1))
                 except Exception as e:
-                    logger.warning(f"OCR strict mode: Failed to process page ({page_index + 1}): {e}")
+                    logger.warning(f"OCR strategy: strict: Failed to process page ({page_index + 1}): {e}")
                     # Add empty fallback content
                     page_contents.append(PdfPageContent(text="", layout_image_bytes=[]))
 
-        else:
+        elif ocr_strategy == OcrStrategy.RELAXED.value:
             page_contents, indexed_images = extract_page_contents_with_images(doc)
+
+        else:
+            raise ValueError(f"Invalid OCR strategy: {ocr_strategy}")
 
         for index, content in enumerate(page_contents):
             log_page_analysis(index, len(page_contents), content)

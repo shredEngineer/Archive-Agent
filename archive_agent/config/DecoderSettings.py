@@ -2,8 +2,14 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import logging
+from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+
+class OcrStrategy(Enum):
+    RELAXED = 'relaxed'
+    STRICT = 'strict'
 
 
 class DecoderSettings:
@@ -11,12 +17,11 @@ class DecoderSettings:
     Decoder settings.
     """
 
-    def __init__(self, ocr_mode_strict: str):
+    def __init__(self, ocr_strategy: OcrStrategy):
         """
         Initialize decoder settings.
-        :param ocr_mode_strict: Strict OCR mode option value (will be parsed to bool).
+        :param ocr_strategy: OCR strategy.
         """
-        self.ocr_mode_strict: bool = ocr_mode_strict.strip().lower() == "true"
+        self.ocr_strategy = ocr_strategy
 
-        if self.ocr_mode_strict:
-            logger.warning(f"Strict OCR mode is ENABLED in your current configuration")
+        logger.info(f"Using OCR strategy: {self.ocr_strategy}")

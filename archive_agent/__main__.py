@@ -17,10 +17,34 @@ from archive_agent.mcp_server.McpServer import McpServer
 
 
 app = typer.Typer(
+    invoke_without_command=True,
     add_completion=False,
-    no_args_is_help=True,
     help="Archive Agent tracks your files, syncs changes, and powers smart queries.",
 )
+
+
+@app.callback()
+def root(ctx: typer.Context) -> None:
+    """
+    Root callback that runs when no subcommand is provided.
+    """
+    if ctx.invoked_subcommand is not None:
+        return  # Handle subcommand.
+
+    _context = ContextManager()
+
+    # Show help.
+    typer.echo(ctx.get_help())
+    raise typer.Exit()
+
+
+# noinspection PyShadowingNames
+@app.command()
+def switch(profile_name: str = typer.Argument("")) -> None:
+    """
+    Create or switch profile.
+    """
+    _context = ContextManager(profile_name=profile_name)
 
 
 # noinspection PyShadowingNames

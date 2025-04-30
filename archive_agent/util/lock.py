@@ -19,14 +19,14 @@ def file_lock(lock_name):
         def wrapper(*args, **kwargs):
             lock_path = tempfile.gettempdir() + f"/{lock_name}.lock"
             with open(lock_path, "w") as lock_file:
-                logger.info(f"Acquiring lock: {lock_path}")
+                logger.debug(f"Acquiring lock: {lock_path}")
                 try:
                     fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 except BlockingIOError:
-                    print(f"Lock is currently held by another process. Waiting for release: {lock_path}")
+                    logger.critical(f"Lock is currently held by another process. Waiting for release: {lock_path}")
                     fcntl.flock(lock_file, fcntl.LOCK_EX)  # Wait until the lock is released
                 result = func(*args, **kwargs)
-                logger.info(f"Releasing lock: {lock_path}")
+                logger.debug(f"Releasing lock: {lock_path}")
                 fcntl.flock(lock_file, fcntl.LOCK_UN)
                 return result
         return wrapper

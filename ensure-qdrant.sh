@@ -6,13 +6,13 @@
 CONTAINER_NAME="archive-agent-qdrant-server"
 
 if docker ps --filter "name=$CONTAINER_NAME" --filter "status=running" --format "{{.Names}}" | grep -q "^$CONTAINER_NAME$"; then
-	echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] Archive Agent: Qdrant server ($CONTAINER_NAME) is running"
+	echo "$(date '+%Y-%m-%d %H:%M:%S') INFO     Archive Agent: Qdrant server ($CONTAINER_NAME) is running"
 else
 	if docker ps -a --filter "name=$CONTAINER_NAME" --format "{{.Names}}" | grep -q "^$CONTAINER_NAME$"; then
-		echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] Archive Agent: Qdrant server ($CONTAINER_NAME) is restarting..."
+		echo "$(date '+%Y-%m-%d %H:%M:%S') INFO     Archive Agent: Qdrant server ($CONTAINER_NAME) is restarting..."
 		docker start "$CONTAINER_NAME"
 	else
-		echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] Archive Agent: Qdrant server ($CONTAINER_NAME) is starting..."
+		echo "$(date '+%Y-%m-%d %H:%M:%S') INFO     Archive Agent: Qdrant server ($CONTAINER_NAME) is starting..."
 		docker run -d \
 			--name "$CONTAINER_NAME" \
 			--restart unless-stopped \

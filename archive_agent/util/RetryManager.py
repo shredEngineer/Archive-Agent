@@ -8,7 +8,11 @@ import traceback
 import logging
 from typing import Callable, Optional, Any, Dict
 
+from archive_agent.ai_provider.AiProviderError import AiProviderError
+
 from openai import OpenAIError
+
+from ollama import RequestError, ResponseError
 
 logger = logging.getLogger(__name__)
 
@@ -95,8 +99,17 @@ class RetryManager:
                 return result
 
             except (
+                    # AiProvider
+                    AiProviderError,
+
+                    # openai
                     OpenAIError,
-                    requests.exceptions.ReadTimeout,
+
+                    # ollama
+                    RequestError, ResponseError,
+
+                    # low-level
+                    requests.exceptions.RequestException,
             ) as e:
                 traceback.print_stack()
                 attempt = self.retries - self.fail_budget + 1

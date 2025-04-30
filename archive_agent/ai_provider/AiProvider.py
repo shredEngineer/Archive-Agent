@@ -24,6 +24,7 @@ class AiProvider(ABC):
         Chunk callback.
         :param prompt: Prompt.
         :return: AI result.
+        :raises AiProviderError: On error.
         """
         raise NotImplementedError
 
@@ -33,6 +34,7 @@ class AiProvider(ABC):
         Embed callback.
         :param text: Text.
         :return: AI result.
+        :raises AiProviderError: On error.
         """
         raise NotImplementedError
 
@@ -42,6 +44,7 @@ class AiProvider(ABC):
         Query callback.
         :param prompt: Prompt.
         :return: AI result.
+        :raises AiProviderError: On error.
         """
         raise NotImplementedError
 
@@ -52,5 +55,6 @@ class AiProvider(ABC):
         :param prompt: Prompt.
         :param image_base64: Image as UTF-8 encoded Base64 string.
         :return: AI result.
+        :raises AiProviderError: On error.
         """
         raise NotImplementedError

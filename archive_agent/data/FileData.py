@@ -55,7 +55,7 @@ class FileData:
 
         self.points: List[PointStruct] = []
 
-        self.image_to_text_callback = self.image_to_text if self.ai.supports_vision else None
+        self.image_to_text_callback = self.image_to_text if self.ai.ai_provider.supports_vision else None
 
         self.decoder_func: Optional[DecoderCallable] = self.get_decoder_func()
 
@@ -66,31 +66,31 @@ class FileData:
         """
         if is_image(self.file_path):
             return lambda: load_image(
-                self.file_path,
-                self.image_to_text_callback,
+                file_path=self.file_path,
+                image_to_text_callback=self.image_to_text_callback,
             )
 
         elif is_plaintext(self.file_path):
             return lambda: load_plaintext(
-                self.file_path,
+                file_path=self.file_path,
             )
 
         elif is_ascii_document(self.file_path):
             return lambda: load_ascii_document(
-                self.file_path,
+                file_path=self.file_path,
             )
 
         elif is_binary_document(self.file_path):
             return lambda: load_binary_document(
-                self.file_path,
-                self.image_to_text_callback,
+                file_path=self.file_path,
+                image_to_text_callback=self.image_to_text_callback,
             )
 
         elif is_pdf_document(self.file_path):
             return lambda: load_pdf_document(
-                self.file_path,
-                self.image_to_text_callback,
-                self.decoder_settings.ocr_mode_strict,
+                file_path=self.file_path,
+                image_to_text_callback=self.image_to_text_callback,
+                ocr_strategy=self.decoder_settings.ocr_strategy,
             )
 
         else:

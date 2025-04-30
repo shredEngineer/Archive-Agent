@@ -73,6 +73,9 @@ class CommitManager:
         else:
             logger.info(f"Committing ({len(removed_files)}) removed file(s)...")
 
+            for file in removed_files.keys():
+                logger.info(f"- TO BE REMOVED  {file}")
+
             confirm = typer.confirm(
                 f"You are about to remove any data associated with ({len(removed_files)}) untracked file(s) "
                 f"from the Qdrant database. Are you sure?"

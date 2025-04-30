@@ -12,11 +12,10 @@
 
 **Archive Agent** is a **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**, using this tech stack:
 
+- **Supported AI providers: [OpenAI](https://platform.openai.com/docs/overview), [Ollama](https://ollama.com/)**
 - **MCP server for automation through IDE or AI extension**
 - Fast and effective semantic chunking (**smart chunking**)
 - Qdrant vector DB *(running locally)* for storage and search 
-- OpenAI API for embeddings and queries
-  ([more providers coming soon](https://github.com/shredEngineer/Archive-Agent/issues/6))
 - Command-line interface (CLI) using *Typer*
 - Graphical user interface (GUI) using *Streamlit*
 
@@ -42,7 +41,7 @@
 
 ---
 
-## ⚙️ Install Requirements
+## ⚙️ Install requirements
 
 - [Docker](https://docs.docker.com/engine/install/) *(for running Qdrant server)*
 - [Python](https://www.python.org/downloads/) **>= 3.10, < 3.13** *(core runtime)*
@@ -56,7 +55,20 @@
 
 ---
 
-## ⚙️ Export OpenAI API key
+## ⚙️ AI provider setup
+
+**Archive Agent** lets you choose between different AI providers:
+
+- **OpenAI**: Requires an OpenAI API key. Faster but incurring API usage costs. **Best performance.**
+- **Ollama**: Requires Ollama models running locally. Slower but possibly cheaper. **Best privacy.**
+
+💡 **Good to know:** You will be prompted to choose an AI provider at startup; see: [Run Archive Agent](#-run-archive-agent).
+
+📌 **Note:** You *can* customize the specific **models** used by the AI provider in the [Archive Agent settings](#-archive-agent-settings). However, you *cannot* change the AI provider of an *existing* profile, as the embeddings will be incompatible; to choose a different AI provider, create a new profile instead.
+
+### OpenAI provider setup
+
+If the OpenAI provider is selected, **Archive Agent** requires the OpenAI API key.
 
 To export your [OpenAI API key](https://platform.openai.com/api-keys), replace `sk-...` with your actual key and run this once:
 
@@ -66,9 +78,25 @@ echo "export OPENAI_API_KEY='sk-...'" >> ~/.bashrc && source ~/.bashrc
 
 This will persist the export for the current user.
 
-**NOTE:** Embeddings and queries will incur AI API token costs. **Use at your own risk.**
-
 💡 **Good to know:** [OpenAI won't use your data for training.](https://platform.openai.com/docs/guides/your-data)
+
+### Ollama provider setup
+
+If the Ollama provider is selected, **Archive Agent** requires Ollama running at `http://localhost:11434`.
+
+- [How to install Ollama.](https://ollama.com/download)
+
+With the default [Archive Agent Settings](#-archive-agent-settings), these Ollama models are expected to be installed: 
+
+```bash
+ollama pull deepseek-coder:6.7b-instruct    # for chunk/query
+ollama pull llava:7b                        # for vision
+ollama pull nomic-embed-text                # for embed
+```
+
+💡 **Good to know:** Ollama also works without a GPU.  
+
+📌 **Note:** At least 32 GiB RAM is recommended for smooth performance.
 
 ---
 
@@ -144,24 +172,27 @@ docker pull qdrant/qdrant
   - PDF documents: `.pdf` (including images, see note below)
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
 
-📌 **Note:** Customize how PDF pages are handled in the [Archive Agent settings](#-archive-agent-settings):
+📌 **Note:** There are different OCR strategies supported by **Archive Agent**:
 
-- Strict OCR mode **disabled** (default):
-  - OCR text layer is extracted.
-  - Forground images are decoded,  background images are ignored.
-  - Cheap and fast, but less accurate.
+- **Relaxed** OCR strategy:
+  - PDF OCR text layer is extracted.
+  - PDF foreground images are decoded, but background images are *ignored*.
+  - **Cheap and fast, but less accurate.**
 
-- Strict OCR mode **enabled**:
-  - OCR text layer is ignored.
+
+- **Strict** OCR strategy:
+  - PDF OCR text layer is *ignored*.
   - PDF pages are treated as images.
-  - Expensive and slow, but more accurate.
+  - **Expensive and slow, but more accurate.**
+
+💡 **Good to know:** You will be prompted to choose an OCR strategy at startup; see: [Run Archive Agent](#-run-archive-agent).
 
 ### ℹ️ How files are processed
 
 Ultimately, **Archive Agent** decodes everything to text like this:
 - Plaintext files are decoded to UTF-8.
 - Documents are converted to plaintext, images are extracted.
-- PDF documents are decoded according to strict OCR mode setting.
+- PDF documents are decoded according to the OCR strategy.
 - Images are decoded to text using AI vision.
   - The vision model will reject unintelligible images.
 
@@ -224,6 +255,19 @@ To show the list of supported commands, run this:
 archive-agent
 ```
 
+### ⚡ Create or switch profile
+
+To switch to a new or existing profile, run this:
+
+```bash
+archive-agent switch "My Other Profile"
+```
+
+📌 **Note:** **Always use quotes** for the profile name argument,
+**or skip it** to get an interactive prompt.
+
+💡 **Good to know:** Profiles are useful to manage *independent* Qdrant collections and [Archive Agent settings](#-archive-agent-settings).
+
 ### ⚡ Add included patterns
 
 To add one or more included patterns, run this:
@@ -232,7 +276,7 @@ To add one or more included patterns, run this:
 archive-agent include "~/Documents/*.txt"
 ```
 
-📌 **Note:** **Always use quotes** for the the pattern argument (to prevent your shell's wildcard expansion),
+📌 **Note:** **Always use quotes** for the pattern argument (to prevent your shell's wildcard expansion),
 **or skip it** to get an interactive prompt.
 
 ### ⚡ Add excluded patterns
@@ -243,7 +287,7 @@ To add one or more excluded patterns, run this:
 archive-agent exclude "~/Documents/*.txt"
 ```
 
-📌 **Note:** **Always use quotes** for the the pattern argument (to prevent your shell's wildcard expansion),
+📌 **Note:** **Always use quotes** for the pattern argument (to prevent your shell's wildcard expansion),
 **or skip it** to get an interactive prompt.
 
 ### ⚡ Remove included / excluded patterns
@@ -254,7 +298,7 @@ To remove one or more previously included / excluded patterns, run this:
 archive-agent remove "~/Documents/*.txt"
 ```
 
-📌 **Note:** **Always use quotes** for the the pattern argument (to prevent your shell's wildcard expansion),
+📌 **Note:** **Always use quotes** for the pattern argument (to prevent your shell's wildcard expansion),
 **or skip it** to get an interactive prompt.
 
 ### ⚡ List included / excluded patterns
@@ -367,13 +411,13 @@ archive-agent mcp
 
 **Archive Agent** exposes these tools via MCP:
 
-| MCP tool            | Equivalent CLI command(s) | Argument(s) | Description                                   |
-|---------------------|---------------------------|-------------|-----------------------------------------------|
-| `get_patterns`      | `patterns`                | None        | Get the list of included / excluded patterns. |
-| `get_files_tracked` | `track` and then `list`   | None        | Get the list of tracked files.                |
-| `get_files_changed` | `track` and then `diff`   | None        | Get the list of changed files.                |
-| `get_search_result` | `search`                  | `question`  | Get list of files relevant to the question.   |
-| `get_answer_rag`    | `query`                   | `question`  | Get answer to question using RAG.             |
+| MCP tool            | Equivalent CLI command(s) | Argument(s) | Description                                     |
+|---------------------|---------------------------|-------------|-------------------------------------------------|
+| `get_patterns`      | `patterns`                | None        | Get the list of included / excluded patterns.   |
+| `get_files_tracked` | `track` and then `list`   | None        | Get the list of tracked files.                  |
+| `get_files_changed` | `track` and then `diff`   | None        | Get the list of changed files.                  |
+| `get_search_result` | `search`                  | `question`  | Get the list of files relevant to the question. |
+| `get_answer_rag`    | `query`                   | `question`  | Get answer to question using RAG.               |
 
 📌 **Note:** These commands are **read-only**, preventing the AI from changing your Qdrant database.
 
@@ -381,25 +425,31 @@ archive-agent mcp
 
 ---
 
-## 🛠️ Archive Agent settings
+## 🔧 Archive Agent settings
 
 **Archive Agent** settings are stored in `~/.archive-agent-settings/`. 
 
 The default settings profile is located in `default/`:
 
 - `config.json`:
-  - `openai_model_embed`: OpenAI model for embedding
-  - `openai_model_query`: OpenAI model for query
-  - `openai_model_vision`: OpenAI model for vision (`""` disables vision)
-  - `openai_temp_query`: Temperature of query model
-  - `qdrant_collection`: Qdrant collection name
-  - `qdrant_server_url`: Qdrant server URL
-  - `qdrant_vector_size`: Qdrant vector size
-  - `qdrant_score_min`: Minimum score of retrieved chunks (`0`...`1`)
-  - `qdrant_chunks_max`: Maximum number of retrieved chunks
-  - `chunk_lines_block`: Number of lines per block for chunking
-  - `ocr_mode_strict`: Enable to treat PDF pages as images (default: `false`)
-  - `mcp_server_port`: MCP server port (default: `8008`)
+
+  | Key                    | Description                                              |
+  |------------------------|----------------------------------------------------------|
+  | `config_version`       | Config version                                           |
+  | `ai_provider`          | AI provider (`openai` or `ollama`)                       |
+  | `ai_model_chunk`       | AI model used for chunking                               |
+  | `ai_model_embed`       | AI model used for embedding                              |
+  | `ai_model_query`       | AI model used for queries                                |
+  | `ai_model_vision`      | AI model used for vision (`""` disables vision)          |
+  | `ai_vector_size`       | Vector size of embeddings (used for Qdrant collection)   |
+  | `ai_temperature_query` | Temperature of the query model                           |
+  | `qdrant_server_url`    | URL of the Qdrant server                                 |
+  | `qdrant_collection`    | Name of the Qdrant collection                            |
+  | `qdrant_score_min`     | Minimum similarity score of retrieved chunks (`0`...`1`) |
+  | `qdrant_chunks_max`    | Maximum number of retrieved chunks                       |
+  | `chunk_lines_block`    | Number of lines per block for chunking                   |
+  | `ocr_mode_strict`      | Treat PDF pages as images (`true` or `false`)            |
+  | `mcp_server_port`      | MCP server port (default `8008`)                         |
 
 
 - `watchlist.json`:
@@ -439,7 +489,7 @@ To run unit tests, check types, and check style, run this:
 - The GUI is implemented in [`archive_agent/core/GuiManager.py`](archive_agent/core/GuiManager.py)
 - The AI API prompts for chunking, embedding, vision, and querying are defined in [`archive_agent/ai/AiManager.py`](archive_agent/ai/AiManager.py) 
 
-If you miss something or spot bad patterns, feel free to contribue and refactor!
+If you miss something or spot bad patterns, feel free to contribute and refactor!
 
 💡 **Good to know:** To enable the PDF image debugger window, run this in your current shell:
 ```bash

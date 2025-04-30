@@ -5,7 +5,6 @@ import typer
 import logging
 import os
 from pathlib import Path
-from copy import deepcopy
 from typing import Dict, Any
 
 from archive_agent.data.FileData import FileData
@@ -39,12 +38,15 @@ class WatchlistManager(StorageManager):
     DIFF_CHANGED = 'changed'
     DIFF_OPTIONS = [DIFF_NONE, DIFF_ADDED, DIFF_REMOVED, DIFF_CHANGED]
 
-    def __init__(self, profile_path: Path) -> None:
+    def __init__(self, settings_path: Path, profile_name: str) -> None:
         """
         Initialize watchlist manager.
-        :param profile_path: Profile path.
+        :param settings_path: Settings path.
+        :param profile_name: Profile name.
         """
-        StorageManager.__init__(self, profile_path / "watchlist.json", deepcopy(self.DEFAULT_WATCHLIST))
+        file_path = settings_path / profile_name / "watchlist.json"
+
+        StorageManager.__init__(self, file_path=file_path, default=self.DEFAULT_WATCHLIST)
 
     def upgrade(self) -> bool:
         """
@@ -262,7 +264,7 @@ class WatchlistManager(StorageManager):
             for file in self.data['tracked'].keys():
                 logger.info(f"- {file}")
         else:
-            logger.info("(0) tracked file(s)")
+            logger.info("- (0) tracked file(s)")
 
     def get_diff_files(self, diff_option: str) -> TrackedFiles:
         """
@@ -289,21 +291,21 @@ class WatchlistManager(StorageManager):
             for file in added_files.keys():
                 logger.info(f"- ADDED    {file}")
         else:
-            logger.info("(0) added file(s)")
+            logger.info("- (0) added file(s)")
 
         if len(changed_files) > 0:
             logger.info(f"({len(changed_files)}) changed files(s):")
             for file in changed_files.keys():
                 logger.info(f"- CHANGED  {file}")
         else:
-            logger.info("(0) changed file(s)")
+            logger.info("- (0) changed file(s)")
 
         if len(removed_files) > 0:
             logger.info(f"({len(removed_files)}) removed files(s):")
             for file in removed_files.keys():
                 logger.info(f"- REMOVED  {file}")
         else:
-            logger.info("(0) removed file(s)")
+            logger.info("- (0) removed file(s)")
 
     def diff_mark_resolved(self, file_data: FileData) -> None:
         """

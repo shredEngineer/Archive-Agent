@@ -62,7 +62,7 @@ class QdrantManager:
         self.chunks_max = chunks_max
 
         if not self.qdrant.collection_exists(collection):
-            logger.info(f"Creating new Qdrant collection: '{collection}'")
+            logger.info(f"Creating new Qdrant collection: '{collection}' (vector size: {vector_size})")
             self.qdrant.create_collection(
                 collection_name=collection,
                 vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
