@@ -17,6 +17,7 @@ def split_sentences(text: str) -> List[str]:
     :return: List of sentences. Empty strings represent paragraph breaks.
     """
     nlp = spacy.load("xx_sent_ud_sm")
+    nlp.max_length = 100_000_000  # Allow very large documents
     if not nlp.has_pipe("sentencizer"):
         nlp.add_pipe("sentencizer")
 
