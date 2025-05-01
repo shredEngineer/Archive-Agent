@@ -191,13 +191,17 @@ docker stop archive-agent-qdrant-server
 
 ## 🔄 Update Archive Agent
 
-To update your **Archive Agent** installation, run this:
+To update your **Archive Agent** installation, run this in the project root:
+
+```bash
+git pull
+poetry install
+```
+
+💡 **Good to know:** To update the Qdrant docker image, run this:
 
 ```bash
 docker stop archive-agent-qdrant-server
-git pull
-poetry install
-poetry run python -m spacy download xx_sent_ud_sm
 docker pull qdrant/qdrant
 ./ensure-qdrant.sh
 ```
