@@ -74,7 +74,7 @@ class CommitManager:
             logger.info(f"Committing ({len(removed_files)}) removed file(s)...")
 
             for file in removed_files.keys():
-                logger.info(f"- TO BE REMOVED  {file}")
+                logger.info(f"- TO BE REMOVED  {format_file(file)}")
 
             logger.warning(
                 f"You are about to remove any data associated with "
