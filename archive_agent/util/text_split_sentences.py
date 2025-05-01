@@ -41,32 +41,34 @@ def split_sentences(text: str) -> List[str]:
 
 def _normalize_lines(text: str) -> str:
     """
-    Normalize the input text in two steps:
-    1. Strip outer whitespace from each line (leading/trailing spaces/tabs)
-    2. Keep only double newlines as paragraph boundaries (single newlines get flattened)
-
-    :param text: Raw text input
-    :return: Cleaned text with only \n\n between paragraphs
+    Normalize the input text:
+    - Strip outer whitespace from each line (leading/trailing spaces/tabs)
+    - Keep only double newlines as paragraph boundaries (single newlines get flattened)
+    - Force double newlines before markdown list items
     """
-    # Step 1: Strip outer whitespace from each line
     stripped_lines = [line.strip() for line in text.splitlines()]
 
-    # Step 2: Remove all empty lines (we will restore double newlines for real paragraph breaks)
-    non_empty_lines: List[str] = []
     paragraph_blocks: List[List[str]] = []
+    current_block: List[str] = []
+
     for line in stripped_lines:
-        if line == "":
-            if non_empty_lines:
-                paragraph_blocks.append(non_empty_lines)
-                non_empty_lines = []
+        if not line:
+            if current_block:
+                paragraph_blocks.append(current_block)
+                current_block = []
+        elif line.startswith("- "):
+            # Close current paragraph before a list item
+            if current_block:
+                paragraph_blocks.append(current_block)
+                current_block = []
+            paragraph_blocks.append([line])  # List item becomes its own paragraph
         else:
-            non_empty_lines.append(line)
+            current_block.append(line)
 
-    # Append final block if needed
-    if non_empty_lines:
-        paragraph_blocks.append(non_empty_lines)
+    if current_block:
+        paragraph_blocks.append(current_block)
 
-    # Join lines inside paragraphs with space, join paragraphs with \n\n
+    # Join lines inside paragraphs with space; join paragraphs with double newline
     normalized_paragraphs = [" ".join(block) for block in paragraph_blocks]
     return "\n\n".join(normalized_paragraphs)
 
