@@ -511,23 +511,24 @@ Each profile folder contains these files:
 
 - `config.json`:
 
-  | Key                    | Description                                              |
-  |------------------------|----------------------------------------------------------|
-  | `config_version`       | Config version                                           |
-  | `ai_provider`          | AI provider (`openai` or `ollama`)                       |
-  | `ai_model_chunk`       | AI model used for chunking                               |
-  | `ai_model_embed`       | AI model used for embedding                              |
-  | `ai_model_query`       | AI model used for queries                                |
-  | `ai_model_vision`      | AI model used for vision (`""` disables vision)          |
-  | `ai_vector_size`       | Vector size of embeddings (used for Qdrant collection)   |
-  | `ai_temperature_query` | Temperature of the query model                           |
-  | `qdrant_server_url`    | URL of the Qdrant server                                 |
-  | `qdrant_collection`    | Name of the Qdrant collection                            |
-  | `qdrant_score_min`     | Minimum similarity score of retrieved chunks (`0`...`1`) |
-  | `qdrant_chunks_max`    | Maximum number of retrieved chunks                       |
-  | `chunk_lines_block`    | Number of lines per block for chunking                   |
-  | `ocr_mode_strict`      | Treat PDF pages as images (`true` or `false`)            |
-  | `mcp_server_port`      | MCP server port (default `8008`)                         |
+  | Key                    | Description                                                                                   |
+  |------------------------|-----------------------------------------------------------------------------------------------|
+  | `config_version`       | Config version                                                                                |
+  | `ocr_strategy`         | OCR strategy in [`DecoderSettings.py`](archive_agent/config/DecoderSettings.py)               |
+  | `ai_provider`          | AI provider in [`ai_provider_registry.py`](archive_agent/ai_provider/ai_provider_registry.py) |
+  | `ai_server_url`        | AI server URL                                                                                 |
+  | `ai_model_chunk`       | AI model used for chunking                                                                    |
+  | `ai_model_embed`       | AI model used for embedding                                                                   |
+  | `ai_model_query`       | AI model used for queries                                                                     |
+  | `ai_model_vision`      | AI model used for vision (`""` disables vision)                                               |
+  | `ai_vector_size`       | Vector size of embeddings (used for Qdrant collection)                                        |
+  | `ai_temperature_query` | Temperature of the query model                                                                |
+  | `qdrant_server_url`    | URL of the Qdrant server                                                                      |
+  | `qdrant_collection`    | Name of the Qdrant collection                                                                 |
+  | `qdrant_score_min`     | Minimum similarity score of retrieved chunks (`0`...`1`)                                      |
+  | `qdrant_chunks_max`    | Maximum number of retrieved chunks                                                            |
+  | `chunk_lines_block`    | Number of lines per block for chunking                                                        |
+  | `mcp_server_port`      | MCP server port (default `8008`)                                                              |
 
 
 - `watchlist.json`:
