@@ -99,13 +99,13 @@ Please install these requirements first:
 **Archive Agent** has been tested with these configurations:
 
 - **Ubuntu 24.04** (PC x64)
-- **[macOS 15 Sequoia](macos.md)** (MacBook Air M1) with Rosetta
+- **macOS 15 Sequoia** (MacBook Air M1) with Rosetta, **experimental**: [Install Archive Agent on macOS](macos.md)
 
 If you're using **Archive Agent** with another setup, please let me know and I'll add it here! 
 
 ---
 
-## Install Archive Agent
+## Install Archive Agent on Linux
 
 To install **Archive Agent** in the current directory of your choice, run this once:
 
