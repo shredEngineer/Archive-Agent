@@ -5,6 +5,7 @@ import json
 import logging
 from typing import Callable, List
 
+import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.pretty import Pretty
@@ -50,6 +51,22 @@ class CliManager:
         except json.JSONDecodeError:
             self.console.print(Panel(f"{text}", title="Raw output", style="red", border_style="red"))
 
+    @staticmethod
+    def prompt(message: str, is_cmd: bool, **kwargs) -> str:
+        """
+        Prompt user with message.
+        :param message: Message.
+        :param is_cmd: Enables "> " command style prompt.
+        :param kwargs: Additional arguments for typer.prompt.
+        :return: User input.
+        """
+        if is_cmd:
+            logger.info(f"🧠 Archive Agent: {message}")
+            return typer.prompt("", prompt_suffix="> ", **kwargs)
+        else:
+            logger.info(f"🧠 Archive Agent")
+            return typer.prompt(message, prompt_suffix="", **kwargs)
+
     def format_openai_chunk(
             self,
             callback: Callable[[], AiResult],
@@ -66,13 +83,15 @@ class CliManager:
         if CliManager.VERBOSE_CHUNK:
             self.console.print(Panel(f"{line_numbered_text}", title="Text", style="blue", border_style="blue"))
 
-        result = callback()
+        logger.info("🧠 I'm chunking …")
 
-        if CliManager.VERBOSE_CHUNK:
-            self.format_json(result.output_text)
+        result = callback()
 
         if CliManager.VERBOSE_USAGE:
             logger.info(f"Used ({result.total_tokens}) AI API token(s) for chunking")
+
+        if CliManager.VERBOSE_CHUNK:
+            self.format_json(result.output_text)
 
         return result
 
@@ -91,6 +110,8 @@ class CliManager:
 
         if CliManager.VERBOSE_EMBED:
             self.format_chunk(chunk)
+
+        logger.info("🧠 I'm embedding …")
 
         result = callback()
 
@@ -113,15 +134,17 @@ class CliManager:
         logger.info(f"Querying...")
 
         if CliManager.VERBOSE_QUERY:
-            self.console.print(Panel(f"{prompt}", title="Query", style="red", border_style="red"))
+            self.console.print(Panel(f"{prompt}", title="Query", style="magenta", border_style="magenta"))
+
+        logger.info("🧠 I'm thinking …")
 
         result = callback()
 
-        if CliManager.VERBOSE_QUERY:
-            self.format_json(result.output_text)
-
         if CliManager.VERBOSE_USAGE:
             logger.info(f"Used ({result.total_tokens}) AI API token(s) for query")
+
+        if CliManager.VERBOSE_QUERY:
+            self.format_json(result.output_text)
 
         return result
 
@@ -134,7 +157,7 @@ class CliManager:
         :param callback: Vision callback returning AI result.
         :return: AI result.
         """
-        logger.info(f"Image vision...")
+        logger.info("🧠 I'm looking at it … [🔭 VISION]")
 
         result = callback()
 
@@ -165,7 +188,10 @@ class CliManager:
             if CliManager.VERBOSE_RETRIEVAL:
                 self.format_chunk(point.payload['chunk_text'])
 
-        logger.warning(f"Found ({len(points)}) matching chunk(s)")
+        if len(points) > 0:
+            logger.info(f"🧠 I found something: ({len(points)}) matching chunk(s)")
+        else:
+            logger.info(f"🧠 I found nothing")
 
     def format_chunk(self, chunk: str) -> None:
         """
@@ -179,7 +205,7 @@ class CliManager:
         Format question.
         :param question: Question.
         """
-        self.console.print(Panel(f"{question}", title="Question", style="red", border_style="red"))
+        self.console.print(Panel(f"{question}", title="Question", style="magenta", border_style="magenta"))
 
     def format_answer(self, query_result: QuerySchema) -> str:
         """
@@ -222,5 +248,7 @@ class CliManager:
         ])
 
         self.console.print(Panel(f"{answer_text}", title="Answer", style="green", border_style="green"))
+
+        logger.info("🧠 That's it!")
 
         return answer_text

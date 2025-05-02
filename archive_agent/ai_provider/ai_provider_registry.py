@@ -5,6 +5,7 @@ from archive_agent.ai_provider.AiProviderKeys import AiProviderKeys
 
 from archive_agent.ai_provider.OpenAiProvider import OpenAiProvider
 from archive_agent.ai_provider.OllamaProvider import OllamaProvider
+from archive_agent.ai_provider.LMStudioProvider import LMStudioProvider
 
 
 ai_provider_registry = {
@@ -28,10 +29,24 @@ ai_provider_registry = {
         "defaults": {
             AiProviderKeys.AI_PROVIDER: "ollama",
             AiProviderKeys.AI_SERVER_URL: "http://localhost:11434",
-            AiProviderKeys.AI_MODEL_CHUNK: "deepseek-coder:6.7b-instruct",
-            AiProviderKeys.AI_MODEL_EMBED: "nomic-embed-text",
-            AiProviderKeys.AI_MODEL_QUERY: "deepseek-coder:6.7b-instruct",
-            AiProviderKeys.AI_MODEL_VISION: "llava",
+            AiProviderKeys.AI_MODEL_CHUNK: "llama3.1:8b",
+            AiProviderKeys.AI_MODEL_EMBED: "nomic-embed-text:v1.5",
+            AiProviderKeys.AI_MODEL_QUERY: "llama3.1:8b",
+            AiProviderKeys.AI_MODEL_VISION: "llava:7b-v1.6",
+            AiProviderKeys.AI_VECTOR_SIZE: 768,
+            AiProviderKeys.AI_TEMPERATURE_QUERY: 1.0,
+        },
+    },
+
+    "lmstudio": {
+        "class": LMStudioProvider,
+        "defaults": {
+            AiProviderKeys.AI_PROVIDER: "lmstudio",
+            AiProviderKeys.AI_SERVER_URL: "http://localhost:1234/v1",
+            AiProviderKeys.AI_MODEL_CHUNK: "meta-llama-3.1-8b-instruct",
+            AiProviderKeys.AI_MODEL_EMBED: "text-embedding-nomic-embed-text-v1.5",
+            AiProviderKeys.AI_MODEL_QUERY: "meta-llama-3.1-8b-instruct",
+            AiProviderKeys.AI_MODEL_VISION: "llava-v1.5-7b",
             AiProviderKeys.AI_VECTOR_SIZE: 768,
             AiProviderKeys.AI_TEMPERATURE_QUERY: 1.0,
         },

@@ -1,7 +1,6 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import typer
 import click
 import logging
 import hashlib
@@ -14,8 +13,10 @@ from archive_agent.config.DecoderSettings import OcrStrategy
 from archive_agent.ai_provider.AiProviderKeys import AiProviderKeys
 from archive_agent.ai_provider.ai_provider_registry import ai_provider_registry
 
-from archive_agent.util.StorageManager import StorageManager
+from archive_agent.util.CliManager import CliManager
 from archive_agent.util.format import format_file
+
+from archive_agent.util.StorageManager import StorageManager
 
 logger = logging.getLogger(__name__)
 
@@ -62,12 +63,15 @@ class ConfigManager(StorageManager, AiProviderKeys):
         AiProviderKeys.AI_TEMPERATURE_QUERY: 0.0,
     }
 
-    def __init__(self, settings_path: Path, profile_name: str) -> None:
+    def __init__(self, cli: CliManager, settings_path: Path, profile_name: str) -> None:
         """
         Initialize config manager.
+        :param cli: CLI manager.
         :param settings_path: Settings path.
         :param profile_name: Profile name.
         """
+        self.cli = cli
+
         file_path = settings_path / profile_name / "config.json"
 
         if not os.path.exists(file_path):
@@ -97,8 +101,9 @@ class ConfigManager(StorageManager, AiProviderKeys):
         """
         Prompt for OCR strategy (fill in deferred option values).
         """
-        ocr_strategy_name: str = typer.prompt(
-            "Select OCR strategy",
+        ocr_strategy_name: str = self.cli.prompt(
+            "Select OCR strategy:",
+            is_cmd=False,
             default=[ocr_strategy.value for ocr_strategy in OcrStrategy][0],
             type=click.Choice([ocr_strategy.value for ocr_strategy in OcrStrategy], case_sensitive=False),
             show_choices=True,
@@ -110,8 +115,9 @@ class ConfigManager(StorageManager, AiProviderKeys):
         """
         Prompt for AI provider (fill in deferred option values).
         """
-        ai_provider_name: str = typer.prompt(
-            "Select AI provider",
+        ai_provider_name: str = self.cli.prompt(
+            "Select AI provider:",
+            is_cmd=False,
             default=list(ai_provider_registry.keys())[0],
             type=click.Choice(list(ai_provider_registry.keys()), case_sensitive=False),
             show_choices=True,

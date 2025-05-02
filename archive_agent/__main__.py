@@ -56,7 +56,7 @@ def include(patterns: List[str] = typer.Argument(None)) -> None:
     context = ContextManager()
 
     if not patterns:
-        patterns = [typer.prompt("Include pattern")]
+        patterns = [context.cli.prompt("Include pattern", is_cmd=True)]
 
     for pattern in patterns:
         context.watchlist.include(pattern)
@@ -71,7 +71,7 @@ def exclude(patterns: List[str] = typer.Argument(None)) -> None:
     context = ContextManager()
 
     if not patterns:
-        patterns = [typer.prompt("Exclude pattern")]
+        patterns = [context.cli.prompt("Exclude patter?", is_cmd=True)]
 
     for pattern in patterns:
         context.watchlist.exclude(pattern)
@@ -86,7 +86,7 @@ def remove(patterns: List[str] = typer.Argument(None)) -> None:
     context = ContextManager()
 
     if not patterns:
-        patterns = [typer.prompt("Remove pattern")]
+        patterns = [context.cli.prompt("Remove pattern", is_cmd=True)]
 
     for pattern in patterns:
         context.watchlist.remove(pattern)
@@ -167,7 +167,7 @@ def search(question: str = typer.Argument(None)) -> None:
     context = ContextManager()
 
     if question is None:
-        question = typer.prompt("Type your question")
+        question = context.cli.prompt("What's up?", is_cmd=True)
 
     _chunks = context.qdrant.search(question)
 
@@ -182,7 +182,7 @@ def query(question: str = typer.Argument(None)) -> None:
     context = ContextManager()
 
     if question is None:
-        question = typer.prompt("Type your question")
+        question = context.cli.prompt("What's up?", is_cmd=True)
 
     _query_result, _answer_text = context.qdrant.query(question)
 

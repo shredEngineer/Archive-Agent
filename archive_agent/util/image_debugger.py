@@ -95,7 +95,7 @@ def _run_viewer(images: List[IndexedImage]) -> None:
 
         meta_lines = [
             f"Image ({img_index}) on page ({page_num})",
-            f"{img.width} x {img.height} px",
+            f"{img.width} × {img.height} px",
         ]
         if img.format:
             meta_lines.append(f"Format: {img.format}")

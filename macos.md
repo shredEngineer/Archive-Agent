@@ -1,6 +1,6 @@
-# Install Archive Agent on Mac OS
+# Install Archive Agent on macOS
 
-To install **Archive Agent** on Mac OS, run this:
+To install **Archive Agent** on macOS, run this:
 
 ```bash
 brew install git pyenv poetry pandoc tkinter docker

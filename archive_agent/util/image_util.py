@@ -32,8 +32,8 @@ def image_resize_safe(
     if image_copy.width != image.width or image_copy.height != image.height:
         logger.warning(
             f"Resized image "
-            f"from ({image.width} x {image.height} px) "
-            f"to ({image_copy.width} x {image_copy.height} px)"
+            f"from ({image.width} × {image.height} px) "
+            f"to ({image_copy.width} × {image_copy.height} px)"
         )
 
     for quality in range(100, 0, -5):

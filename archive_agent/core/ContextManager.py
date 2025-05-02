@@ -31,11 +31,18 @@ class ContextManager:
         Initialize context manager.
         :param profile_name: Optional profile name to create or switch to (or "" to request prompt).
         """
+        self.cli = CliManager()
+
         settings_path = Path.home() / ".archive-agent-settings"
 
-        self.profile_manager = ProfileManager(settings_path=settings_path, profile_name=profile_name)
+        self.profile_manager = ProfileManager(
+            cli=self.cli,
+            settings_path=settings_path,
+            profile_name=profile_name,
+        )
 
         self.config = ConfigManager(
+            cli=self.cli,
             settings_path=settings_path,
             profile_name=self.profile_manager.data[self.profile_manager.PROFILE_NAME],
         )
@@ -44,8 +51,6 @@ class ContextManager:
             settings_path=settings_path,
             profile_name=self.profile_manager.data[self.profile_manager.PROFILE_NAME],
         )
-
-        self.cli = CliManager()
 
         self.ai = AiManager(
             ai_provider=self._load_ai_provider(),

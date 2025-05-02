@@ -1,4 +1,6 @@
-🍀 **[Beta testers welcome!](#-collaborators-welcome)**
+🍀 **Collaborators welcome**  
+You are invited to contribute to this open source project!  
+Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues) and [submit pull requests](https://github.com/shredEngineer/Archive-Agent/pulls) anytime.
 
 ---
 
@@ -6,146 +8,104 @@
 
 **Archive Agent** is an open-source semantic file tracker with OCR + AI search.  
 
-*Watch me explain it here:* https://www.youtube.com/watch?v=dyKovjez4-g
+🤓 [Watch me explain **Archive Agent** on *YouTube*](https://www.youtube.com/watch?v=dyKovjez4-g)
 
 ![Archive Agent Logo](archive_agent/assets/Archive-Agent-400x300.png)
 
 - **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**
-- **Supported AI providers: [OpenAI](https://platform.openai.com/docs/overview), [Ollama](https://ollama.com/)**
+- **Supported AI providers: [OpenAI](https://platform.openai.com/docs/overview), [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/)**
 - **[MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension**
 - Fast and effective semantic chunking (**smart chunking**)
-- Qdrant vector DB *(running locally)* for storage and search 
-- Command-line interface (CLI) using *Typer*
-- Graphical user interface (GUI) using *Streamlit*
+- [Qdrant](https://qdrant.tech/) vector DB *(running locally)* for storage and search 
 
 ---
 
-⚡ **Looking for the CLI command reference? See: [Run Archive Agent](#-run-archive-agent)**
+**Looking for the CLI command reference? 👉 [Run Archive Agent](#run-archive-agent)**
+
+**Looking for the MCP tool reference? 👉 [MCP Tools](#mcp-tools)**
 
 ---
 
-⚡ **Looking for the MCP tool reference? See: [MCP Tools](#-mcp-tools)**
-
----
-
-📷 **Screenshot of CLI:**
+📷 Screenshot of **command-line** interface (CLI) using *Typer*:
 
 ![](archive_agent/assets/Screenshot-CLI.png)
 
-📷 **Screenshot of GUI:**
+📷 Screenshot of **graphical** user interface (GUI) using *Streamlit*:
+[(enlarge)](archive_agent/assets/Screenshot-GUI.png)
 
 ![](archive_agent/assets/Screenshot-GUI.png)
 
-[(enlarge screenshot to see details)](archive_agent/assets/Screenshot-GUI.png)
-
----
-
-## 🗂️ Structure
+## Structure
 
 <!-- TOC -->
 * [🧠 Archive Agent](#-archive-agent)
-  * [🗂️ Structure](#-structure)
-  * [⚙️ Install requirements](#-install-requirements)
-  * [⚙️ AI provider setup](#-ai-provider-setup)
+  * [Structure](#structure)
+  * [Install requirements](#install-requirements)
+  * [Supported OS](#supported-os)
+  * [Install Archive Agent](#install-archive-agent)
+  * [Update Archive Agent](#update-archive-agent)
+  * [Setup Qdrant server](#setup-qdrant-server)
+  * [How Archive Agent works](#how-archive-agent-works)
+    * [Which files are processed](#which-files-are-processed)
+    * [How files are processed](#how-files-are-processed)
+    * [How smart chunking works](#how-smart-chunking-works)
+    * [How chunks are retrieved](#how-chunks-are-retrieved)
+    * [How files are selected for tracking](#how-files-are-selected-for-tracking)
+  * [AI provider setup](#ai-provider-setup)
     * [OpenAI provider setup](#openai-provider-setup)
     * [Ollama provider setup](#ollama-provider-setup)
-  * [⚙️ Install Archive Agent](#-install-archive-agent)
-  * [⚙️ Setup Qdrant server](#-setup-qdrant-server)
-  * [🔄 Update Archive Agent](#-update-archive-agent)
-  * [🧠 How Archive Agent works](#-how-archive-agent-works)
-    * [ℹ️ Which files are processed](#ℹ-which-files-are-processed)
-    * [ℹ️ How files are processed](#ℹ-how-files-are-processed)
-    * [ℹ️ How smart chunking works](#ℹ-how-smart-chunking-works)
-    * [ℹ️ How chunks are retrieved](#ℹ-how-chunks-are-retrieved)
-    * [ℹ️ How files are selected for tracking](#ℹ-how-files-are-selected-for-tracking)
-  * [🚀 Run Archive Agent](#-run-archive-agent)
-    * [⚡ List usage info](#-list-usage-info)
-    * [⚡ Create or switch profile](#-create-or-switch-profile)
-    * [⚡ Add included patterns](#-add-included-patterns)
-    * [⚡ Add excluded patterns](#-add-excluded-patterns)
-    * [⚡ Remove included / excluded patterns](#-remove-included--excluded-patterns)
-    * [⚡ List included / excluded patterns](#-list-included--excluded-patterns)
-    * [⚡ Resolve patterns and track files](#-resolve-patterns-and-track-files)
-    * [⚡ List tracked files](#-list-tracked-files)
-    * [⚡ List changed files](#-list-changed-files)
-    * [⚡ Commit changed files to database](#-commit-changed-files-to-database)
-    * [⚡ Combined track and commit](#-combined-track-and-commit)
-    * [⚡ Search your files](#-search-your-files)
-    * [⚡ Query your files](#-query-your-files)
-    * [⚡ Launch Archive Agent GUI](#-launch-archive-agent-gui)
-    * [⚡ Start MCP Server](#-start-mcp-server)
-    * [🔌 MCP Tools](#-mcp-tools)
-  * [🔧 Archive Agent settings](#-archive-agent-settings)
-  * [🛢 Qdrant database](#-qdrant-database)
-  * [🔬 Testing and code analysis](#-testing-and-code-analysis)
-  * [📖 Developer's guide](#-developers-guide)
-  * [🍀 Collaborators welcome](#-collaborators-welcome)
-  * [🐞 Known bugs](#-known-bugs)
-  * [📜 License: GNU GPL v3.0](#-license-gnu-gpl-v30)
+    * [LM Studio provider setup](#lm-studio-provider-setup)
+  * [Run Archive Agent](#run-archive-agent)
+    * [Show list of commands](#show-list-of-commands)
+    * [Create or switch profile](#create-or-switch-profile)
+    * [Add included patterns](#add-included-patterns)
+    * [Add excluded patterns](#add-excluded-patterns)
+    * [Remove included / excluded patterns](#remove-included--excluded-patterns)
+    * [List included / excluded patterns](#list-included--excluded-patterns)
+    * [Resolve patterns and track files](#resolve-patterns-and-track-files)
+    * [List tracked files](#list-tracked-files)
+    * [List changed files](#list-changed-files)
+    * [Commit changed files to database](#commit-changed-files-to-database)
+    * [Combined track and commit](#combined-track-and-commit)
+    * [Search your files](#search-your-files)
+    * [Query your files](#query-your-files)
+    * [Launch Archive Agent GUI](#launch-archive-agent-gui)
+    * [Start MCP Server](#start-mcp-server)
+    * [MCP Tools](#mcp-tools)
+  * [Archive Agent settings](#archive-agent-settings)
+  * [Qdrant database](#qdrant-database)
+  * [Developer's guide](#developers-guide)
+    * [Important modules](#important-modules)
+    * [Testing and code analysis](#testing-and-code-analysis)
+    * [PDF image debugger window](#pdf-image-debugger-window)
+  * [Known bugs](#known-bugs)
+  * [Licensed under GNU GPL v3.0](#licensed-under-gnu-gpl-v30)
 <!-- TOC -->
 
 ---
 
-## ⚙️ Install requirements
+## Install requirements
+
+Please install these requirements first: 
 
 - [Docker](https://docs.docker.com/engine/install/) *(for running Qdrant server)*
 - [Python](https://www.python.org/downloads/) **>= 3.10, < 3.13** *(core runtime)*
 - [Poetry](https://python-poetry.org/docs/#installation) *(dependency management)*
 
+---
 
-- **Tested with Ubuntu 24.04**
+## Supported OS
 
+**Archive Agent** has been tested with these configurations:
 
-- Experimental [install instructions for Mac OS X](macos.md) are available.
+- **Ubuntu 24.04** (PC x64)
+- **[macOS 15 Sequoia](macos.md)** (MacBook Air M1) with Rosetta
+
+If you're using **Archive Agent** with another setup, please let me know and I'll add it here! 
 
 ---
 
-## ⚙️ AI provider setup
-
-**Archive Agent** lets you choose between different AI providers:
-
-- **OpenAI**: Requires an OpenAI API key. Faster but incurring API usage costs. **Best performance.**
-- **Ollama**: Requires Ollama models running locally. Slower but possibly cheaper. **Best privacy.**
-
-💡 **Good to know:** You will be prompted to choose an AI provider at startup; see: [Run Archive Agent](#-run-archive-agent).
-
-📌 **Note:** You *can* customize the specific **models** used by the AI provider in the [Archive Agent settings](#-archive-agent-settings). However, you *cannot* change the AI provider of an *existing* profile, as the embeddings will be incompatible; to choose a different AI provider, create a new profile instead.
-
-### OpenAI provider setup
-
-If the OpenAI provider is selected, **Archive Agent** requires the OpenAI API key.
-
-To export your [OpenAI API key](https://platform.openai.com/api-keys), replace `sk-...` with your actual key and run this once:
-
-```bash
-echo "export OPENAI_API_KEY='sk-...'" >> ~/.bashrc && source ~/.bashrc
-```
-
-This will persist the export for the current user.
-
-💡 **Good to know:** [OpenAI won't use your data for training.](https://platform.openai.com/docs/guides/your-data)
-
-### Ollama provider setup
-
-If the Ollama provider is selected, **Archive Agent** requires Ollama running at `http://localhost:11434`.
-
-- [How to install Ollama.](https://ollama.com/download)
-
-With the default [Archive Agent Settings](#-archive-agent-settings), these Ollama models are expected to be installed: 
-
-```bash
-ollama pull deepseek-coder:6.7b-instruct    # for chunk/query
-ollama pull llava:7b                        # for vision
-ollama pull nomic-embed-text                # for embed
-```
-
-💡 **Good to know:** Ollama also works without a GPU.  
-
-📌 **Note:** At least 32 GiB RAM is recommended for smooth performance.
-
----
-
-## ⚙️ Install Archive Agent
+## Install Archive Agent
 
 To install **Archive Agent** in the current directory of your choice, run this once:
 
@@ -165,7 +125,26 @@ This will create a global `archive-agent` command for the current user.
 
 ---
 
-## ⚙️ Setup Qdrant server
+## Update Archive Agent
+
+To update your **Archive Agent** installation, run this in the installation root:
+
+```bash
+git pull
+poetry install
+```
+
+💡 **Good to know:** To update the Qdrant docker image, run this:
+
+```bash
+docker stop archive-agent-qdrant-server
+docker pull qdrant/qdrant
+./ensure-qdrant.sh
+```
+
+---
+
+## Setup Qdrant server
 
 🚨 **IMPORTANT:** To manage Docker without root, run this once **and reboot**:
 
@@ -189,28 +168,9 @@ docker stop archive-agent-qdrant-server
 
 ---
 
-## 🔄 Update Archive Agent
+## How Archive Agent works
 
-To update your **Archive Agent** installation, run this in the project root:
-
-```bash
-git pull
-poetry install
-```
-
-💡 **Good to know:** To update the Qdrant docker image, run this:
-
-```bash
-docker stop archive-agent-qdrant-server
-docker pull qdrant/qdrant
-./ensure-qdrant.sh
-```
-
----
-
-## 🧠 How Archive Agent works
-
-### ℹ️ Which files are processed
+###  Which files are processed
 
 **Archive Agent** currently supports these file types:
 - Text:
@@ -223,20 +183,19 @@ docker pull qdrant/qdrant
 
 📌 **Note:** There are different OCR strategies supported by **Archive Agent**:
 
-- **Relaxed** OCR strategy:
-  - PDF OCR text layer is extracted.
-  - PDF foreground images are decoded, but background images are *ignored*.
-  - **Cheap and fast, but less accurate.**
-
-
 - **Strict** OCR strategy:
   - PDF OCR text layer is *ignored*.
   - PDF pages are treated as images.
   - **Expensive and slow, but more accurate.**
 
-💡 **Good to know:** You will be prompted to choose an OCR strategy at startup; see: [Run Archive Agent](#-run-archive-agent).
+- **Relaxed** OCR strategy:
+  - PDF OCR text layer is extracted.
+  - PDF foreground images are decoded, but background images are *ignored*.
+  - **Cheap and fast, but less accurate.**
 
-### ℹ️ How files are processed
+💡 **Good to know:** You will be prompted to choose an OCR strategy at startup; see: [Run Archive Agent](#run-archive-agent).
+
+### How files are processed
 
 Ultimately, **Archive Agent** decodes everything to text like this:
 - Plaintext files are decoded to UTF-8.
@@ -249,7 +208,7 @@ Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
 
 📌 **Note:** Unsupported files are tracked but not processed.
 
-### ℹ️ How smart chunking works
+### How smart chunking works
 
 **Archive Agent** processes decoded text like this:
 - Decoded text is sanitized and split into sentences.
@@ -262,7 +221,7 @@ Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
 
 💡 **Good to know:** This **smart chunking** improves the accuracy and effectiveness of the retrieval. 
 
-### ℹ️ How chunks are retrieved
+### How chunks are retrieved
 
 **Archive Agent** retrieves chunks related to your question like this:
 - The question is turned into a vector using AI embeddings.
@@ -275,7 +234,7 @@ Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
 
 The LLM's answer is structured to be multi-faceted, making **Archive Agent** a helpful assistant.
 
-### ℹ️ How files are selected for tracking
+### How files are selected for tracking
 
 **Archive Agent** uses *patterns* to select your files:
 
@@ -294,9 +253,75 @@ This approach gives you the best control over the specific files or file types t
 
 ---
 
-## 🚀 Run Archive Agent
+## AI provider setup
 
-### ⚡ List usage info
+**Archive Agent** lets you choose between different AI providers:
+
+- Remote APIs *(higher performance and costs, less privacy)*:
+  - **OpenAI**: Requires an OpenAI API key.
+
+
+- Local APIs *(lower performance and costs, best privacy)*:
+  - **Ollama**: Requires Ollama running locally.
+  - **LM Studio**: Requires LM Studio running locally.
+
+💡 **Good to know:** You will be prompted to choose an AI provider at startup; see: [Run Archive Agent](#run-archive-agent).
+
+📌 **Note:** You *can* customize the specific **models** used by the AI provider in the [Archive Agent settings](#archive-agent-settings). However, you *cannot* change the AI provider of an *existing* profile, as the embeddings will be incompatible; to choose a different AI provider, create a new profile instead.
+
+### OpenAI provider setup
+
+If the OpenAI provider is selected, **Archive Agent** requires the OpenAI API key.
+
+To export your [OpenAI API key](https://platform.openai.com/api-keys), replace `sk-...` with your actual key and run this once:
+
+```bash
+echo "export OPENAI_API_KEY='sk-...'" >> ~/.bashrc && source ~/.bashrc
+```
+
+This will persist the export for the current user.
+
+💡 **Good to know:** [OpenAI won't use your data for training.](https://platform.openai.com/docs/guides/your-data)
+
+### Ollama provider setup
+
+If the Ollama provider is selected, **Archive Agent** requires Ollama running at `http://localhost:11434`.
+
+- [How to install Ollama.](https://ollama.com/download)
+
+With the default [Archive Agent Settings](#archive-agent-settings), these Ollama models are expected to be installed: 
+
+```bash
+ollama pull llama3.1:8b             # for chunk/query
+ollama pull llava:7b-v1.6           # for vision
+ollama pull nomic-embed-text:v1.5   # for embed
+```
+
+💡 **Good to know:** Ollama also works without a GPU.
+At least 32 GiB RAM is recommended for smooth performance.
+
+### LM Studio provider setup
+
+If the LM Studio provider is selected, **Archive Agent** requires LM Studio running at `http://localhost:1234`.
+
+- [How to install LM Studio.](https://lmstudio.ai/download)
+
+With the default [Archive Agent Settings](#archive-agent-settings), these LM Studio models are expected to be installed: 
+
+```bash
+meta-llama-3.1-8b-instruct              # for chunk/query
+llava-v1.5-7b                           # for vision
+text-embedding-nomic-embed-text-v1.5    # for embed
+```
+
+💡 **Good to know:** LM Studio also works without a GPU.
+At least 32 GiB RAM is recommended for smooth performance.
+
+---
+
+## Run Archive Agent
+
+### Show list of commands
 
 To show the list of supported commands, run this:
 
@@ -304,7 +329,7 @@ To show the list of supported commands, run this:
 archive-agent
 ```
 
-### ⚡ Create or switch profile
+### Create or switch profile
 
 To switch to a new or existing profile, run this:
 
@@ -315,9 +340,9 @@ archive-agent switch "My Other Profile"
 📌 **Note:** **Always use quotes** for the profile name argument,
 **or skip it** to get an interactive prompt.
 
-💡 **Good to know:** Profiles are useful to manage *independent* Qdrant collections and [Archive Agent settings](#-archive-agent-settings).
+💡 **Good to know:** Profiles are useful to manage *independent* Qdrant collections and [Archive Agent settings](#archive-agent-settings).
 
-### ⚡ Add included patterns
+### Add included patterns
 
 To add one or more included patterns, run this:
 
@@ -328,7 +353,7 @@ archive-agent include "~/Documents/*.txt"
 📌 **Note:** **Always use quotes** for the pattern argument (to prevent your shell's wildcard expansion),
 **or skip it** to get an interactive prompt.
 
-### ⚡ Add excluded patterns
+### Add excluded patterns
 
 To add one or more excluded patterns, run this:
 
@@ -339,7 +364,7 @@ archive-agent exclude "~/Documents/*.txt"
 📌 **Note:** **Always use quotes** for the pattern argument (to prevent your shell's wildcard expansion),
 **or skip it** to get an interactive prompt.
 
-### ⚡ Remove included / excluded patterns
+### Remove included / excluded patterns
 
 To remove one or more previously included / excluded patterns, run this:
 
@@ -350,7 +375,7 @@ archive-agent remove "~/Documents/*.txt"
 📌 **Note:** **Always use quotes** for the pattern argument (to prevent your shell's wildcard expansion),
 **or skip it** to get an interactive prompt.
 
-### ⚡ List included / excluded patterns
+### List included / excluded patterns
 
 To show the list of included / excluded patterns, run this: 
 
@@ -358,7 +383,7 @@ To show the list of included / excluded patterns, run this:
 archive-agent patterns
 ```
 
-### ⚡ Resolve patterns and track files
+### Resolve patterns and track files
 
 To resolve all patterns and track changes to your files, run this:
 
@@ -366,7 +391,7 @@ To resolve all patterns and track changes to your files, run this:
 archive-agent track
 ```
 
-### ⚡ List tracked files
+### List tracked files
 
 To show the list of tracked files, run this: 
 
@@ -376,7 +401,7 @@ archive-agent list
 
 📌 **Note:** Don't forget to `track` your files first.
 
-### ⚡ List changed files
+### List changed files
 
 To show the list of changed files, run this: 
 
@@ -386,7 +411,7 @@ archive-agent diff
 
 📌 **Note:** Don't forget to `track` your files first.
 
-### ⚡ Commit changed files to database
+### Commit changed files to database
 
 To sync changes to your files with the Qdrant database, run this:
 
@@ -403,7 +428,7 @@ archive-agent commit
 
 📌 **Note:** Don't forget to `track` your files first.
 
-### ⚡ Combined track and commit
+### Combined track and commit
 
 To `track` and then `commit` in one go, run this:
 
@@ -411,7 +436,7 @@ To `track` and then `commit` in one go, run this:
 archive-agent update
 ```
 
-### ⚡ Search your files
+### Search your files
 
 ```bash
 archive-agent search "Which files mention donuts?"
@@ -421,7 +446,7 @@ Lists files relevant to the question.
 
 📌 **Note:** **Always use quotes** for the question argument, **or skip it** to get an interactive prompt.
 
-### ⚡ Query your files
+### Query your files
 
 ```bash
 archive-agent query "Which files mention donuts?"
@@ -431,7 +456,7 @@ Answers your question using RAG.
 
 📌 **Note:** **Always use quotes** for the question argument, **or skip it** to get an interactive prompt.
 
-### ⚡ Launch Archive Agent GUI
+### Launch Archive Agent GUI
 
 To launch the **Archive Agent** GUI in your browser, run this:
 
@@ -441,7 +466,7 @@ archive-agent gui
 
 📌 **Note:** Press `CTRL+C` in the console to close the GUI server.
 
-### ⚡ Start MCP Server
+### Start MCP Server
 
 To start the **Archive Agent** MCP server, run this:
 
@@ -456,7 +481,7 @@ archive-agent mcp
 - [`.vscode/mcp.json`](.vscode/mcp.json) for [GitHub Copilot agent mode (VS Code)](https://code.visualstudio.com/blogs/2025/02/24/introducing-copilot-agent-mode): 
 - [`.roo/mcp.json`](.roo/mcp.json) for [Roo Code (VS Code extension)](https://marketplace.visualstudio.com/items?itemName=RooVeterinaryInc.roo-cline)
 
-### 🔌 MCP Tools
+### MCP Tools
 
 **Archive Agent** exposes these tools via MCP:
 
@@ -474,11 +499,15 @@ archive-agent mcp
 
 ---
 
-## 🔧 Archive Agent settings
+## Archive Agent settings
 
-**Archive Agent** settings are stored in `~/.archive-agent-settings/`. 
+**Archive Agent** settings are organized as profile folders in `~/.archive-agent-settings/`.
 
-The default settings profile is located in `default/`:
+E.g., the `default` profile is located in `~/.archive-agent-settings/default/`.
+
+The currently used profile is stored in `~/.archive-agent-settings/profile.json`.
+
+Each profile folder contains these files:
 
 - `config.json`:
 
@@ -504,9 +533,11 @@ The default settings profile is located in `default/`:
 - `watchlist.json`:
   - Managed via the `include` / `exclude` / `remove` / `track` / `commit` / `update` commands.
 
+📌 **Note:** To delete a profile, simply delete the folder. This will not delete the Qdrant collection.
+
 ---
 
-## 🛢 Qdrant database
+## Qdrant database
 
 The Qdrant database is stored in `~/.archive-agent-qdrant-storage/`.
 
@@ -516,19 +547,13 @@ The Qdrant database is stored in `~/.archive-agent-qdrant-storage/`.
 
 ---
 
-## 🔬 Testing and code analysis
-
-To run unit tests, check types, and check style, run this:
-
-```bash
-./audit.sh
-```
-
----
-
-## 📖 Developer's guide
+## Developer's guide
 
 **Archive Agent** was written from scratch for educational purposes (on either end of the software).
+
+### Important modules
+
+To get started, check out these epic modules:
 
 - The app context is initialized in [`archive_agent/core/ContextManager.py`](archive_agent/core/ContextManager.py)
 - The default config is defined in [`archive_agent/config/ConfigManager.py`](archive_agent/config/ConfigManager.py)  
@@ -537,27 +562,32 @@ To run unit tests, check types, and check style, run this:
 - The CLI verbosity can be adjusted in [`archive_agent/util/CliManager.py`](archive_agent/util/CliManager.py)
 - The GUI is implemented in [`archive_agent/core/GuiManager.py`](archive_agent/core/GuiManager.py)
 - The AI API prompts for chunking, embedding, vision, and querying are defined in [`archive_agent/ai/AiManager.py`](archive_agent/ai/AiManager.py) 
+- The AI provider registry is located in [`archive_agent/ai_provider/ai_provider_registry.py`](archive_agent/ai_provider/ai_provider_registry.py)
 
 If you miss something or spot bad patterns, feel free to contribute and refactor!
 
-💡 **Good to know:** To enable the PDF image debugger window, run this in your current shell:
+### Testing and code analysis
+
+To run unit tests, check types, and check style, run this:
+
+```bash
+./audit.sh
+```
+
+(Some remaining type errors need to be fixed…)
+
+### PDF image debugger window
+
+To enable the PDF image debugger window, run this in your current shell:
 ```bash
 export ARCHIVE_AGENT_IMAGE_DEBUGGER=1
 ```
 
-(PDF image debugger windows must be closed manually in order to proceed.)
+📌 **Note:** PDF image debugger windows must be closed manually in order to proceed.
 
 ---
 
-## 🍀 Collaborators welcome
-
-**You are invited to contribute to this open source project!**
-
-**Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues) and [submit pull requests](https://github.com/shredEngineer/Archive-Agent/pulls) anytime.**
-
----
-
-## 🐞 Known bugs
+## Known bugs
 
 - [ ] While `track` initially reports a file as *added*, subsequent `track` calls report it as *changed*. 
 
@@ -569,7 +599,7 @@ export ARCHIVE_AGENT_IMAGE_DEBUGGER=1
 
 ---
 
-## 📜 License: GNU GPL v3.0
+## Licensed under GNU GPL v3.0
 
 Copyright © 2025 Dr.-Ing. Paul Wilhelm <[paul@wilhelm.dev](mailto:paul@wilhelm.dev)>
 

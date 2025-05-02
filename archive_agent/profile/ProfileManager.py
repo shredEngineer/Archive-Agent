@@ -1,11 +1,12 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import typer
 import logging
 from pathlib import Path
 from copy import deepcopy
 from typing import Optional
+
+from archive_agent.util.CliManager import CliManager
 
 from archive_agent.util.StorageManager import StorageManager
 
@@ -26,29 +27,35 @@ class ProfileManager(StorageManager):
         PROFILE_NAME: "default",
     }
 
-    def __init__(self, settings_path: Path, profile_name: Optional[str]) -> None:
+    def __init__(self, cli: CliManager, settings_path: Path, profile_name: Optional[str]) -> None:
         """
         Initialize profile manager.
+        :param cli: CLI manager.
         :param settings_path: Settings path.
         :param profile_name: Optional profile name to create or switch to (or "" to request prompt).
         """
+        self.cli = cli
+
         StorageManager.__init__(self, settings_path / "profile.json", deepcopy(self.DEFAULT_CONFIG))
 
         available_profiles = [p.name for p in settings_path.iterdir() if p.is_dir()]
 
         if len(available_profiles) == 0:
             logger.info("No profiles found")
+            profile_name = ""  # Request prompt
+
         else:
             logger.info(f"Found ({len(available_profiles)}) profile(s):")
             for profile in available_profiles:
                 logger.info(f"- '{profile}'")
 
-        if "default" not in available_profiles:
-            profile_name = ""  # Request prompt
-
         if profile_name is not None:
             if profile_name == "":
-                profile_name = typer.prompt("Create or switch profile:", default="default")
+                profile_name = self.cli.prompt(
+                    "Profile to create or switch to:",
+                    is_cmd=False,
+                    default=self.data[self.PROFILE_NAME],
+                )
             self.data[self.PROFILE_NAME] = profile_name
             self.save()
 

@@ -162,7 +162,7 @@ def extract_text_from_images_per_page(
                     if img.width <= TINY_IMAGE_WIDTH_THRESHOLD or img.height <= TINY_IMAGE_HEIGHT_THRESHOLD:
                         logger.warning(
                             f"Image ({i + 1}) on page ({index + 1}) / ({len(contents)}): "
-                            f"Ignored because it's tiny ({img.width} x {img.height} px)"
+                            f"Ignored because it's tiny ({img.width} × {img.height} px)"
                         )
                         continue
 

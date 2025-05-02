@@ -8,8 +8,8 @@ logger = logging.getLogger(__name__)
 
 
 class OcrStrategy(Enum):
-    RELAXED = 'relaxed'
     STRICT = 'strict'
+    RELAXED = 'relaxed'
 
 
 class DecoderSettings:

@@ -260,7 +260,7 @@ class WatchlistManager(StorageManager):
         Show the list of tracked files.
         """
         if len(self.data['tracked']) > 0:
-            logger.info(f"({len(self.data['tracked'])}) tracked files(s):")
+            logger.info(f"({len(self.data['tracked'])}) tracked file(s):")
             for file in self.data['tracked'].keys():
                 logger.info(f"- {file}")
         else:
@@ -287,21 +287,21 @@ class WatchlistManager(StorageManager):
         removed_files = self.get_diff_files(self.DIFF_REMOVED)
 
         if len(added_files) > 0:
-            logger.info(f"({len(added_files)}) added files(s):")
+            logger.info(f"({len(added_files)}) added file(s):")
             for file in added_files.keys():
                 logger.info(f"- ADDED    {file}")
         else:
             logger.info("- (0) added file(s)")
 
         if len(changed_files) > 0:
-            logger.info(f"({len(changed_files)}) changed files(s):")
+            logger.info(f"({len(changed_files)}) changed file(s):")
             for file in changed_files.keys():
                 logger.info(f"- CHANGED  {file}")
         else:
             logger.info("- (0) changed file(s)")
 
         if len(removed_files) > 0:
-            logger.info(f"({len(removed_files)}) removed files(s):")
+            logger.info(f"({len(removed_files)}) removed file(s):")
             for file in removed_files.keys():
                 logger.info(f"- REMOVED  {file}")
         else:
