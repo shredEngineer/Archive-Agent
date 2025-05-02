@@ -9,76 +9,57 @@ import os.path
 from pathlib import Path
 from typing import Optional, Any, Dict
 
+from archive_agent.config.DecoderSettings import OcrStrategy
+
+from archive_agent.ai_provider.AiProviderKeys import AiProviderKeys
+from archive_agent.ai_provider.ai_provider_registry import ai_provider_registry
+
 from archive_agent.util.StorageManager import StorageManager
 from archive_agent.util.format import format_file
-from archive_agent.config.DecoderSettings import OcrStrategy
 
 logger = logging.getLogger(__name__)
 
 
-class ConfigManager(StorageManager):
+class ConfigManager(StorageManager, AiProviderKeys):
     """
     Config manager.
     """
 
     CONFIG_VERSION = 'config_version'
 
-    AI_PROVIDER = 'ai_provider'
-    AI_SERVER_URL = 'ai_server_url'
-    AI_MODEL_CHUNK = 'ai_model_chunk'
-    AI_MODEL_EMBED = 'ai_model_embed'
-    AI_MODEL_QUERY = 'ai_model_query'
-    AI_MODEL_VISION = 'ai_model_vision'
-    AI_VECTOR_SIZE = 'ai_vector_size'
-    AI_TEMPERATURE_QUERY = 'ai_temperature_query'
-
     QDRANT_SERVER_URL = 'qdrant_server_url'
     QDRANT_COLLECTION = 'qdrant_collection'
     QDRANT_SCORE_MIN = 'qdrant_score_min'
     QDRANT_CHUNKS_MAX = 'qdrant_chunks_max'
     CHUNK_LINES_BLOCK = 'chunk_lines_block'
-    OCR_STRATEGY = 'ocr_strategy'
+
     MCP_SERVER_PORT = 'mcp_server_port'
 
-    DEFAULT_CONFIG_OPENAI = {
-        AI_PROVIDER: "openai",
-        AI_SERVER_URL: "https://api.openai.com/v1",
-        AI_MODEL_CHUNK: "gpt-4o-2024-08-06",
-        AI_MODEL_EMBED: "text-embedding-3-small",
-        AI_MODEL_QUERY: "gpt-4o-2024-08-06",
-        AI_MODEL_VISION: "gpt-4o-2024-08-06",
-        AI_VECTOR_SIZE: 1536,
-        AI_TEMPERATURE_QUERY: 1.0,
-    }
-
-    DEFAULT_CONFIG_OLLAMA = {
-        AI_PROVIDER: "ollama",
-        AI_SERVER_URL: "http://localhost:11434",
-        AI_MODEL_CHUNK: "deepseek-coder:6.7b-instruct",
-        AI_MODEL_EMBED: "nomic-embed-text",
-        AI_MODEL_QUERY: "deepseek-coder:6.7b-instruct",
-        AI_MODEL_VISION: "llava",
-        AI_VECTOR_SIZE: 768,
-        AI_TEMPERATURE_QUERY: 1.0,
-    }
+    OCR_STRATEGY = 'ocr_strategy'
 
     DEFAULT_CONFIG = {
         CONFIG_VERSION: 5,
-        AI_PROVIDER: "",            # defer
-        AI_SERVER_URL: "",          # defer
-        AI_MODEL_CHUNK: "",         # defer
-        AI_MODEL_EMBED: "",         # defer
-        AI_MODEL_QUERY: "",         # defer
-        AI_MODEL_VISION: "",        # defer
-        AI_VECTOR_SIZE: 0,          # defer
-        AI_TEMPERATURE_QUERY: 0.0,  # defer
+
         QDRANT_SERVER_URL: "http://localhost:6333",
         QDRANT_COLLECTION: "archive-agent",
         QDRANT_SCORE_MIN: .2,
         QDRANT_CHUNKS_MAX: 20,
         CHUNK_LINES_BLOCK: 50,
-        OCR_STRATEGY: "",           # defer
+
         MCP_SERVER_PORT: 8008,
+
+        # deferred to `_prompt_ocr_strategy`
+        OCR_STRATEGY: "",
+
+        # deferred to `_prompt_ai_provider`
+        AiProviderKeys.AI_PROVIDER: "",
+        AiProviderKeys.AI_SERVER_URL: "",
+        AiProviderKeys.AI_MODEL_CHUNK: "",
+        AiProviderKeys.AI_MODEL_EMBED: "",
+        AiProviderKeys.AI_MODEL_QUERY: "",
+        AiProviderKeys.AI_MODEL_VISION: "",
+        AiProviderKeys.AI_VECTOR_SIZE: 0,
+        AiProviderKeys.AI_TEMPERATURE_QUERY: 0.0,
     }
 
     def __init__(self, settings_path: Path, profile_name: str) -> None:
@@ -93,8 +74,8 @@ class ConfigManager(StorageManager):
             logger.info(f"Creating profile: '{profile_name}'")
 
             self._qdrant_collection_name(profile_name)
-            self._prompt_ai_provider()
             self._prompt_ocr_strategy()
+            self._prompt_ai_provider()
 
         else:
             logger.info(f"Using profile: '{profile_name}'")
@@ -109,44 +90,34 @@ class ConfigManager(StorageManager):
         profile_name_hash = hashlib.sha1(profile_name.encode('utf-8')).hexdigest()[:8]
         profile_name_safe = profile_name.replace(' ', '-')
         unique_suffix = "-" + profile_name_safe + "-" + profile_name_hash
+
         self.DEFAULT_CONFIG[self.QDRANT_COLLECTION] += unique_suffix
-
-    def _prompt_ai_provider(self) -> None:
-        """
-        Prompt for AI provider (fill in deferred option values).
-        """
-        ai_provider_mapping = {
-            "openai": self.DEFAULT_CONFIG_OPENAI,
-            "ollama": self.DEFAULT_CONFIG_OLLAMA,
-        }
-
-        ai_provider_name: str = typer.prompt(
-            "Select AI provider",
-            default=list(ai_provider_mapping.keys())[0],
-            type=click.Choice(list(ai_provider_mapping.keys()), case_sensitive=False),
-            show_choices=True,
-        )
-
-        ai_provider_defaults = ai_provider_mapping[ai_provider_name]
-
-        self.DEFAULT_CONFIG.update(ai_provider_defaults)
 
     def _prompt_ocr_strategy(self) -> None:
         """
         Prompt for OCR strategy (fill in deferred option values).
         """
-        ocr_strategy_values = [ocr_strategy.value for ocr_strategy in OcrStrategy]
-
         ocr_strategy_name: str = typer.prompt(
             "Select OCR strategy",
-            default=ocr_strategy_values[0],
-            type=click.Choice(ocr_strategy_values, case_sensitive=False),
+            default=[ocr_strategy.value for ocr_strategy in OcrStrategy][0],
+            type=click.Choice([ocr_strategy.value for ocr_strategy in OcrStrategy], case_sensitive=False),
             show_choices=True,
         )
 
-        ocr_strategy_default = OcrStrategy(ocr_strategy_name).value
+        self.DEFAULT_CONFIG[self.OCR_STRATEGY] = OcrStrategy(ocr_strategy_name).value
 
-        self.DEFAULT_CONFIG[self.OCR_STRATEGY] = ocr_strategy_default
+    def _prompt_ai_provider(self) -> None:
+        """
+        Prompt for AI provider (fill in deferred option values).
+        """
+        ai_provider_name: str = typer.prompt(
+            "Select AI provider",
+            default=list(ai_provider_registry.keys())[0],
+            type=click.Choice(list(ai_provider_registry.keys()), case_sensitive=False),
+            show_choices=True,
+        )
+
+        self.DEFAULT_CONFIG.update(ai_provider_registry[ai_provider_name]["defaults"])
 
     def upgrade(self) -> bool:
         """

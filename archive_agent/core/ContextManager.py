@@ -15,11 +15,8 @@ from archive_agent.core.CommitManager import CommitManager
 
 from archive_agent.ai.AiManager import AiManager
 
+from archive_agent.ai_provider.ai_provider_registry import ai_provider_registry
 from archive_agent.ai_provider.AiProvider import AiProvider
-
-from archive_agent.ai_provider.OpenAiProvider import OpenAiProvider
-
-from archive_agent.ai_provider.OllamaProvider import OllamaProvider
 
 logger = logging.getLogger(__name__)
 
@@ -79,15 +76,12 @@ class ContextManager:
         """
         ai_provider_name = self.config.data[self.config.AI_PROVIDER]
 
-        ai_provider_mapping = {
-            "openai": OpenAiProvider,
-            "ollama": OllamaProvider,
-        }
+        if ai_provider_name not in ai_provider_registry:
+            raise ValueError(
+                f"Invalid AI provider: '{ai_provider_name}' (must be one of {ai_provider_registry.keys()})"
+            )
 
-        if ai_provider_name not in ai_provider_mapping:
-            raise ValueError(f"Invalid AI provider: '{ai_provider_name}' (must be one of {ai_provider_mapping.keys()})")
-
-        ai_provider_class = ai_provider_mapping[ai_provider_name]
+        ai_provider_class = ai_provider_registry[ai_provider_name]["class"]
 
         ai_provider = ai_provider_class(
             server_url=self.config.data[self.config.AI_SERVER_URL],

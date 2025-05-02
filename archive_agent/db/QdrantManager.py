@@ -241,7 +241,7 @@ class QdrantManager:
 
         query_result = self.ai.query(question, context)
         if query_result.reject:
-            logger.warning(f"Query rejected: {query_result.rejection_reason}")
+            logger.warning(f"Query rejected: \"{query_result.rejection_reason}\"")
 
         answer_text = self.cli.format_answer(query_result)
 
