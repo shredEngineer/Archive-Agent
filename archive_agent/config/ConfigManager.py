@@ -24,6 +24,7 @@ class ConfigManager(StorageManager):
     CONFIG_VERSION = 'config_version'
 
     AI_PROVIDER = 'ai_provider'
+    AI_SERVER_URL = 'ai_server_url'
     AI_MODEL_CHUNK = 'ai_model_chunk'
     AI_MODEL_EMBED = 'ai_model_embed'
     AI_MODEL_QUERY = 'ai_model_query'
@@ -41,6 +42,7 @@ class ConfigManager(StorageManager):
 
     DEFAULT_CONFIG_OPENAI = {
         AI_PROVIDER: "openai",
+        AI_SERVER_URL: "https://api.openai.com/v1",
         AI_MODEL_CHUNK: "gpt-4o-2024-08-06",
         AI_MODEL_EMBED: "text-embedding-3-small",
         AI_MODEL_QUERY: "gpt-4o-2024-08-06",
@@ -51,6 +53,7 @@ class ConfigManager(StorageManager):
 
     DEFAULT_CONFIG_OLLAMA = {
         AI_PROVIDER: "ollama",
+        AI_SERVER_URL: "http://localhost:11434",
         AI_MODEL_CHUNK: "deepseek-coder:6.7b-instruct",
         AI_MODEL_EMBED: "nomic-embed-text",
         AI_MODEL_QUERY: "deepseek-coder:6.7b-instruct",
@@ -60,8 +63,9 @@ class ConfigManager(StorageManager):
     }
 
     DEFAULT_CONFIG = {
-        CONFIG_VERSION: 4,
+        CONFIG_VERSION: 5,
         AI_PROVIDER: "",            # defer
+        AI_SERVER_URL: "",          # defer
         AI_MODEL_CHUNK: "",         # defer
         AI_MODEL_EMBED: "",         # defer
         AI_MODEL_QUERY: "",         # defer
@@ -188,6 +192,17 @@ class ConfigManager(StorageManager):
             self._rename_option('qdrant_vector_size', self.AI_VECTOR_SIZE)
             self._rename_option('openai_temp_query', self.AI_TEMPERATURE_QUERY)
             self._rename_option('ocr_mode_strict', self.OCR_STRATEGY, translate={'false': 'relaxed', 'true': 'strict'})
+            upgraded = True
+
+        # Option(s) added in v5:
+        # - `ai_server_url`
+        if version < 5:
+            self._set_version(5)
+            ai_server_url_default = {
+                "openai": "https://api.openai.com/v1",
+                "ollama": "http://localhost:11434",
+            }
+            self._add_option(self.AI_SERVER_URL, default=ai_server_url_default[self.data[self.AI_PROVIDER]])
             upgraded = True
 
         return upgraded

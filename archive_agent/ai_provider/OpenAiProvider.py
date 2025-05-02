@@ -19,6 +19,7 @@ class OpenAiProvider(AiProvider):
 
     def __init__(
             self,
+            server_url: str,
             model_chunk: str,
             model_embed: str,
             model_query: str,
@@ -27,6 +28,7 @@ class OpenAiProvider(AiProvider):
     ):
         """
         Initialize OpenAI provider.
+        :param server_url: Server URL.
         :param model_chunk: Model for chunking.
         :param model_embed: Model for embeddings.
         :param model_query: Model for queries.
@@ -42,7 +44,7 @@ class OpenAiProvider(AiProvider):
 
         self.temperature_query = temperature_query
 
-        self.client = OpenAI()
+        self.client = OpenAI(base_url=server_url)
 
     def chunk_callback(self, prompt: str) -> AiResult:
         """

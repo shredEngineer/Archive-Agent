@@ -90,6 +90,7 @@ class ContextManager:
         ai_provider_class = ai_provider_mapping[ai_provider_name]
 
         ai_provider = ai_provider_class(
+            server_url=self.config.data[self.config.AI_SERVER_URL],
             model_chunk=self.config.data[self.config.AI_MODEL_CHUNK],
             model_embed=self.config.data[self.config.AI_MODEL_EMBED],
             model_query=self.config.data[self.config.AI_MODEL_QUERY],
@@ -97,5 +98,6 @@ class ContextManager:
             temperature_query=self.config.data[self.config.AI_TEMPERATURE_QUERY],
         )
 
-        logger.info(f"Using AI provider: '{ai_provider_name}'")
+        ai_server_url = self.config.data[self.config.AI_SERVER_URL]
+        logger.info(f"Using AI provider: '{ai_provider_name}' @ {ai_server_url}")
         return ai_provider
