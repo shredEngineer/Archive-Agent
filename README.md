@@ -107,6 +107,8 @@ If you're using **Archive Agent** with another setup, please let me know and I'l
 
 ## Install Archive Agent on Linux
 
+This should work on any Linux distribution derived from Ubuntu (e.g. Linux Mint). 
+
 To install **Archive Agent** in the current directory of your choice, run this once:
 
 ```bash
