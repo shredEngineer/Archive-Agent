@@ -42,7 +42,7 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
   * [Structure](#structure)
   * [Install requirements](#install-requirements)
   * [Supported OS](#supported-os)
-  * [Install Archive Agent](#install-archive-agent)
+  * [Install Archive Agent on Linux](#install-archive-agent-on-linux)
   * [Update Archive Agent](#update-archive-agent)
   * [Setup Qdrant server](#setup-qdrant-server)
   * [How Archive Agent works](#how-archive-agent-works)
