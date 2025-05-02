@@ -8,17 +8,17 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
 
 **Archive Agent** is an open-source semantic file tracker with OCR + AI search.  
 
-🤓 [Watch me explain **Archive Agent** on *YouTube*](https://www.youtube.com/watch?v=dyKovjez4-g)
-
-![Archive Agent Logo](archive_agent/assets/Archive-Agent-400x300.png)
-
 - **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**
 - **Supported AI providers: [OpenAI](https://platform.openai.com/docs/overview), [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/)**
 - **[MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension**
 - Fast and effective semantic chunking (**smart chunking**)
 - [Qdrant](https://qdrant.tech/) vector DB *(running locally)* for storage and search 
 
+![Archive Agent Logo](archive_agent/assets/Archive-Agent-400x300.png)
+
 ---
+
+🤓 **[Watch me explain this on YouTube](https://www.youtube.com/watch?v=dyKovjez4-g)**
 
 **Looking for the CLI command reference? 👉 [Run Archive Agent](#run-archive-agent)**
 
