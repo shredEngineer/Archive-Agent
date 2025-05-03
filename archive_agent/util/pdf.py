@@ -51,7 +51,7 @@ def load_pdf_document(
     try:
         doc: fitz.Document = fitz.open(file_path)
 
-        logger.info(f"Processing: OCR strategy: {ocr_strategy}")
+        logger.info(f"Processing: OCR strategy: '{ocr_strategy}'")
 
         if ocr_strategy == OcrStrategy.STRICT.value:
             page_contents: List[PdfPageContent] = []
@@ -80,7 +80,7 @@ def load_pdf_document(
             page_contents, indexed_images = extract_page_contents_with_images(doc)
 
         else:
-            raise ValueError(f"Invalid OCR strategy: {ocr_strategy}")
+            raise ValueError(f"Invalid OCR strategy: '{ocr_strategy}'")
 
         for index, content in enumerate(page_contents):
             log_page_analysis(index, len(page_contents), content)
