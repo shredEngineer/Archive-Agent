@@ -33,7 +33,7 @@ class CustomLogHighlighter(ReprHighlighter):
 
         self.unwanted_words: tuple[str, ...] = (
             "pattern",
-            # "file",
+            "file",
             "name",
             "profile",
             "chunk",
