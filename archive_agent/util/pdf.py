@@ -154,7 +154,7 @@ def extract_text_from_images_per_page(
 
     for index, content in enumerate(contents):
         page_image_texts: List[str] = []
-        logger.info(f"Processing {format_file(file_path)}...")
+        logger.info(f"Processing {format_file(file_path)}")
 
         for i, img_bytes in enumerate(content.layout_image_bytes):
             try:
