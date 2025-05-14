@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/shredengineer-archive-agent-badge.png)](https://mseep.ai/app/shredengineer-archive-agent)
+
 🍀 **Collaborators welcome**  
 You are invited to contribute to this open source project!  
 Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues) and [submit pull requests](https://github.com/shredEngineer/Archive-Agent/pulls) anytime.
