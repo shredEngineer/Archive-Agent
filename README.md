@@ -45,8 +45,8 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
   * [Install requirements](#install-requirements)
   * [Supported OS](#supported-os)
   * [Install Archive Agent on Linux](#install-archive-agent-on-linux)
-  * [Update Archive Agent](#update-archive-agent)
   * [Setup Qdrant server](#setup-qdrant-server)
+  * [Update Archive Agent](#update-archive-agent)
   * [How Archive Agent works](#how-archive-agent-works)
     * [Which files are processed](#which-files-are-processed)
     * [How files are processed](#how-files-are-processed)
@@ -117,11 +117,8 @@ To install **Archive Agent** in the current directory of your choice, run this o
 ```bash
 git clone https://github.com/shredEngineer/Archive-Agent
 cd Archive-Agent
-poetry install
-poetry run python -m spacy download xx_sent_ud_sm
-sudo apt install -y pandoc python3-tk
-chmod +x *.sh
-echo "alias archive-agent='$(pwd)/archive-agent.sh'" >> ~/.bashrc && source ~/.bashrc
+chmod +x install.sh
+./install.sh
 ```
 
 This will create a global `archive-agent` command for the current user.
