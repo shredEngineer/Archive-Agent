@@ -6,8 +6,12 @@ from pathlib import Path
 
 import streamlit as st
 
+from streamlit_extras.stylable_container import stylable_container
+from st_copy_to_clipboard import st_copy_to_clipboard
+
 from archive_agent.core.ContextManager import ContextManager
 from archive_agent.util.text_util import replace_file_uris_with_markdown
+
 
 logger = logging.getLogger(__name__)
 
@@ -75,13 +79,26 @@ class GuiManager:
         else:
             return self.format_chunk_refs(answer_text)
 
-    @staticmethod
-    def display_answer(answer: str) -> None:
+    def display_answer(self, answer: str) -> None:
         """
         Displays answer.
         :param answer: Answer.
         """
         st.markdown(answer, unsafe_allow_html=True)
+
+        col1, col2 = st.columns([6, 1])
+        with col2:
+            with stylable_container(
+                key="copy_button",
+                css_styles="""
+                    button {
+                        background-color: #444444;
+                        color: #dddddd;
+                        border: 1px solid #444444;
+                    }
+                    """,
+            ):
+                st_copy_to_clipboard(answer, "Copy")
 
 
 if __name__ == '__main__':

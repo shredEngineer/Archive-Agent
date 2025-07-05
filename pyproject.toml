@@ -26,6 +26,8 @@ fastapi = "^0.115.12"
 uvicorn = "^0.34.2"
 mcp = "^1.6.0"
 ollama = "^0.4.8"
+st-copy-to-clipboard = "^0.1.2"
+streamlit-extras = "^0.4.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
