@@ -125,26 +125,7 @@ echo "alias archive-agent='$(pwd)/archive-agent.sh'" >> ~/.bashrc && source ~/.b
 
 This will create a global `archive-agent` command for the current user.
 
-📌 **Note:** Complete Qdrant server setup **before** using the `archive-agent` command.
-
----
-
-## Update Archive Agent
-
-To update your **Archive Agent** installation, run this in the installation root:
-
-```bash
-git pull
-poetry install
-```
-
-💡 **Good to know:** To update the Qdrant docker image, run this:
-
-```bash
-docker stop archive-agent-qdrant-server
-docker pull qdrant/qdrant
-./ensure-qdrant.sh
-```
+📌 **Note:** Complete Qdrant server setup **before** using the `archive-agent` command. (See next section.)
 
 ---
 
@@ -168,6 +149,25 @@ This will download the Qdrant docker image on the first run.
 
 ```bash
 docker stop archive-agent-qdrant-server
+```
+
+---
+
+## Update Archive Agent
+
+To update your **Archive Agent** installation, run this in the installation root:
+
+```bash
+git pull
+poetry install
+```
+
+💡 **Good to know:** To update the Qdrant docker image, run this:
+
+```bash
+docker stop archive-agent-qdrant-server
+docker pull qdrant/qdrant
+./ensure-qdrant.sh
 ```
 
 ---
