@@ -47,6 +47,15 @@ def switch(profile_name: str = typer.Argument("")) -> None:
     _context = ContextManager(profile_name=profile_name)
 
 
+@app.command()
+def config() -> None:
+    """
+    Open current profile config in nano.
+    """
+    context = ContextManager()
+    subprocess.run(["nano", str(context.config.file_path)])
+
+
 # noinspection PyShadowingNames
 @app.command()
 def include(patterns: List[str] = typer.Argument(None)) -> None:

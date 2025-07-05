@@ -60,6 +60,7 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
   * [Run Archive Agent](#run-archive-agent)
     * [Show list of commands](#show-list-of-commands)
     * [Create or switch profile](#create-or-switch-profile)
+    * [Open profile config in nano](#open-profile-config-in-nano)
     * [Add included patterns](#add-included-patterns)
     * [Add excluded patterns](#add-excluded-patterns)
     * [Remove included / excluded patterns](#remove-included--excluded-patterns)
@@ -345,6 +346,14 @@ archive-agent switch "My Other Profile"
 **or skip it** to get an interactive prompt.
 
 💡 **Good to know:** Profiles are useful to manage *independent* Qdrant collections and [Archive Agent settings](#archive-agent-settings).
+
+### Open profile config in nano
+
+To open the current profile's config in `nano`, run this:
+
+```bash
+archive-agent config
+```
 
 ### Add included patterns
 
