@@ -1,51 +1,46 @@
-[tool.poetry]
+[project]
 name = "archive-agent"
 version = "3.2.0"
 description = "Archive Agent: Smart Indexer with RAG Engine"
-authors = ["Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>"]
+authors = [
+    { name = "Dr.-Ing. Paul Wilhelm", email = "paul@wilhelm.dev" },
+]
 readme = "README.md"
-packages = [{ include = "archive_agent" }]
-license = "MIT"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.13"
-openai = ">=1.69.0,<2.0.0"
-qdrant-client = ">=1.13.3,<2.0.0"
-typer = ">=0.15.2,<0.16.0"
-pillow = ">=11.1.0,<12.0.0"
-charset-normalizer = ">=3.4.1,<4.0.0"
-rich = ">=14.0.0,<15.0.0"
-requests = ">=2.32.3,<3.0.0"
-streamlit = ">=1.44.1,<2.0.0"
-pypandoc = ">=1.15,<2.0"
-pyright = ">=1.1.398,<2.0.0"
-pycodestyle = ">=2.13.0,<3.0.0"
-spacy = ">=3.8.5,<4.0.0"
-pymupdf4llm = ">=0.0.21,<0.0.22"
-fastapi = "^0.115.12"
-uvicorn = "^0.34.2"
-mcp = "^1.6.0"
-ollama = "^0.4.8"
-st-copy-to-clipboard = "^0.1.2"
-streamlit-extras = "^0.4.3"
+dependencies = [
+    "pip",  # Needed for spaCy download
+    "openai>=1.69.0,<2.0.0",
+    "qdrant-client>=1.13.3,<2.0.0",
+    "typer>=0.15.2,<0.16.0",
+    "pillow>=11.1.0,<12.0.0",
+    "charset-normalizer>=3.4.1,<4.0.0",
+    "rich>=14.0.0,<15.0.0",
+    "requests>=2.32.3,<3.0.0",
+    "streamlit>=1.44.1,<2.0.0",
+    "pypandoc>=1.15,<2.0",
+    "spacy>=3.8.5,<4.0.0",
+    "pymupdf4llm>=0.0.21,<0.0.22",
+    "fastapi>=0.115.12,<0.116",
+    "uvicorn>=0.34.2,<0.35",
+    "mcp>=1.6.0,<1.7",
+    "ollama>=0.4.8,<0.5",
+    "st-copy-to-clipboard>=0.1.2,<0.2",
+    "streamlit-extras>=0.4.3,<0.5",
+]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.0"
-pytest-cov = "^5.0"
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0,<9.0",
+    "pytest-cov>=5.0,<6.0",
+    "pyright>=1.1.398,<2.0.0",
+    "pycodestyle>=2.13.0,<3.0.0",
+]
 
-[tool.poetry.scripts]
+[project.scripts]
 archive-agent = "archive_agent.__main__:app"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts = "-ra -q --cov=archive_agent --cov-report=term-missing"
-
-[tool.coverage.run]
-omit = ["*/__init__.py"]
-
-[tool.coverage.report]
-omit = ["*/__init__.py"]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -3,8 +3,10 @@
 # Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 # This file is part of Archive Agent. See LICENSE for details.
 
+# Exit on any error
+set -e
+
 CONTAINER_NAME="archive-agent-qdrant-server"
-LOG_PREFIX="$(date '+%Y-%m-%d %H:%M:%S')"
 
 # Function to display help message
 show_help() {
@@ -28,27 +30,27 @@ container_is_running() {
 # Function to start the Qdrant server
 start_qdrant() {
     if container_is_running; then
-        echo "$LOG_PREFIX INFO     Archive Agent: Qdrant server ($CONTAINER_NAME) is already running."
+        echo "Archive Agent: Qdrant server: Already running."
     else
         if container_exists; then
-            echo "$LOG_PREFIX INFO     Archive Agent: Qdrant server ($CONTAINER_NAME) is restarting..."
+            echo "Archive Agent: Qdrant server: Restarting..."
             if ! docker start "$CONTAINER_NAME"; then
-                echo "$LOG_PREFIX ERROR    Archive Agent: Failed to restart Qdrant server ($CONTAINER_NAME)."
+                echo "Archive Agent: Qdrant server: ERROR: Failed to restart."
                 exit 1
             fi
-            echo "$LOG_PREFIX INFO     Archive Agent: Qdrant server ($CONTAINER_NAME) restarted successfully."
+            echo "Archive Agent: Qdrant server: Restarted successfully."
         else
-            echo "$LOG_PREFIX INFO     Archive Agent: Qdrant server ($CONTAINER_NAME) is starting for the first time..."
+            echo "Archive Agent: Qdrant server: Starting for the first time..."
             if ! docker run -d \
                 --name "$CONTAINER_NAME" \
                 --restart unless-stopped \
                 -p 6333:6333 \
                 -v ~/.archive-agent-qdrant-storage:/qdrant/storage \
                 qdrant/qdrant; then
-                echo "$LOG_PREFIX ERROR    Archive Agent: Failed to start Qdrant server ($CONTAINER_NAME)."
+                echo "Archive Agent: Qdrant server: ERROR: Failed to start."
                 exit 1
             fi
-            echo "$LOG_PREFIX INFO     Archive Agent: Qdrant server ($CONTAINER_NAME) started successfully."
+            echo "Archive Agent: Qdrant server: Started successfully."
         fi
     fi
 }
@@ -56,16 +58,16 @@ start_qdrant() {
 # Function to stop the Qdrant server
 stop_qdrant() {
     if container_is_running; then
-        echo "$LOG_PREFIX INFO     Archive Agent: Stopping Qdrant server ($CONTAINER_NAME)..."
+        echo "Archive Agent: Qdrant server: Stopping..."
         if ! docker stop "$CONTAINER_NAME"; then
-            echo "$LOG_PREFIX ERROR    Archive Agent: Failed to stop Qdrant server ($CONTAINER_NAME)."
+            echo "Archive Agent: Qdrant server: ERROR: Failed to stop."
             exit 1
         fi
-        echo "$LOG_PREFIX INFO     Archive Agent: Qdrant server ($CONTAINER_NAME) stopped successfully."
+        echo "Archive Agent: Qdrant server: Stopped successfully."
     elif container_exists; then
-        echo "$LOG_PREFIX INFO     Archive Agent: Qdrant server ($CONTAINER_NAME) is not running but exists. No action needed."
+        echo "Archive Agent: Qdrant server: Not running but exists. No action needed."
     else
-        echo "$LOG_PREFIX INFO     Archive Agent: Qdrant server ($CONTAINER_NAME) does not exist. No action needed."
+        echo "Archive Agent: Qdrant server: Does not exist. No action needed."
     fi
 }
 
@@ -74,34 +76,34 @@ update_qdrant() {
     local was_running=false
     if container_is_running; then
         was_running=true
-        echo "$LOG_PREFIX INFO     Archive Agent: Qdrant server ($CONTAINER_NAME) is running. Stopping it before update..."
+        echo "Archive Agent: Qdrant server: Running. Stopping it before update..."
         if ! docker stop "$CONTAINER_NAME"; then
-            echo "$LOG_PREFIX ERROR    Archive Agent: Failed to stop Qdrant server ($CONTAINER_NAME) for update. Aborting."
+            echo "Archive Agent: Qdrant server: ERROR: Failed to stop for update. Aborting."
             exit 1
         fi
     fi
 
-    echo "$LOG_PREFIX INFO     Archive Agent: Pulling latest Qdrant Docker image (qdrant/qdrant)..."
+    echo "Archive Agent: Qdrant server: Pulling latest Qdrant Docker image (qdrant/qdrant)..."
     if ! docker pull qdrant/qdrant; then
-        echo "$LOG_PREFIX ERROR    Archive Agent: Failed to pull latest Qdrant Docker image."
+        echo "Archive Agent: Qdrant server: ERROR: Failed to pull latest Qdrant Docker image."
         # Attempt to restart if it was running, even if pull failed
         if $was_running; then
-            echo "$LOG_PREFIX INFO     Archive Agent: Attempting to restart Qdrant server ($CONTAINER_NAME) after failed pull."
-            docker start "$CONTAINER_NAME" || echo "$LOG_PREFIX ERROR    Archive Agent: Failed to restart Qdrant server ($CONTAINER_NAME)."
+            echo "Archive Agent: Qdrant server: Attempting to restart after failed pull."
+            docker start "$CONTAINER_NAME" || echo "Archive Agent: Qdrant server: ERROR: Failed to restart."
         fi
         exit 1
     fi
-    echo "$LOG_PREFIX INFO     Archive Agent: Qdrant Docker image updated successfully."
+    echo "Archive Agent: Qdrant server: Qdrant Docker image updated successfully."
 
     if $was_running; then
-        echo "$LOG_PREFIX INFO     Archive Agent: Restarting Qdrant server ($CONTAINER_NAME)..."
+        echo "Archive Agent: Qdrant server: Restarting after update..."
         if ! docker start "$CONTAINER_NAME"; then
-            echo "$LOG_PREFIX ERROR    Archive Agent: Failed to restart Qdrant server ($CONTAINER_NAME) after update."
+            echo "Archive Agent: Qdrant server: ERROR: Failed to restart after update."
             exit 1
         fi
-        echo "$LOG_PREFIX INFO     Archive Agent: Qdrant server ($CONTAINER_NAME) restarted successfully after update."
+        echo "Archive Agent: Qdrant server: Restarted successfully after update."
     else
-        echo "$LOG_PREFIX INFO     Archive Agent: Qdrant server ($CONTAINER_NAME) was not running, so not restarting."
+        echo "Archive Agent: Qdrant server: Was not running, so not restarting."
     fi
 }
 
@@ -121,7 +123,7 @@ case "$1" in
         update_qdrant
         ;;
     *)
-        echo "$LOG_PREFIX ERROR    Archive Agent: Invalid command: $1"
+        echo "Archive Agent: Qdrant server: ERROR: Invalid command: $1"
         show_help
         ;;
 esac

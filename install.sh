@@ -1,26 +1,51 @@
 #!/bin/bash
 
+# Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
+# This file is part of Archive Agent. See LICENSE for details.
+
 # Exit on any error
 set -e
 
-# --- Dependencies ---
-echo "Installing Python dependencies with Poetry..."
-poetry install
+# Script permissions
+chmod +x archive-agent.sh
+chmod +x audit.sh
+chmod +x manage-qdrant.sh
 
-echo "Downloading spaCy model..."
-poetry run python -m spacy download xx_sent_ud_sm
+echo ""
+echo ".------------."
+echo "| Install uv |"
+echo "'------------'"
+# https://docs.astral.sh/uv/getting-started/installation/#standalone-installer
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-echo "Installing system packages (pandoc, python3-tk)..."
-sudo apt install -y pandoc python3-tk
+echo ""
+echo ".---------------------."
+echo "| Install environment |"
+echo "'---------------------'"
+uv sync --extra dev
 
-# --- Permissions ---
-echo "Setting script permissions..."
-chmod +x *.sh
+echo ""
+echo ".---------------------."
+echo "| Install spaCy model |"
+echo "'---------------------'"
+uv run python -m spacy download xx_sent_ud_sm
 
-# --- Qdrant ---
+echo ""
+echo ".-----------------------."
+echo "| (sudo) Install pandoc |"
+echo "'-----------------------'"
+sudo apt update && sudo apt install -y pandoc
+
+echo ""
+echo ".------------------------------."
+echo "| (sudo) Install Qdrant server |"
+echo "'------------------------------'"
 sudo ./manage-qdrant.sh start
 
-# --- Alias Setup ---
+echo ""
+echo ".-----------------------."
+echo "| Install command alias |"
+echo "'-----------------------'"
 ALIAS_DEFINITION="alias archive-agent='$(pwd)/archive-agent.sh'"
 if grep -Fxq "$ALIAS_DEFINITION" ~/.bashrc; then
     echo "Alias 'archive-agent' already exists in ~/.bashrc."
@@ -30,4 +55,8 @@ else
     echo "Alias added. Please run 'source ~/.bashrc' or open a new terminal to use it."
 fi
 
-echo "Installation script finished."
+echo ""
+echo ".--------------------------------------."
+echo "| Archive Agent successfully installed |"
+echo "'--------------------------------------'"
+echo ""

@@ -95,19 +95,17 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
 **Archive Agent** has been tested with these configurations:
 
 - **Ubuntu 24.04** (PC x64)
-- **macOS 15 Sequoia** (MacBook Air M1) with Rosetta, **experimental**: [Install Archive Agent on macOS](macos.md)
 
-If you're using **Archive Agent** with another setup, please let me know and I'll add it here! 
+If you've successfully installed and tested **Archive Agent** with a different setup, please let me know and I'll add it here! 
 
 ---
 
 ## Install requirements
 
-Please install these requirements first: 
+Please install these requirements before proceeding to [Install Archive Agent on Linux](#install-archive-agent-on-linux):
 
-- [Docker](https://docs.docker.com/engine/install/) *(for running Qdrant server)*
-- [Python](https://www.python.org/downloads/) **>= 3.10, < 3.13** *(core runtime)*
-- [Poetry](https://python-poetry.org/docs/#installation) *(dependency management)*
+- 🐳 [Docker](https://docs.docker.com/engine/install/) *(for running Qdrant server)*
+- 🐍 [Python](https://www.python.org/downloads/) **>= 3.10** *(core runtime)* (usually already installed)
 
 ---
 
@@ -124,9 +122,11 @@ chmod +x install.sh
 ./install.sh
 ```
 
-This will download the Qdrant docker image and launch it with persistent storage and auto-restart.
-
-This will create a global `archive-agent` command for the current user.
+This script will execute the following steps in order:
+- Download and install `uv` for package management.
+- Set up the Python environment
+- Download the Qdrant docker image and launch it with persistent storage and auto-restart.
+- Create a global `archive-agent` command for the current user.
 
 🚀 **Archive Agent is now installed!** Please complete the [AI provider setup](#ai-provider-setup) next.
 Afterward, you're ready to [Run Archive Agent](#run-archive-agent).
