@@ -17,6 +17,9 @@ sudo apt install -y pandoc python3-tk
 echo "Setting script permissions..."
 chmod +x *.sh
 
+# --- Qdrant ---
+sudo ./manage-qdrant.sh start
+
 # --- Alias Setup ---
 ALIAS_DEFINITION="alias archive-agent='$(pwd)/archive-agent.sh'"
 if grep -Fxq "$ALIAS_DEFINITION" ~/.bashrc; then

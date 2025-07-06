@@ -45,7 +45,6 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
   * [Supported OS](#supported-os)
   * [Install requirements](#install-requirements)
   * [Install Archive Agent on Linux](#install-archive-agent-on-linux)
-  * [Setup Qdrant server](#setup-qdrant-server)
   * [Update Archive Agent](#update-archive-agent)
   * [How Archive Agent works](#how-archive-agent-works)
     * [Which files are processed](#which-files-are-processed)
@@ -121,37 +120,11 @@ chmod +x install.sh
 ./install.sh
 ```
 
+This will download the Qdrant docker image and launch it with persistent storage and auto-restart.
+
 This will create a global `archive-agent` command for the current user.
 
-📌 **Note:** Complete the Qdrant server setup **before** using the `archive-agent` command. (See next section.)
-
----
-
-## Setup Qdrant server
-
-**Archive Agent** controls the state of the Qdrant server via Docker, so it needs to be able to use it without root privileges.
-
-🚨 **IMPORTANT:** To manage Docker without root, run this once **and reboot**:
-
-```bash
-sudo usermod -aG docker $USER
-```
-
-To launch Qdrant with persistent storage and auto-restart, run this once:
-
-```bash
-./ensure-qdrant.sh
-```
-
-This will download the Qdrant docker image on the first run, start it, and configure it. 
-
-🚀 **Now you should be good to go!**
-
-📌 **Note (optional):** In case you need to stop the Qdrant Docker image (e.g. for maintenance), run this:
-
-```bash
-docker stop archive-agent-qdrant-server
-```
+🚀 **You're good to go now!** Feel free to read on, or jump straight to the CLI command reference: [Run Archive Agent](#run-archive-agent)
 
 ---
 
@@ -174,9 +147,7 @@ see [Archive Agent settings](#archive-agent-settings) and [Qdrant database](#qdr
 💡 **Good to know:** To also update the Qdrant docker image, run this:
 
 ```bash
-docker stop archive-agent-qdrant-server
-docker pull qdrant/qdrant
-./ensure-qdrant.sh
+sudo ./manage-qdrant.sh update
 ```
 
 ---
