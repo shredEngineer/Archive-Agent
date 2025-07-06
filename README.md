@@ -22,15 +22,20 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
 
 🤓 **[Watch me explain this on YouTube](https://www.youtube.com/watch?v=dyKovjez4-g)**
 
-**Just getting started? 👉 [Install requirements](#install-requirements) + [Install Archive Agent on Linux](#install-archive-agent-on-linux)**
+**Just getting started?  
+👉 [Install Archive Agent on Linux](#install-archive-agent)**
 
-**Want to know the nitty-gritty details? 👉 [How Archive Agent works](#how-archive-agent-works)**
+**Want to know the nitty-gritty details?  
+👉 [How Archive Agent works](#how-archive-agent-works)**
 
-**Looking for the CLI command reference? 👉 [Run Archive Agent](#run-archive-agent)**
+**Looking for the CLI command reference?  
+👉 [Run Archive Agent](#run-archive-agent)**
 
-**Looking for the MCP tool reference? 👉 [MCP Tools](#mcp-tools)**
+**Looking for the MCP tool reference?  
+👉 [MCP Tools](#mcp-tools)**
 
-**Want to upgrade for the latest features? 👉 [Update Archive Agent](#update-archive-agent)**
+**Want to upgrade for the latest features?  
+👉 [Update Archive Agent](#update-archive-agent)**
 
 ---
 
@@ -49,14 +54,15 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
 * [🧠 Archive Agent](#-archive-agent)
   * [Structure](#structure)
   * [Supported OS](#supported-os)
-  * [Install requirements](#install-requirements)
-  * [Install Archive Agent on Linux](#install-archive-agent-on-linux)
+  * [Install Archive Agent](#install-archive-agent)
+    * [Ubuntu / Linux Mint](#ubuntu--linux-mint)
   * [AI provider setup](#ai-provider-setup)
     * [OpenAI provider setup](#openai-provider-setup)
     * [Ollama provider setup](#ollama-provider-setup)
     * [LM Studio provider setup](#lm-studio-provider-setup)
   * [How Archive Agent works](#how-archive-agent-works)
     * [Which files are processed](#which-files-are-processed)
+    * [OCR strategies](#ocr-strategies)
     * [How files are processed](#how-files-are-processed)
     * [How smart chunking works](#how-smart-chunking-works)
     * [How chunks are retrieved](#how-chunks-are-retrieved)
@@ -102,18 +108,16 @@ If you've successfully installed and tested **Archive Agent** with a different s
 
 ---
 
-## Install requirements
+## Install Archive Agent
 
-Please install these requirements before proceeding to [Install Archive Agent on Linux](#install-archive-agent-on-linux):
+Please install these requirements before proceeding:
 
 - 🐳 [Docker](https://docs.docker.com/engine/install/) *(for running Qdrant server)*
 - 🐍 [Python](https://www.python.org/downloads/) **>= 3.10** *(core runtime)* (usually already installed)
 
----
+### Ubuntu / Linux Mint
 
-## Install Archive Agent on Linux
-
-This should work on any Linux distribution derived from Ubuntu (e.g. Linux Mint). 
+This installation method should work on any Linux distribution derived from Ubuntu (e.g. Linux Mint). 
 
 To install **Archive Agent** in the current directory of your choice, run this once:
 
@@ -124,17 +128,17 @@ chmod +x install.sh
 ./install.sh
 ```
 
-This script will execute the following steps in order:
-- Download and install `uv` for package management
+The `install.sh` script will execute the following steps in order:
+- Download and install `uv` (used for Python environment management)
 - Install the custom Python environment
 - Install the `spaCy` tokenizer model (used for chunking)
 - Install `pandoc` (used for document parsing)
 - Download and install the Qdrant docker image with persistent storage and auto-restart
-- Create a global `archive-agent` command for the current user
+- Install a global `archive-agent` command for the current user
 
 🚀 **Archive Agent is now installed!**
 
-👉 **Please complete the [AI provider setup](#ai-provider-setup) next.**
+👉 **Please complete the [AI provider setup](#ai-provider-setup) next.**  
 (Afterward, you'll be ready to [Run Archive Agent](#run-archive-agent)!)
 
 ---
@@ -218,6 +222,8 @@ At least 32 GiB RAM is recommended for smooth performance.
   - PDF documents: `.pdf` (including images, see note below)
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
 
+### OCR strategies
+
 📌 **Note:** There are different OCR strategies supported by **Archive Agent**:
 
 - **Strict** OCR strategy:
@@ -291,6 +297,11 @@ This approach gives you the best control over the specific files or file types t
 ---
 
 ## Run Archive Agent
+
+💡 **Good to know:** At startup, you will be prompted to choose the following:
+- **Profile name**
+- **AI provider** (see [AI Provider Setup](#ai-provider-setup))
+- **OCR strategy** (see [OCR strategies](#ocr-strategies))
 
 ### Show list of commands
 
@@ -491,10 +502,10 @@ To update your **Archive Agent** installation, run this in the installation dire
 
 ```bash
 git pull
-poetry install
+./install.sh
 ```
 
-📌 **Note:** If updating doesn't work, try removing the installation directory and installing **Archive Agent** again.
+📌 **Note:** If updating doesn't work, try removing the installation directory and then [Install Archive Agent](#install-archive-agent) again.
 Your config and data are safely stored in another place;
 see [Archive Agent settings](#archive-agent-settings) and [Qdrant database](#qdrant-database) for details.
 
