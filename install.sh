@@ -56,7 +56,7 @@ else
 fi
 
 echo ""
-echo ".--------------------------------------."
-echo "| Archive Agent successfully installed |"
-echo "'--------------------------------------'"
+echo ".---------------------------------------."
+echo "| Archive Agent: Successfully installed |"
+echo "'---------------------------------------'"
 echo ""

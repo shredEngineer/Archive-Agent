@@ -123,10 +123,12 @@ chmod +x install.sh
 ```
 
 This script will execute the following steps in order:
-- Download and install `uv` for package management.
-- Set up the Python environment
-- Download the Qdrant docker image and launch it with persistent storage and auto-restart.
-- Create a global `archive-agent` command for the current user.
+- Download and install `uv` for package management
+- Install the custom Python environment
+- Install the `spaCy` tokenizer model (used for chunking)
+- Install `pandoc` (used for document parsing)
+- Download and install the Qdrant docker image with persistent storage and auto-restart
+- Create a global `archive-agent` command for the current user
 
 🚀 **Archive Agent is now installed!** Please complete the [AI provider setup](#ai-provider-setup) next.
 Afterward, you're ready to [Run Archive Agent](#run-archive-agent).
