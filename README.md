@@ -42,8 +42,8 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
 <!-- TOC -->
 * [🧠 Archive Agent](#-archive-agent)
   * [Structure](#structure)
-  * [Install requirements](#install-requirements)
   * [Supported OS](#supported-os)
+  * [Install requirements](#install-requirements)
   * [Install Archive Agent on Linux](#install-archive-agent-on-linux)
   * [Setup Qdrant server](#setup-qdrant-server)
   * [Update Archive Agent](#update-archive-agent)
@@ -87,16 +87,6 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
 
 ---
 
-## Install requirements
-
-Please install these requirements first: 
-
-- [Docker](https://docs.docker.com/engine/install/) *(for running Qdrant server)*
-- [Python](https://www.python.org/downloads/) **>= 3.10, < 3.13** *(core runtime)*
-- [Poetry](https://python-poetry.org/docs/#installation) *(dependency management)*
-
----
-
 ## Supported OS
 
 **Archive Agent** has been tested with these configurations:
@@ -105,6 +95,16 @@ Please install these requirements first:
 - **macOS 15 Sequoia** (MacBook Air M1) with Rosetta, **experimental**: [Install Archive Agent on macOS](macos.md)
 
 If you're using **Archive Agent** with another setup, please let me know and I'll add it here! 
+
+---
+
+## Install requirements
+
+Please install these requirements first: 
+
+- [Docker](https://docs.docker.com/engine/install/) *(for running Qdrant server)*
+- [Python](https://www.python.org/downloads/) **>= 3.10, < 3.13** *(core runtime)*
+- [Poetry](https://python-poetry.org/docs/#installation) *(dependency management)*
 
 ---
 
@@ -123,11 +123,13 @@ chmod +x install.sh
 
 This will create a global `archive-agent` command for the current user.
 
-📌 **Note:** Complete Qdrant server setup **before** using the `archive-agent` command. (See next section.)
+📌 **Note:** Complete the Qdrant server setup **before** using the `archive-agent` command. (See next section.)
 
 ---
 
 ## Setup Qdrant server
+
+**Archive Agent** controls the state of the Qdrant server via Docker, so it needs to be able to use it without root privileges.
 
 🚨 **IMPORTANT:** To manage Docker without root, run this once **and reboot**:
 
@@ -141,9 +143,11 @@ To launch Qdrant with persistent storage and auto-restart, run this once:
 ./ensure-qdrant.sh
 ```
 
-This will download the Qdrant docker image on the first run.
+This will download the Qdrant docker image on the first run, start it, and configure it. 
 
-📌 **Note:** In case you need to stop the Qdrant Docker image, run this:
+🚀 **Now you should be good to go!**
+
+📌 **Note (optional):** In case you need to stop the Qdrant Docker image (e.g. for maintenance), run this:
 
 ```bash
 docker stop archive-agent-qdrant-server
