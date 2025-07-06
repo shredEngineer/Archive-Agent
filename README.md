@@ -157,14 +157,21 @@ docker stop archive-agent-qdrant-server
 
 ## Update Archive Agent
 
-To update your **Archive Agent** installation, run this in the installation root:
+This step is not needed right away if you just installed Archive Agent.
+However, to get the latest features, you should update your installation regularly.
+
+To update your **Archive Agent** installation, run this in the installation directory:
 
 ```bash
 git pull
 poetry install
 ```
 
-💡 **Good to know:** To update the Qdrant docker image, run this:
+📌 **Note:** If updating doesn't work, try removing the installation directory and installing **Archive Agent** again.
+Your config and data are safely stored in another place;
+see [Archive Agent settings](#archive-agent-settings) and [Qdrant database](#qdrant-database) for details.
+
+💡 **Good to know:** To also update the Qdrant docker image, run this:
 
 ```bash
 docker stop archive-agent-qdrant-server
