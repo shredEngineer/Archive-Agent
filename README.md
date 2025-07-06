@@ -350,11 +350,13 @@ archive-agent switch "My Other Profile"
 
 ### Open profile config in nano
 
-To open the current profile's config in `nano`, run this:
+To open the current profile's config (JSON) for editing in `nano`, run this:
 
 ```bash
 archive-agent config
 ```
+
+See [Archive Agent settings](#archive-agent-settings) for details.
 
 ### Add included patterns
 
