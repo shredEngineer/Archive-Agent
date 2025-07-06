@@ -6,7 +6,7 @@ import logging
 from typing import List, Tuple
 
 from qdrant_client import QdrantClient
-from qdrant_client.http.exceptions import UnexpectedResponse
+from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 from qdrant_client.models import (
     VectorParams,
     Distance,
@@ -61,14 +61,21 @@ class QdrantManager:
         self.score_min = score_min
         self.chunks_max = chunks_max
 
-        if not self.qdrant.collection_exists(collection):
-            logger.info(f"Creating new Qdrant collection: '{collection}' (vector size: {vector_size})")
-            self.qdrant.create_collection(
-                collection_name=collection,
-                vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
+        try:
+            if not self.qdrant.collection_exists(collection):
+                logger.info(f"Creating new Qdrant collection: '{collection}' (vector size: {vector_size})")
+                self.qdrant.create_collection(
+                    collection_name=collection,
+                    vectors_config=VectorParams(size=vector_size, distance=Distance.COSINE),
+                )
+            else:
+                logger.info(f"Connected to Qdrant collection: '{collection}'")
+        except ResponseHandlingException as e:
+            logger.error(
+                f"Failed to connect to Qdrant collection: {e}\n"
+                f"Make sure the Qdrant server is running: ./manage-qdrant.sh start"
             )
-        else:
-            logger.info(f"Connected to Qdrant collection: '{collection}'")
+            raise typer.Exit(code=1)
 
     def add(self, file_data: FileData, quiet: bool = False) -> bool:
         """

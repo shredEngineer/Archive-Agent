@@ -1,6 +1,10 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
+import typer
+import logging
+import os
+
 from openai import OpenAI
 
 from archive_agent.ai_provider.AiProvider import AiProvider
@@ -10,6 +14,8 @@ from archive_agent.ai.AiResult import AiResult
 from archive_agent.ai_schema.ChunkSchema import ChunkSchema
 from archive_agent.ai_schema.QuerySchema import QuerySchema
 from archive_agent.ai_schema.VisionSchema import VisionSchema
+
+logger = logging.getLogger(__name__)
 
 
 class OpenAiProvider(AiProvider):
@@ -43,6 +49,14 @@ class OpenAiProvider(AiProvider):
         self.model_vision = model_vision
 
         self.temperature_query = temperature_query
+
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if not openai_api_key:
+            logger.error(
+                "Missing OPENAI_API_KEY.\n"
+                "Please complete AI Provider Setup."
+            )
+            raise typer.Exit(code=1)
 
         self.client = OpenAI(base_url=server_url)
 
