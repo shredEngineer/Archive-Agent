@@ -22,6 +22,8 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
 
 🤓 **[Watch me explain this on YouTube](https://www.youtube.com/watch?v=dyKovjez4-g)**
 
+👉 First **[Install requirements](#install-requirements), then [Install Archive Agent on Linux](#install-archive-agent-on-linux)**
+
 **Want to know the nitty-gritty details? 👉 [How Archive Agent works](#how-archive-agent-works)**
 
 **Looking for the CLI command reference? 👉 [Run Archive Agent](#run-archive-agent)**
