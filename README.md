@@ -91,7 +91,6 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
   * [Developer's guide](#developers-guide)
     * [Important modules](#important-modules)
     * [Testing and code analysis](#testing-and-code-analysis)
-    * [PDF image debugger window](#pdf-image-debugger-window)
   * [Known bugs](#known-bugs)
   * [Licensed under GNU GPL v3.0](#licensed-under-gnu-gpl-v30)
 <!-- TOC -->
@@ -224,19 +223,26 @@ At least 32 GiB RAM is recommended for smooth performance.
 
 ### OCR strategies
 
-📌 **Note:** There are different OCR strategies supported by **Archive Agent**:
+For PDF documents, there are different OCR strategies supported by **Archive Agent**:
 
-- **Strict** OCR strategy:
+- `auto` OCR strategy:
+  - Selects best OCR strategy for each page based on the number of characters extracted from the PDF OCR text layer, if any. 
+  - Decides based on `ocr_auto_threshold` (see [Archive Agent settings](#archive-agent-settings)), the minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict`.
+  - **Optimal trade-off between cost, speed, and accuracy.**
+
+
+- `strict` OCR strategy:
   - PDF OCR text layer is *ignored*.
   - PDF pages are treated as images.
   - **Expensive and slow, but more accurate.**
 
-- **Relaxed** OCR strategy:
+
+- `relaxed` OCR strategy:
   - PDF OCR text layer is extracted.
   - PDF foreground images are decoded, but background images are *ignored*.
   - **Cheap and fast, but less accurate.**
 
-💡 **Good to know:** You will be prompted to choose an OCR strategy at startup; see: [Run Archive Agent](#run-archive-agent).
+💡 **Good to know:** You will be prompted to choose an OCR strategy at startup (see [Run Archive Agent](#run-archive-agent)).
 
 ### How files are processed
 
@@ -529,24 +535,25 @@ Each profile folder contains these files:
 
 - `config.json`:
 
-  | Key                    | Description                                                                                   |
-  |------------------------|-----------------------------------------------------------------------------------------------|
-  | `config_version`       | Config version                                                                                |
-  | `ocr_strategy`         | OCR strategy in [`DecoderSettings.py`](archive_agent/config/DecoderSettings.py)               |
-  | `ai_provider`          | AI provider in [`ai_provider_registry.py`](archive_agent/ai_provider/ai_provider_registry.py) |
-  | `ai_server_url`        | AI server URL                                                                                 |
-  | `ai_model_chunk`       | AI model used for chunking                                                                    |
-  | `ai_model_embed`       | AI model used for embedding                                                                   |
-  | `ai_model_query`       | AI model used for queries                                                                     |
-  | `ai_model_vision`      | AI model used for vision (`""` disables vision)                                               |
-  | `ai_vector_size`       | Vector size of embeddings (used for Qdrant collection)                                        |
-  | `ai_temperature_query` | Temperature of the query model                                                                |
-  | `qdrant_server_url`    | URL of the Qdrant server                                                                      |
-  | `qdrant_collection`    | Name of the Qdrant collection                                                                 |
-  | `qdrant_score_min`     | Minimum similarity score of retrieved chunks (`0`...`1`)                                      |
-  | `qdrant_chunks_max`    | Maximum number of retrieved chunks                                                            |
-  | `chunk_lines_block`    | Number of lines per block for chunking                                                        |
-  | `mcp_server_port`      | MCP server port (default `8008`)                                                              |
+  | Key                    | Description                                                                                      |
+  |------------------------|--------------------------------------------------------------------------------------------------|
+  | `config_version`       | Config version                                                                                   |
+  | `ocr_strategy`         | OCR strategy in [`DecoderSettings.py`](archive_agent/config/DecoderSettings.py)                  |
+  | `ocr_auto_threshold`   | Minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict` |
+  | `ai_provider`          | AI provider in [`ai_provider_registry.py`](archive_agent/ai_provider/ai_provider_registry.py)    |
+  | `ai_server_url`        | AI server URL                                                                                    |
+  | `ai_model_chunk`       | AI model used for chunking                                                                       |
+  | `ai_model_embed`       | AI model used for embedding                                                                      |
+  | `ai_model_query`       | AI model used for queries                                                                        |
+  | `ai_model_vision`      | AI model used for vision (`""` disables vision)                                                  |
+  | `ai_vector_size`       | Vector size of embeddings (used for Qdrant collection)                                           |
+  | `ai_temperature_query` | Temperature of the query model                                                                   |
+  | `qdrant_server_url`    | URL of the Qdrant server                                                                         |
+  | `qdrant_collection`    | Name of the Qdrant collection                                                                    |
+  | `qdrant_score_min`     | Minimum similarity score of retrieved chunks (`0`...`1`)                                         |
+  | `qdrant_chunks_max`    | Maximum number of retrieved chunks                                                               |
+  | `chunk_lines_block`    | Number of lines per block for chunking                                                           |
+  | `mcp_server_port`      | MCP server port (default `8008`)                                                                 |
 
 💡 **Good to know:** Use the `config` CLI command to open the current profile's config (JSON) in the `nano` editor.
 
@@ -595,17 +602,6 @@ To run unit tests, check types, and check style, run this:
 ```
 
 (Some remaining type errors need to be fixed…)
-
-### PDF image debugger window
-
-To enable the PDF image debugger window, run this in your current shell:
-```bash
-export ARCHIVE_AGENT_IMAGE_DEBUGGER=1
-```
-
-📌 **Note:** PDF image debugger windows must be closed manually in order to proceed.
-
----
 
 ## Known bugs
 

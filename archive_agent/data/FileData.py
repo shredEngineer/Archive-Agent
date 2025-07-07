@@ -90,7 +90,7 @@ class FileData:
             return lambda: load_pdf_document(
                 file_path=self.file_path,
                 image_to_text_callback=self.image_to_text_callback,
-                ocr_strategy=self.decoder_settings.ocr_strategy,
+                decoder_settings=self.decoder_settings,
             )
 
         else:
@@ -137,7 +137,12 @@ class FileData:
         :return: Text if successful, None otherwise.
         """
         if self.decoder_func is not None:
-            return self.decoder_func()
+            try:
+                return self.decoder_func()
+            except Exception as e:
+                logger.warning(f"Failed to process {format_file(self.file_path)}: {e}")
+                return None
+
         else:
             logger.warning(f"Cannot process {format_file(self.file_path)}")
             return None

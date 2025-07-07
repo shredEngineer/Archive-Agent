@@ -79,7 +79,8 @@ class GuiManager:
         else:
             return self.format_chunk_refs(answer_text)
 
-    def display_answer(self, answer: str) -> None:
+    @staticmethod
+    def display_answer(answer: str) -> None:
         """
         Displays answer.
         :param answer: Answer.

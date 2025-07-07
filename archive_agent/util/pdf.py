@@ -3,27 +3,25 @@
 
 import logging
 import io
-import os
-from typing import Optional, List, Set, Tuple, Any
+from typing import Optional, List, Set, Any
 
 # noinspection PyPackageRequirements
 import fitz
+
 from PIL import Image
 
-from archive_agent.config.DecoderSettings import OcrStrategy
+from archive_agent.config.DecoderSettings import OcrStrategy, DecoderSettings
 from archive_agent.util.format import format_file
 from archive_agent.util.image import ImageToTextCallback
-from archive_agent.util.image_debugger import show_images, IndexedImage
-from archive_agent.util.pdf_util import PdfPageContent, analyze_page_objects, log_page_analysis
+from archive_agent.util.pdf_util import PdfPageContent, get_pdf_page_content
 
 logger = logging.getLogger(__name__)
 
 
-IMAGE_DEBUGGER: bool = True if os.environ.get("ARCHIVE_AGENT_IMAGE_DEBUGGER", False) else False
-
-
 TINY_IMAGE_WIDTH_THRESHOLD: int = 32
 TINY_IMAGE_HEIGHT_THRESHOLD: int = 32
+
+OCR_STRATEGY_STRICT_PAGE_DPI: int = 300
 
 
 def is_pdf_document(file_path: str) -> bool:
@@ -39,135 +37,126 @@ def is_pdf_document(file_path: str) -> bool:
 def load_pdf_document(
         file_path: str,
         image_to_text_callback: Optional[ImageToTextCallback],
-        ocr_strategy: OcrStrategy,
+        decoder_settings: DecoderSettings,
 ) -> Optional[str]:
     """
-    Load PDF document, extract layout text and images, convert images to text, and assemble the final document content.
+    Load PDF document.
     :param file_path: File path.
     :param image_to_text_callback: Optional image-to-text callback.
-    :param ocr_strategy: OCR strategy.
-    :return: Full document text if successful, None otherwise.
+    :param decoder_settings: Decoder settings.
+    :return: PDF document text if successful, None otherwise.
     """
-    try:
-        doc: fitz.Document = fitz.open(file_path)
+    doc: fitz.Document = fitz.open(file_path)
 
-        logger.info(f"Processing: OCR strategy: '{ocr_strategy}'")
+    page_contents = get_pdf_page_contents(
+        doc=doc,
+        decoder_settings=decoder_settings,
+    )
 
-        if ocr_strategy == OcrStrategy.STRICT.value:
-            page_contents: List[PdfPageContent] = []
-            indexed_images: List[IndexedImage] = []
+    image_texts_per_page = None
 
-            pages: List[Any] = [page for page in doc]
+    if image_to_text_callback is None:
+        logger.warning(f"Image vision is DISABLED in your current configuration")
+    else:
+        image_texts_per_page = extract_text_from_images_per_page(
+            file_path,
+            page_contents,
+            image_to_text_callback,
+        )
 
-            for page_index, page in enumerate(pages):
-                try:
-                    pix = page.get_pixmap(dpi=300)
-                    img_bytes = pix.tobytes()
-                    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-
-                    # Create a fake page content with only one full-page image
-                    content = PdfPageContent(text="", layout_image_bytes=[img_bytes])
-                    page_contents.append(content)
-
-                    # Include in visual debugger images
-                    indexed_images.append((img, page_index + 1, 1))
-                except Exception as e:
-                    logger.warning(f"OCR strategy: strict: Failed to process page ({page_index + 1}): {e}")
-                    # Add empty fallback content
-                    page_contents.append(PdfPageContent(text="", layout_image_bytes=[]))
-
-        elif ocr_strategy == OcrStrategy.RELAXED.value:
-            page_contents, indexed_images = extract_page_contents_with_images(doc)
-
-        else:
-            raise ValueError(f"Invalid OCR strategy: '{ocr_strategy}'")
-
-        for index, content in enumerate(page_contents):
-            log_page_analysis(index, len(page_contents), content)
-
-        if IMAGE_DEBUGGER and indexed_images:
-            show_images(indexed_images)
-
-        image_texts_per_page = None
-
-        if len(indexed_images) > 0:
-            if image_to_text_callback is None:
-                logger.warning(f"Image vision is DISABLED in your current configuration")
-                logger.warning(f"IGNORING ({len(indexed_images)}) PDF document image(s)")
-            else:
-                image_texts_per_page = extract_text_from_images_per_page(
-                    file_path,
-                    page_contents,
-                    image_to_text_callback,
-                )
-
-        return build_document_text_from_pages(page_contents, image_texts_per_page)
-
-    except Exception as e:
-        logger.warning(f"Failed to load {format_file(file_path)}: {e}")
-        return None
+    return build_document_text_from_pages(page_contents, image_texts_per_page)
 
 
-def extract_page_contents_with_images(
-        doc: fitz.Document
-) -> Tuple[List[PdfPageContent], List[IndexedImage]]:
+def get_pdf_page_contents(
+        doc: fitz.Document,
+        decoder_settings: DecoderSettings,
+) -> List[PdfPageContent]:
     """
-    Analyze all pages in the PDF and extract both layout content and indexed layout images.
-    :param doc: Opened PyMuPDF document.
-    :return: Tuple of page contents and image triplets (image, page number, image index).
+    Get PDF page contents.
+    :param doc: PDF document.
+    :param decoder_settings: Decoder settings.
+    :return: PDF page contents.
     """
     page_contents: List[PdfPageContent] = []
-    indexed_images: List[IndexedImage] = []
-
     pages: List[Any] = [page for page in doc]
-
     for page_index, page in enumerate(pages):
-        content: PdfPageContent = analyze_page_objects(page)
-        page_contents.append(content)
 
-        for image_index, b in enumerate(content.layout_image_bytes):
-            try:
-                img = Image.open(io.BytesIO(b)).convert("RGB")
-                indexed_images.append((img, page_index + 1, image_index + 1))
-            except Exception as e:
-                logger.warning(
-                    f"Failed to decode image ({image_index + 1}) "
-                    f"on page ({page_index + 1}) / ({len(pages)}): {e}"
-                )
+        logger.info(f"Analyzing PDF page ({page_index + 1}) / ({len(pages)}):")
+        page_content: PdfPageContent = get_pdf_page_content(page)
 
-    return page_contents, indexed_images
+        # Resolve `auto` OCR strategy
+        if decoder_settings.ocr_strategy == OcrStrategy.AUTO.value:
+            if len(page_content.text) >= decoder_settings.ocr_auto_threshold:
+                ocr_strategy_resolved = OcrStrategy.RELAXED.value
+                logger.info(f"- OCR strategy: 'auto' resolved to 'relaxed' (threshold: {decoder_settings.ocr_auto_threshold} characters)")
+            else:
+                ocr_strategy_resolved = OcrStrategy.STRICT.value
+                logger.info(f"- OCR strategy: 'auto' resolved to 'strict' (threshold: {decoder_settings.ocr_auto_threshold} characters)")
+        else:
+            ocr_strategy_resolved = decoder_settings.ocr_strategy
+            logger.info(f"- OCR strategy: '{ocr_strategy_resolved}'")
+
+        if ocr_strategy_resolved == OcrStrategy.STRICT.value:
+            # Replace page content with only one full-page image.
+            logger.info(f"- IGNORING ({len(page_content.image_blocks)}) image(s)")
+            logger.info(f"- IGNORING ({len(page_content.text)}) character(s) in ({len(page_content.text_blocks)}) text block(s)")
+            logger.info(f"- Decoding full-page image (rendered at {OCR_STRATEGY_STRICT_PAGE_DPI} DPI) ")
+            page_content = PdfPageContent(
+                text="",
+                layout_image_bytes=[page.get_pixmap(dpi=OCR_STRATEGY_STRICT_PAGE_DPI).tobytes()],
+            )
+
+        elif ocr_strategy_resolved == OcrStrategy.RELAXED.value:
+            # Keep page content as-is.
+            logger.info(f"- Decoding ({len(page_content.image_blocks)}) image(s)")
+            logger.info(f"- Decoding ({len(page_content.text)}) character(s) in ({len(page_content.text_blocks)}) text block(s)")
+
+            num_background_images: int = len(page_content.image_objects) - len(page_content.image_blocks)
+            if num_background_images > 0:
+                logger.warning(f"- IGNORING ({num_background_images}) background image(s)")
+
+            if page_content.vector_blocks:
+                logger.warning(f"- IGNORING ({len(page_content.vector_blocks)}) vector diagram(s)")
+
+        else:
+            raise ValueError(f"Invalid OCR strategy: '{decoder_settings.ocr_strategy}'")
+
+        page_contents.append(page_content)
+
+    return page_contents
 
 
 def extract_text_from_images_per_page(
         file_path: str,
-        contents: List[PdfPageContent],
+        page_contents: List[PdfPageContent],
         image_to_text_callback: ImageToTextCallback,
 ) -> List[List[str]]:
     """
-    Extract image-based text descriptions for each page.
+    Extract text from images per page.
     :param file_path: File path (used for logging only).
-    :param contents: List of PageContent instances.
+    :param page_contents: PDF page contents.
     :param image_to_text_callback: Image-to-text callback.
     :return: List of text results per page (one list of strings per page).
     """
     all_image_texts: List[List[str]] = []
 
-    for index, content in enumerate(contents):
+    for index, content in enumerate(page_contents):
         page_image_texts: List[str] = []
         logger.info(f"Processing {format_file(file_path)}")
 
         for i, img_bytes in enumerate(content.layout_image_bytes):
             try:
+                # noinspection PyTypeChecker
                 with Image.open(io.BytesIO(img_bytes)) as img:
                     if img.width <= TINY_IMAGE_WIDTH_THRESHOLD or img.height <= TINY_IMAGE_HEIGHT_THRESHOLD:
                         logger.warning(
-                            f"Image ({i + 1}) on page ({index + 1}) / ({len(contents)}): "
+                            f"Image ({i + 1}) on page ({index + 1}) / ({len(page_contents)}): "
                             f"Ignored because it's tiny ({img.width} × {img.height} px)"
                         )
                         continue
 
                     logger.info(
-                        f"Image ({i + 1}) on page ({index + 1}) / ({len(contents)}): "
+                        f"Image ({i + 1}) on page ({index + 1}) / ({len(page_contents)}): "
                         f"Converting to text"
                     )
 
@@ -177,12 +166,12 @@ def extract_text_from_images_per_page(
                         page_image_texts.append(f"[Image] {text}")
                     else:
                         logger.warning(
-                            f"Image ({i + 1}) on page ({index + 1}) / ({len(contents)}): "
+                            f"Image ({i + 1}) on page ({index + 1}) / ({len(page_contents)}): "
                             f"Returned no text"
                         )
             except Exception as e:
                 logger.warning(
-                    f"Image ({i + 1}) on page ({index + 1}) / ({len(contents)}): "
+                    f"Image ({i + 1}) on page ({index + 1}) / ({len(page_contents)}): "
                     f"Failed to extract text: {e}"
                 )
 
@@ -192,22 +181,21 @@ def extract_text_from_images_per_page(
 
 
 def build_document_text_from_pages(
-        contents: List[PdfPageContent],
+        page_contents: List[PdfPageContent],
         image_texts_per_page: Optional[List[List[str]]] = None
 ) -> Optional[str]:
     """
-    Build the final document text by combining layout text and image-derived text.
-
-    :param contents: List of PageContent instances.
+    Build PDF document text by combining layout text and image text.
+    :param page_contents: PDF page contents.
     :param image_texts_per_page: Optional image text results per page (must align by index if provided).
-    :return: Text.
+    :return: PDF document text.
     """
     result_parts: List[str] = []
 
     if image_texts_per_page is not None:
-        assert len(contents) == len(image_texts_per_page)
+        assert len(page_contents) == len(image_texts_per_page)
 
-    for idx, content in enumerate(contents):
+    for idx, content in enumerate(page_contents):
         page_parts: List[str] = []
 
         if image_texts_per_page is not None:

@@ -37,9 +37,10 @@ class ConfigManager(StorageManager, AiProviderKeys):
     MCP_SERVER_PORT = 'mcp_server_port'
 
     OCR_STRATEGY = 'ocr_strategy'
+    OCR_AUTO_THRESHOLD = 'ocr_auto_threshold'
 
     DEFAULT_CONFIG = {
-        CONFIG_VERSION: 5,
+        CONFIG_VERSION: 6,  # DON'T FORGET TO UPDATE BOTH  `CONFIG_VERSION`  AND  `upgrade()`
 
         QDRANT_SERVER_URL: "http://localhost:6333",
         QDRANT_COLLECTION: "archive-agent",
@@ -51,6 +52,8 @@ class ConfigManager(StorageManager, AiProviderKeys):
 
         # deferred to `_prompt_ocr_strategy`
         OCR_STRATEGY: "",
+
+        OCR_AUTO_THRESHOLD: 32,
 
         # deferred to `_prompt_ai_provider`
         AiProviderKeys.AI_PROVIDER: "",
@@ -78,8 +81,8 @@ class ConfigManager(StorageManager, AiProviderKeys):
             logger.info(f"Creating profile: '{profile_name}'")
 
             self._qdrant_collection_name(profile_name)
-            self._prompt_ocr_strategy()
             self._prompt_ai_provider()
+            self._prompt_ocr_strategy()
 
         else:
             logger.info(f"Using profile: '{profile_name}'")
@@ -91,25 +94,12 @@ class ConfigManager(StorageManager, AiProviderKeys):
         Set unique Qdrant collection name.
         :param profile_name: Profile name.
         """
+        # noinspection PyTypeChecker
         profile_name_hash = hashlib.sha1(profile_name.encode('utf-8')).hexdigest()[:8]
         profile_name_safe = profile_name.replace(' ', '-')
         unique_suffix = "-" + profile_name_safe + "-" + profile_name_hash
 
         self.DEFAULT_CONFIG[self.QDRANT_COLLECTION] += unique_suffix
-
-    def _prompt_ocr_strategy(self) -> None:
-        """
-        Prompt for OCR strategy (fill in deferred option values).
-        """
-        ocr_strategy_name: str = self.cli.prompt(
-            "Select OCR strategy:",
-            is_cmd=False,
-            default=[ocr_strategy.value for ocr_strategy in OcrStrategy][0],
-            type=click.Choice([ocr_strategy.value for ocr_strategy in OcrStrategy], case_sensitive=False),
-            show_choices=True,
-        )
-
-        self.DEFAULT_CONFIG[self.OCR_STRATEGY] = OcrStrategy(ocr_strategy_name).value
 
     def _prompt_ai_provider(self) -> None:
         """
@@ -124,6 +114,20 @@ class ConfigManager(StorageManager, AiProviderKeys):
         )
 
         self.DEFAULT_CONFIG.update(ai_provider_registry[ai_provider_name]["defaults"])
+
+    def _prompt_ocr_strategy(self) -> None:
+        """
+        Prompt for OCR strategy (fill in deferred option values).
+        """
+        ocr_strategy_name: str = self.cli.prompt(
+            "Select OCR strategy:",
+            is_cmd=False,
+            default=[ocr_strategy.value for ocr_strategy in OcrStrategy][0],
+            type=click.Choice([ocr_strategy.value for ocr_strategy in OcrStrategy], case_sensitive=False),
+            show_choices=True,
+        )
+
+        self.DEFAULT_CONFIG[self.OCR_STRATEGY] = OcrStrategy(ocr_strategy_name).value
 
     def upgrade(self) -> bool:
         """
@@ -180,6 +184,19 @@ class ConfigManager(StorageManager, AiProviderKeys):
                 "ollama": "http://localhost:11434",
             }
             self._add_option(self.AI_SERVER_URL, default=ai_server_url_default[self.data[self.AI_PROVIDER]])
+            upgraded = True
+
+        # Option(s) added in v6:
+        # - `ocr_auto_threshold`
+        # Other changes:
+        # - New `auto` OCR strategy overrides previous `ocr_strategy` setting
+        if version < 6:
+            self._set_version(6)
+            self._add_option(self.OCR_AUTO_THRESHOLD)
+
+            self.data[self.OCR_STRATEGY] = 'auto'
+            logger.warning("Your config has been updated to use the new 'auto' OCR strategy.")
+
             upgraded = True
 
         return upgraded

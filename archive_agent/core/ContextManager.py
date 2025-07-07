@@ -60,6 +60,7 @@ class ContextManager:
 
         self.decoder_settings = DecoderSettings(
             ocr_strategy=self.config.data[self.config.OCR_STRATEGY],
+            ocr_auto_threshold=self.config.data[self.config.OCR_AUTO_THRESHOLD],
         )
 
         self.qdrant = QdrantManager(

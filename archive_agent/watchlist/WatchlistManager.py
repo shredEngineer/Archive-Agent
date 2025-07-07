@@ -291,21 +291,21 @@ class WatchlistManager(StorageManager):
             for file in added_files.keys():
                 logger.info(f"- ADDED    {file}")
         else:
-            logger.info("- (0) added file(s)")
+            logger.info("(0) added file(s)")
 
         if len(changed_files) > 0:
             logger.info(f"({len(changed_files)}) changed file(s):")
             for file in changed_files.keys():
                 logger.info(f"- CHANGED  {file}")
         else:
-            logger.info("- (0) changed file(s)")
+            logger.info("(0) changed file(s)")
 
         if len(removed_files) > 0:
             logger.info(f"({len(removed_files)}) removed file(s):")
             for file in removed_files.keys():
                 logger.info(f"- REMOVED  {file}")
         else:
-            logger.info("- (0) removed file(s)")
+            logger.info("(0) removed file(s)")
 
     def diff_mark_resolved(self, file_data: FileData) -> None:
         """

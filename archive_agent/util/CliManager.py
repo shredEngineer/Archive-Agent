@@ -157,7 +157,7 @@ class CliManager:
         :param callback: Vision callback returning AI result.
         :return: AI result.
         """
-        logger.info("🧠 I'm looking at it … [🔭 VISION]")
+        logger.info("🧠 I'm looking at it …")
 
         result = callback()
 

@@ -20,22 +20,29 @@ class PdfPageContent:
     """
     PDF page content.
     """
+    text: str = ""
+
+    layout_image_bytes: List[bytes] = field(default_factory=list)
 
     text_blocks: List[LayoutBlock] = field(default_factory=list)
     image_blocks: List[LayoutBlock] = field(default_factory=list)
     vector_blocks: List[LayoutBlock] = field(default_factory=list)
     other_blocks: List[LayoutBlock] = field(default_factory=list)
     image_objects: List[ImageObject] = field(default_factory=list)
-    text: str = ""
-    layout_image_bytes: List[bytes] = field(default_factory=list)
 
 
-def analyze_page_objects(page: fitz.Page) -> PdfPageContent:
+def get_pdf_page_content(page: fitz.Page) -> PdfPageContent:
     """
-    Analyze and extract structured content from a PDF page.
+    Get PDF page content.
     :param page: PDF page.
-    :return: PageContent with all relevant elements.
+    :return: PDF page content.
     """
+
+    # noinspection PyUnresolvedReferences
+    text: str = page.get_text("text").strip()
+
+    image_objects: List[ImageObject] = page.get_images(full=True)
+
     # noinspection PyUnresolvedReferences
     blocks: List[LayoutBlock] = page.get_text("dict")["blocks"]
 
@@ -59,37 +66,12 @@ def analyze_page_objects(page: fitz.Page) -> PdfPageContent:
         else:
             other_blocks.append(block)
 
-    image_objects: List[ImageObject] = page.get_images(full=True)
-    # noinspection PyUnresolvedReferences
-    text: str = page.get_text("text").strip()
-
     return PdfPageContent(
+        text=text,
+        layout_image_bytes=layout_image_bytes,
         text_blocks=text_blocks,
         image_blocks=image_blocks,
         vector_blocks=vector_blocks,
         other_blocks=other_blocks,
         image_objects=image_objects,
-        text=text,
-        layout_image_bytes=layout_image_bytes
     )
-
-
-def log_page_analysis(page_index: int, pages_total: int, content: PdfPageContent) -> None:
-    """
-    Log analysis results and statistics for a page.
-    :param page_index: Page index (0-based).
-    :param pages_total: Total number of pages.
-    :param content: PageContent instance.
-    """
-    num_background_images: int = len(content.image_objects) - len(content.image_blocks)
-    char_count: int = len(content.text)
-
-    logger.info(f"Loading PDF page ({page_index + 1}) / ({pages_total}):")
-    logger.info(f"- ({len(content.image_blocks)}) image(s)")
-    logger.info(f"- ({char_count}) character(s) in ({len(content.text_blocks)}) text block(s)")
-
-    if num_background_images > 0:
-        logger.warning(f"- IGNORING ({num_background_images}) background image(s)")
-
-    if content.vector_blocks:
-        logger.warning(f"- IGNORING ({len(content.vector_blocks)}) vector diagram(s)")

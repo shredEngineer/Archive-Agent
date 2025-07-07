@@ -56,4 +56,5 @@ def image_to_base64(image: Image.Image) -> str:
     """
     img_bytes = io.BytesIO()
     image.save(img_bytes, format="JPEG")
+    # noinspection PyTypeChecker
     return base64.b64encode(img_bytes.getvalue()).decode("utf-8")
