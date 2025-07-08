@@ -146,7 +146,7 @@ def diff() -> None:
 def commit(
         invalidate_cache: bool = typer.Option(
             False,
-            "--invalidate-cache",
+            "--nocache",
             help="Invalidate the AI cache for this commit."
         )
 ) -> None:
@@ -164,7 +164,7 @@ def commit(
 def update(
         invalidate_cache: bool = typer.Option(
             False,
-            "--invalidate-cache",
+            "--nocache",
             help="Invalidate the AI cache for this commit."
         )
 ) -> None:

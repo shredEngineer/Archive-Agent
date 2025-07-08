@@ -6,7 +6,6 @@ from pathlib import Path
 
 import streamlit as st
 
-from streamlit_extras.stylable_container import stylable_container
 from st_copy_to_clipboard import st_copy_to_clipboard
 
 from archive_agent.core.ContextManager import ContextManager
@@ -36,28 +35,6 @@ class GuiManager:
         logger.info("Press CTRL+C to stop the GUI server.")
         self._render_layout()
 
-    def _render_layout(self) -> None:
-        """
-        Render GUI.
-        """
-        col1, col2 = st.columns([1, 5])
-
-        with col1:
-            image_path = Path(__file__).parent.parent / "assets" / "Archive-Agent-400x300.png"
-            st.image(image_path, width=200)
-
-        with col2:
-            query: str = st.text_input(
-                "Ask a question",
-                label_visibility="collapsed",
-                placeholder="Ask something..."
-            )
-
-        if query:
-            with st.spinner("Thinking..."):
-                result_md: str = self.get_answer(query)
-            self.display_answer(result_md)
-
     @staticmethod
     def format_chunk_refs(text: str) -> str:
         """
@@ -79,27 +56,48 @@ class GuiManager:
         else:
             return self.format_chunk_refs(answer_text)
 
+    def _render_layout(self) -> None:
+        """
+        Render GUI with centered image and search form.
+        """
+        image_path = Path(__file__).parent.parent / "assets" / "Archive-Agent-800x300.png"
+
+        cols = st.columns(3)
+        with cols[0]:
+            # TODO: Implement files and chunks count.
+            # files_count = "NaN"
+            # chunks_count = "NaN"
+            # st.markdown(f"📄 {files_count} files")
+            # st.markdown(f"🧩 {chunks_count} chunks")
+            pass
+        with cols[2]:
+            st.image(image_path, width=400)
+
+        # The search bar and button in a form, side by side
+        with st.form("search_form"):
+            search_col, button_col = st.columns([5, 1])
+            with search_col:
+                query = st.text_input(
+                    "Ask a question",
+                    label_visibility="collapsed",
+                    placeholder="Ask something..."
+                )
+            with button_col:
+                submitted = st.form_submit_button("⚡", use_container_width=True)
+
+        if submitted and query:
+            with st.spinner("Thinking..."):
+                result_md: str = self.get_answer(query)
+            self.display_answer(result_md)
+
     @staticmethod
     def display_answer(answer: str) -> None:
         """
-        Displays answer.
+        Displays answer with a copy button above.
         :param answer: Answer.
         """
         st.markdown(answer, unsafe_allow_html=True)
-
-        col1, col2 = st.columns([6, 1])
-        with col2:
-            with stylable_container(
-                key="copy_button",
-                css_styles="""
-                    button {
-                        background-color: #444444;
-                        color: #dddddd;
-                        border: 1px solid #444444;
-                    }
-                    """,
-            ):
-                st_copy_to_clipboard(answer, "Copy")
+        st_copy_to_clipboard(answer, "Copy")
 
 
 if __name__ == '__main__':

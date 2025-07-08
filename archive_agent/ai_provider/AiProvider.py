@@ -57,15 +57,21 @@ class AiProvider(ABC):
         cache_key = hashlib.sha256(cache_str.encode('utf-8')).hexdigest()
 
         if self.invalidate_cache:
-            logger.info(f"Cache bypass (--invalidate_cache) for '{cache_key_prefix}'")
+            logger.info(f"Cache read bypassed (--nocache) for '{cache_key_prefix}'")
+
         elif cache_key in self.cache:
+            # Cache read.
             logger.info(f"Cache hit for '{cache_key_prefix}'")
             return self.cache[cache_key]
+
         else:
             logger.info(f"Cache miss for '{cache_key_prefix}'")
 
         result = callback(**callback_kwargs)
+
+        # Cache write.
         self.cache[cache_key] = result
+
         return result
 
     @abstractmethod

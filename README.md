@@ -1,14 +1,12 @@
-[![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/499d8d83-02c8-4c9b-9e4f-8e8391395482)
-
-🍀 **Collaborators welcome**  
-You are invited to contribute to this open source project!  
-Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues) and [submit pull requests](https://github.com/shredEngineer/Archive-Agent/pulls) anytime.
+![Archive Agent Logo](archive_agent/assets/Archive-Agent-800x300.png)
 
 ---
 
-# 🧠 Archive Agent
+# ⚡ Archive Agent
 
 **Archive Agent** is an open-source semantic file tracker with OCR + AI search.  
+
+[![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/499d8d83-02c8-4c9b-9e4f-8e8391395482)
 
 - **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**
 - **Supported AI providers: [OpenAI](https://platform.openai.com/docs/overview), [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/)**
@@ -16,12 +14,12 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
 - Fast and effective semantic chunking (**smart chunking**)
 - [Qdrant](https://qdrant.tech/) vector DB *(running locally)* for storage and search
 - Automatic OCR and AI cache save costs and headaches
+- **100% dev-friendly:** Clean docs and code ✨
 
-![Archive Agent Logo](archive_agent/assets/Archive-Agent-400x300.png)
+
+- YouTube explainer: **[How RAG Helped Me Find Any PDF in Seconds](https://www.youtube.com/watch?v=dyKovjez4-g)**
 
 ---
-
-🤓 **[Watch me explain this on YouTube](https://www.youtube.com/watch?v=dyKovjez4-g)**
 
 **Just getting started?  
 👉 [Install Archive Agent on Linux](#install-archive-agent)**
@@ -38,13 +36,17 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
 **Want to upgrade for the latest features?  
 👉 [Update Archive Agent](#update-archive-agent)**
 
+🍀 **Collaborators welcome**  
+You are invited to contribute to this open source project!  
+Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues) and [submit pull requests](https://github.com/shredEngineer/Archive-Agent/pulls) anytime.
+
 ---
 
-📷 Screenshot of **command-line** interface (CLI) using *Typer*:
+📷 Screenshot of **command-line** interface (CLI):
 
 ![](archive_agent/assets/Screenshot-CLI.png)
 
-📷 Screenshot of **graphical** user interface (GUI) using *Streamlit*:
+📷 Screenshot of **graphical** user interface (GUI):
 [(enlarge)](archive_agent/assets/Screenshot-GUI.png)
 
 ![](archive_agent/assets/Screenshot-GUI.png)
@@ -52,7 +54,7 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
 ## Structure
 
 <!-- TOC -->
-* [🧠 Archive Agent](#-archive-agent)
+* [⚡ Archive Agent](#-archive-agent)
   * [Structure](#structure)
   * [Supported OS](#supported-os)
   * [Install Archive Agent](#install-archive-agent)
@@ -88,6 +90,8 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
   * [MCP Tools](#mcp-tools)
   * [Update Archive Agent](#update-archive-agent)
   * [Archive Agent settings](#archive-agent-settings)
+    * [Profile configuration](#profile-configuration)
+    * [Watchlist](#watchlist)
     * [AI cache](#ai-cache)
   * [Qdrant database](#qdrant-database)
   * [Developer's guide](#developers-guide)
@@ -330,7 +334,7 @@ archive-agent switch "My Other Profile"
 📌 **Note:** **Always use quotes** for the profile name argument,
 **or skip it** to get an interactive prompt.
 
-💡 **Good to know:** Profiles are useful to manage *independent* Qdrant collections and [Archive Agent settings](#archive-agent-settings).
+💡 **Good to know:** Profiles are useful to manage *independent* Qdrant collections (see [Qdrant database](#qdrant-database)) and [Archive Agent settings](#archive-agent-settings).
 
 ### Open current profile config in nano
 
@@ -419,10 +423,10 @@ To sync changes to your files with the Qdrant database, run this:
 archive-agent commit
 ```
 
-To selectively invalidate the [AI cache](#ai-cache) for a single entire commit, pass the `--invalidate-cache` option:
+To bypass the [AI cache](#ai-cache) for this commit, pass the `--nocache` option:
 
 ```bash
-archive-agent commit --invalidate-cache
+archive-agent commit --nocache
 ```
 
 💡 **Good to know:** Changes are triggered by:
@@ -442,10 +446,10 @@ To `track` and then `commit` in one go, run this:
 archive-agent update
 ```
 
-To selectively invalidate the [AI cache](#ai-cache) for a single commit, pass the `--invalidate-cache` option:
+To bypass the [AI cache](#ai-cache) for this commit, pass the `--nocache` option:
 
 ```bash
-archive-agent update --invalidate-cache
+archive-agent update --nocache
 ```
 
 ### Search your files
@@ -545,9 +549,17 @@ E.g., the `default` profile is located in `~/.archive-agent-settings/default/`.
 
 The currently used profile is stored in `~/.archive-agent-settings/profile.json`.
 
-Each profile folder contains these files:
+📌 **Note:** To delete a profile, simply delete the profile folder.
+This will not delete the Qdrant collection (see [Qdrant database](#qdrant-database)).
 
-- `config.json`:
+### Profile configuration
+
+The profile configuration is contained in the profile folder as `config.json`.  
+
+💡 **Good to know:** Use the `config` CLI command to open the current profile's config (JSON) in the `nano` editor (see [Open current profile config in nano](#open-current-profile-config-in-nano)).
+
+💡 **Good to know:** Use the `switch` CLI command to switch to a new or existing profile (see [Create or switch profile](#create-or-switch-profile)).
+
 
   | Key                    | Description                                                                                      |
   |------------------------|--------------------------------------------------------------------------------------------------|
@@ -569,12 +581,14 @@ Each profile folder contains these files:
   | `chunk_lines_block`    | Number of lines per block for chunking                                                           |
   | `mcp_server_port`      | MCP server port (default `8008`)                                                                 |
 
-💡 **Good to know:** Use the `config` CLI command to open the current profile's config (JSON) in the `nano` editor.
+### Watchlist
 
-- `watchlist.json`:
-  - Managed via the `include` / `exclude` / `remove` / `track` / `commit` / `update` commands.
+The profile watchlist is contained in the profile folder as `watchlist.json`.
 
-📌 **Note:** To delete a profile, simply delete the profile folder. This will not delete the Qdrant collection.
+The watchlist is managed by these commands only:
+
+- `include` / `exclude` / `remove`
+- `track` / `commit` / `update`
 
 ### AI cache
 
@@ -587,17 +601,16 @@ The AI cache ensures that, in a given profile:
 
 This way, **Archive Agent** can quickly resume where it left off if a commit was interrupted.
 
-To invalidate the AI cache for a single commit, pass the `--invalidate-cache` option to the `commit` or `update` command
+To bypass the AI cache for a single commit, pass the `--nocache` option to the `commit` or `update` command
 (see [Commit changed files to database](#commit-changed-files-to-database) and [Combined track and commit](#combined-track-and-commit)).
 
 💡 **Good to know:** Queries are never cached, so you always get a fresh answer. 
 
-The AI cache uses different entries for each combination of the following AI parameters:
-- `ai_model_chunk`
-- `ai_model_embed`
-- `ai_model_vision`
-
 📌 **Note:** To clear the entire AI cache, simply delete the profile's cache folder.
+
+📌 **Technical Note:** **Archive Agent** keys the cache using a composite hash made from the text/image bytes, and of the AI model names for chunking, embedding, and vision.
+Cache keys are deterministic and change generated whenever you change the *chunking*, *embedding* or *vision* AI model names.
+Since cache entries are retained forever, switching back to a prior combination of AI model names will again access the "old" keys.  
 
 ---
 

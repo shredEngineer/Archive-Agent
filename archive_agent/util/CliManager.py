@@ -61,10 +61,10 @@ class CliManager:
         :return: User input.
         """
         if is_cmd:
-            logger.info(f"🧠 Archive Agent: {message}")
+            logger.info(f"⚡ Archive Agent: {message}")
             return typer.prompt("", prompt_suffix="> ", **kwargs)
         else:
-            logger.info(f"🧠 Archive Agent")
+            logger.info(f"⚡ Archive Agent")
             return typer.prompt(message, prompt_suffix="", **kwargs)
 
     def format_openai_chunk(
@@ -83,7 +83,7 @@ class CliManager:
         if CliManager.VERBOSE_CHUNK:
             self.console.print(Panel(f"{line_numbered_text}", title="Text", style="blue", border_style="blue"))
 
-        logger.info("🧠 I'm chunking …")
+        logger.info("⚡ I'm chunking …")
 
         result = callback()
 
@@ -111,7 +111,7 @@ class CliManager:
         if CliManager.VERBOSE_EMBED:
             self.format_chunk(chunk)
 
-        logger.info("🧠 I'm embedding …")
+        logger.info("⚡ I'm embedding …")
 
         result = callback()
 
@@ -136,7 +136,7 @@ class CliManager:
         if CliManager.VERBOSE_QUERY:
             self.console.print(Panel(f"{prompt}", title="Query", style="magenta", border_style="magenta"))
 
-        logger.info("🧠 I'm thinking …")
+        logger.info("⚡ I'm thinking …")
 
         result = callback()
 
@@ -157,7 +157,7 @@ class CliManager:
         :param callback: Vision callback returning AI result.
         :return: AI result.
         """
-        logger.info("🧠 I'm looking at it …")
+        logger.info("⚡ I'm looking at it …")
 
         result = callback()
 
@@ -189,9 +189,9 @@ class CliManager:
                 self.format_chunk(point.payload['chunk_text'])
 
         if len(points) > 0:
-            logger.info(f"🧠 I found something: ({len(points)}) matching chunk(s)")
+            logger.info(f"⚡ I found something: ({len(points)}) matching chunk(s)")
         else:
-            logger.info(f"🧠 I found nothing")
+            logger.info(f"⚡ I found nothing")
 
     def format_chunk(self, chunk: str) -> None:
         """
@@ -249,6 +249,6 @@ class CliManager:
 
         self.console.print(Panel(f"{answer_text}", title="Answer", style="green", border_style="green"))
 
-        logger.info("🧠 That's it!")
+        logger.info("⚡ That's it!")
 
         return answer_text

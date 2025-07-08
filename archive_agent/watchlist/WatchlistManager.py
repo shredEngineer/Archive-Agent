@@ -264,7 +264,7 @@ class WatchlistManager(StorageManager):
             for file in self.data['tracked'].keys():
                 logger.info(f"- {file}")
         else:
-            logger.info("- (0) tracked file(s)")
+            logger.info("(0) tracked file(s)")
 
     def get_diff_files(self, diff_option: str) -> TrackedFiles:
         """
