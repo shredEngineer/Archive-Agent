@@ -65,7 +65,7 @@ def include(patterns: List[str] = typer.Argument(None)) -> None:
     context = ContextManager()
 
     if not patterns:
-        patterns = [context.cli.prompt("Include pattern", is_cmd=True)]
+        patterns = [context.cli.prompt("Include pattern?", is_cmd=True)]
 
     for pattern in patterns:
         context.watchlist.include(pattern)
@@ -80,7 +80,7 @@ def exclude(patterns: List[str] = typer.Argument(None)) -> None:
     context = ContextManager()
 
     if not patterns:
-        patterns = [context.cli.prompt("Exclude patter?", is_cmd=True)]
+        patterns = [context.cli.prompt("Exclude pattern?", is_cmd=True)]
 
     for pattern in patterns:
         context.watchlist.exclude(pattern)
@@ -95,7 +95,7 @@ def remove(patterns: List[str] = typer.Argument(None)) -> None:
     context = ContextManager()
 
     if not patterns:
-        patterns = [context.cli.prompt("Remove pattern", is_cmd=True)]
+        patterns = [context.cli.prompt("Remove pattern?", is_cmd=True)]
 
     for pattern in patterns:
         context.watchlist.remove(pattern)
@@ -143,11 +143,17 @@ def diff() -> None:
 
 
 @app.command()
-def commit() -> None:
+def commit(
+        invalidate_cache: bool = typer.Option(
+            False,
+            "--invalidate-cache",
+            help="Invalidate the AI cache for this commit."
+        )
+) -> None:
     """
     Sync changed files with the Qdrant database.
     """
-    context = ContextManager()
+    context = ContextManager(invalidate_cache=invalidate_cache)
 
     context.committer.commit()
 
@@ -155,11 +161,17 @@ def commit() -> None:
 
 
 @app.command()
-def update() -> None:
+def update(
+        invalidate_cache: bool = typer.Option(
+            False,
+            "--invalidate-cache",
+            help="Invalidate the AI cache for this commit."
+        )
+) -> None:
     """
     `track` and then `commit` in one go.
     """
-    context = ContextManager()
+    context = ContextManager(invalidate_cache=invalidate_cache)
 
     context.watchlist.track()
 

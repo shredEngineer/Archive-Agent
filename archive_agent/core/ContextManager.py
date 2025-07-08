@@ -17,6 +17,10 @@ from archive_agent.ai.AiManager import AiManager
 
 from archive_agent.ai_provider.ai_provider_registry import ai_provider_registry
 from archive_agent.ai_provider.AiProvider import AiProvider
+from archive_agent.ai_provider.AiProviderParams import AiProviderParams
+
+from archive_agent.util.CacheManager import CacheManager
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +30,18 @@ class ContextManager:
     Context manager.
     """
 
-    def __init__(self, profile_name: Optional[str] = None):
+    def __init__(
+            self,
+            profile_name: Optional[str] = None,
+            invalidate_cache: bool = False,
+    ):
         """
         Initialize context manager.
         :param profile_name: Optional profile name to create or switch to (or "" to request prompt).
+        :param invalidate_cache: Invalidate cache if enabled, probe cache otherwise.
         """
+        self.invalidate_cache = invalidate_cache
+
         self.cli = CliManager()
 
         settings_path = Path.home() / ".archive-agent-settings"
@@ -50,6 +61,10 @@ class ContextManager:
         self.watchlist = WatchlistManager(
             settings_path=settings_path,
             profile_name=self.profile_manager.data[self.profile_manager.PROFILE_NAME],
+        )
+
+        self.ai_cache = CacheManager(
+            cache_path=settings_path / self.profile_manager.data[self.profile_manager.PROFILE_NAME] / "ai_cache",
         )
 
         self.ai = AiManager(
@@ -90,12 +105,16 @@ class ContextManager:
         ai_provider_class = ai_provider_registry[ai_provider_name]["class"]
 
         ai_provider = ai_provider_class(
+            cache=self.ai_cache,
+            invalidate_cache=self.invalidate_cache,
+            params=AiProviderParams(
+                model_chunk=self.config.data[self.config.AI_MODEL_CHUNK],
+                model_embed=self.config.data[self.config.AI_MODEL_EMBED],
+                model_query=self.config.data[self.config.AI_MODEL_QUERY],
+                model_vision=self.config.data[self.config.AI_MODEL_VISION],
+                temperature_query=self.config.data[self.config.AI_TEMPERATURE_QUERY],
+            ),
             server_url=self.config.data[self.config.AI_SERVER_URL],
-            model_chunk=self.config.data[self.config.AI_MODEL_CHUNK],
-            model_embed=self.config.data[self.config.AI_MODEL_EMBED],
-            model_query=self.config.data[self.config.AI_MODEL_QUERY],
-            model_vision=self.config.data[self.config.AI_MODEL_VISION],
-            temperature_query=self.config.data[self.config.AI_TEMPERATURE_QUERY],
         )
 
         ai_server_url = self.config.data[self.config.AI_SERVER_URL]

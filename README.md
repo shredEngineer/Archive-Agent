@@ -14,7 +14,8 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
 - **Supported AI providers: [OpenAI](https://platform.openai.com/docs/overview), [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/)**
 - **[MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension**
 - Fast and effective semantic chunking (**smart chunking**)
-- [Qdrant](https://qdrant.tech/) vector DB *(running locally)* for storage and search 
+- [Qdrant](https://qdrant.tech/) vector DB *(running locally)* for storage and search
+- Automatic OCR and AI cache save costs and headaches
 
 ![Archive Agent Logo](archive_agent/assets/Archive-Agent-400x300.png)
 
@@ -87,6 +88,7 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
   * [MCP Tools](#mcp-tools)
   * [Update Archive Agent](#update-archive-agent)
   * [Archive Agent settings](#archive-agent-settings)
+    * [AI cache](#ai-cache)
   * [Qdrant database](#qdrant-database)
   * [Developer's guide](#developers-guide)
     * [Important modules](#important-modules)
@@ -417,6 +419,12 @@ To sync changes to your files with the Qdrant database, run this:
 archive-agent commit
 ```
 
+To selectively invalidate the [AI cache](#ai-cache) for a single entire commit, pass the `--invalidate-cache` option:
+
+```bash
+archive-agent commit --invalidate-cache
+```
+
 💡 **Good to know:** Changes are triggered by:
 - File added
 - File removed
@@ -432,6 +440,12 @@ To `track` and then `commit` in one go, run this:
 
 ```bash
 archive-agent update
+```
+
+To selectively invalidate the [AI cache](#ai-cache) for a single commit, pass the `--invalidate-cache` option:
+
+```bash
+archive-agent update --invalidate-cache
 ```
 
 ### Search your files
@@ -560,7 +574,30 @@ Each profile folder contains these files:
 - `watchlist.json`:
   - Managed via the `include` / `exclude` / `remove` / `track` / `commit` / `update` commands.
 
-📌 **Note:** To delete a profile, simply delete the folder. This will not delete the Qdrant collection.
+📌 **Note:** To delete a profile, simply delete the profile folder. This will not delete the Qdrant collection.
+
+### AI cache
+
+Each profile folder also contains an `ai_cache` folder.
+
+The AI cache ensures that, in a given profile:
+- The same text is only chunked once.
+- The same text is only embedded once.
+- The same image is only OCR-ed once.
+
+This way, **Archive Agent** can quickly resume where it left off if a commit was interrupted.
+
+To invalidate the AI cache for a single commit, pass the `--invalidate-cache` option to the `commit` or `update` command
+(see [Commit changed files to database](#commit-changed-files-to-database) and [Combined track and commit](#combined-track-and-commit)).
+
+💡 **Good to know:** Queries are never cached, so you always get a fresh answer. 
+
+The AI cache uses different entries for each combination of the following AI parameters:
+- `ai_model_chunk`
+- `ai_model_embed`
+- `ai_model_vision`
+
+📌 **Note:** To clear the entire AI cache, simply delete the profile's cache folder.
 
 ---
 

@@ -6,10 +6,13 @@ from openai import OpenAI
 from archive_agent.ai_provider.AiProvider import AiProvider
 from archive_agent.ai_provider.AiProviderError import AiProviderError
 from archive_agent.ai.AiResult import AiResult
+from archive_agent.ai_provider.AiProviderParams import AiProviderParams
 
 from archive_agent.ai_schema.ChunkSchema import ChunkSchema
 from archive_agent.ai_schema.QuerySchema import QuerySchema
 from archive_agent.ai_schema.VisionSchema import VisionSchema
+
+from archive_agent.util.CacheManager import CacheManager
 
 
 class LMStudioProvider(AiProvider):
@@ -18,34 +21,29 @@ class LMStudioProvider(AiProvider):
     """
 
     def __init__(
-        self,
-        server_url: str,
-        model_chunk: str,
-        model_embed: str,
-        model_query: str,
-        model_vision: str,
-        temperature_query: float,
+            self,
+            cache: CacheManager,
+            invalidate_cache: bool,
+            params: AiProviderParams,
+            server_url: str,
     ):
         """
         Initialize LM Studio provider.
+        :param cache: Cache manager.
+        :param invalidate_cache: Invalidate cache if enabled, probe cache otherwise.
+        :param params: AI provider parameters.
         :param server_url: Server URL.
-        :param model_chunk: Model for chunking.
-        :param model_embed: Model for embeddings.
-        :param model_query: Model for queries.
-        :param model_vision: Model for vision (leave empty to disable vision support).
-        :param temperature_query: Temperature of query model.
         """
-        AiProvider.__init__(self, supports_vision=model_vision != "")
-
-        self.model_chunk = model_chunk
-        self.model_embed = model_embed
-        self.model_query = model_query
-        self.model_vision = model_vision
-        self.temperature_query = temperature_query
+        AiProvider.__init__(
+            self,
+            cache=cache,
+            invalidate_cache=invalidate_cache,
+            params=params,
+        )
 
         self.client = OpenAI(base_url=server_url, api_key="lm-studio")
 
-    def chunk_callback(self, prompt: str) -> AiResult:
+    def _perform_chunk_callback(self, prompt: str) -> AiResult:
         """
         Chunk callback.
         :param prompt: Prompt.
@@ -54,7 +52,7 @@ class LMStudioProvider(AiProvider):
         """
         # noinspection PyTypeChecker
         response = self.client.chat.completions.create(
-            model=self.model_chunk,
+            model=self.params.model_chunk,
             temperature=0.0,
             messages=[
                 {
@@ -89,7 +87,7 @@ class LMStudioProvider(AiProvider):
             parsed_schema=parsed_schema,
         )
 
-    def embed_callback(self, text: str) -> AiResult:
+    def _perform_embed_callback(self, text: str) -> AiResult:
         """
         Embed callback.
         :param text: Text.
@@ -99,7 +97,7 @@ class LMStudioProvider(AiProvider):
         try:
             response = self.client.embeddings.create(
                 input=text,
-                model=self.model_embed
+                model=self.params.model_embed
             )
 
             return AiResult(
@@ -110,7 +108,7 @@ class LMStudioProvider(AiProvider):
         except Exception as e:
             raise AiProviderError(f"Embedding failed:\n{e}")
 
-    def query_callback(self, prompt: str) -> AiResult:
+    def _perform_query_callback(self, prompt: str) -> AiResult:
         """
         Query callback.
         :param prompt: Prompt.
@@ -119,8 +117,8 @@ class LMStudioProvider(AiProvider):
         """
         # noinspection PyTypeChecker
         response = self.client.chat.completions.create(
-            model=self.model_query,
-            temperature=self.temperature_query,
+            model=self.params.model_query,
+            temperature=self.params.temperature_query,
             messages=[
                 {
                     "role": "user",
@@ -154,7 +152,7 @@ class LMStudioProvider(AiProvider):
             parsed_schema=parsed_schema,
         )
 
-    def vision_callback(self, prompt: str, image_base64: str) -> AiResult:
+    def _perform_vision_callback(self, prompt: str, image_base64: str) -> AiResult:
         """
         Vision callback.
         :param prompt: Prompt.
@@ -162,12 +160,12 @@ class LMStudioProvider(AiProvider):
         :return: AI result.
         :raises AiProviderError: On error.
         """
-        if not self.model_vision:
+        if not self.params.model_vision:
             raise AiProviderError("Vision model is not configured.")
 
         # noinspection PyTypeChecker
         response = self.client.chat.completions.create(
-            model=self.model_vision,
+            model=self.params.model_vision,
             temperature=0.0,
             messages=[
                 {
