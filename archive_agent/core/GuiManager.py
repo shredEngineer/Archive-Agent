@@ -11,6 +11,8 @@ from st_copy_to_clipboard import st_copy_to_clipboard
 from archive_agent.core.ContextManager import ContextManager
 from archive_agent.util.text_util import replace_file_uris_with_markdown
 
+from archive_agent import __version__
+
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +66,13 @@ class GuiManager:
 
         cols = st.columns(3)
         with cols[0]:
+            st.markdown(
+                f"**Archive Agent v{__version__}**"
+            )
+            st.markdown(
+                f"[Qdrant dashboard]({self.context.config.data[self.context.config.QDRANT_SERVER_URL]}/dashboard)"
+            )
+
             # TODO: Implement files and chunks count.
             # files_count = "NaN"
             # chunks_count = "NaN"
