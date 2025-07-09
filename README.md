@@ -4,9 +4,11 @@
 
 # ⚡ Archive Agent
 
-**Archive Agent** is an open-source semantic file tracker with OCR + AI search.  
+**Archive Agent** is an open-source semantic file tracker with OCR + AI search (RAG) and MCP capability.  
 
 [![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/499d8d83-02c8-4c9b-9e4f-8e8391395482)
+[![Listed on MCP.so](https://img.shields.io/badge/MCP.so-listed-yellow)](https://mcp.so/server/Archive-Agent/shredEngineer)
+[![Listed on RAGHub](https://img.shields.io/badge/RAGHub-listed-blue)](https://github.com/Andrew-Jang/RAGHub?tab=readme-ov-file#rag-frameworks)
 
 - **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**
 - **Supported AI providers: [OpenAI](https://platform.openai.com/docs/overview), [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/)**
@@ -423,6 +425,12 @@ To sync changes to your files with the Qdrant database, run this:
 archive-agent commit
 ```
 
+To see additional information on chunking and embedding, pass the `--verbose` option:
+
+```bash
+archive-agent commit --verbose
+```
+
 To bypass the [AI cache](#ai-cache) for this commit, pass the `--nocache` option:
 
 ```bash
@@ -444,6 +452,12 @@ To `track` and then `commit` in one go, run this:
 
 ```bash
 archive-agent update
+```
+
+To see additional information on chunking and embedding, pass the `--verbose` option:
+
+```bash
+archive-agent update --verbose
 ```
 
 To bypass the [AI cache](#ai-cache) for this commit, pass the `--nocache` option:
@@ -636,7 +650,7 @@ To get started, check out these epic modules:
 - The default config is defined in [`archive_agent/config/ConfigManager.py`](archive_agent/config/ConfigManager.py)  
 - The CLI commands are defined in [`archive_agent/__main__.py`](archive_agent/__main__.py)
 - The commit logic is implemented in [`archive_agent/core/CommitManager.py`](archive_agent/core/CommitManager.py)
-- The CLI verbosity can be adjusted in [`archive_agent/util/CliManager.py`](archive_agent/util/CliManager.py)
+- The CLI verbosity is handled in [`archive_agent/util/CliManager.py`](archive_agent/util/CliManager.py)
 - The GUI is implemented in [`archive_agent/core/GuiManager.py`](archive_agent/core/GuiManager.py)
 - The AI API prompts for chunking, embedding, vision, and querying are defined in [`archive_agent/ai/AiManager.py`](archive_agent/ai/AiManager.py) 
 - The AI provider registry is located in [`archive_agent/ai_provider/ai_provider_registry.py`](archive_agent/ai_provider/ai_provider_registry.py)

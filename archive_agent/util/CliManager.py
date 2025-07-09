@@ -26,17 +26,20 @@ class CliManager:
     CLI manager.
     """
 
-    VERBOSE_CHUNK: bool = True
-    VERBOSE_EMBED: bool = True
+    VERBOSE_CHUNK: bool = False  # enabled by --verbose flag
+    VERBOSE_EMBED: bool = False  # enabled by --verbose flag
     VERBOSE_QUERY: bool = True
     VERBOSE_VISION: bool = True
     VERBOSE_RETRIEVAL: bool = True
     VERBOSE_USAGE: bool = True
 
-    def __init__(self):
+    def __init__(self, verbose: bool = False):
         """
         Initialize CLI manager.
         """
+        CliManager.VERBOSE_CHUNK = verbose
+        CliManager.VERBOSE_EMBED = verbose
+
         self.console = Console(markup=False)
 
     def format_json(self, text: str) -> None:

@@ -34,15 +34,17 @@ class ContextManager:
             self,
             profile_name: Optional[str] = None,
             invalidate_cache: bool = False,
+            verbose: bool = False,
     ):
         """
         Initialize context manager.
         :param profile_name: Optional profile name to create or switch to (or "" to request prompt).
         :param invalidate_cache: Invalidate cache if enabled, probe cache otherwise.
+        :param verbose: Set CLI verbosity.
         """
         self.invalidate_cache = invalidate_cache
 
-        self.cli = CliManager()
+        self.cli = CliManager(verbose=verbose)
 
         settings_path = Path.home() / ".archive-agent-settings"
 

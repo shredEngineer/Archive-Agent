@@ -165,19 +165,34 @@ class FileData:
             )
 
             if carry:
-                logger.info(f"Carrying over ({len(carry.splitlines())}) lines")
+                # `carry` is merged with the next block before chunking.
+                current_block_line_count: int = len(carry.splitlines()) + len(block_of_sentences)
+                logger.info(
+                    f"Carrying over ({len(carry.splitlines())}) lines; "
+                    f"current block has ({current_block_line_count}) lines"
+                )
                 block_of_sentences = carry.splitlines() + block_of_sentences
 
             chunk_result = self.ai.chunk(block_of_sentences)
 
-            ranges = chunk_start_to_ranges(chunk_result.chunk_start_lines, len(block_of_sentences))
+            ranges = chunk_start_to_ranges(
+                chunk_result.chunk_start_lines,
+                len(block_of_sentences),
+            )
 
-            block_chunks, carry = extract_chunks_and_carry(block_of_sentences, ranges)
+            block_chunks, carry = extract_chunks_and_carry(
+                block_of_sentences,
+                ranges,
+            )
 
             chunks += block_chunks
 
         if carry:
-            logger.info(f"Appending final carry of ({len(carry.splitlines())}) lines")
+            final_chunk_line_count: int = len(carry.splitlines())
+            logger.info(
+                f"Appending final carry of ({final_chunk_line_count}) lines; "
+                f"final chunk has ({final_chunk_line_count}) lines"
+            )
             chunks.append(carry)
 
         return chunks

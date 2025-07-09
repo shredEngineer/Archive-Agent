@@ -19,7 +19,7 @@ from archive_agent.mcp_server.McpServer import McpServer
 app = typer.Typer(
     invoke_without_command=True,
     add_completion=False,
-    help="Archive Agent is an open-source semantic file tracker with OCR + AI search.",
+    help="Archive Agent is an open-source semantic file tracker with OCR + AI search (RAG) and MCP capability.",
 )
 
 
@@ -148,12 +148,17 @@ def commit(
             False,
             "--nocache",
             help="Invalidate the AI cache for this commit."
-        )
+        ),
+        verbose: bool = typer.Option(
+            False,
+            "--verbose",
+            help="Show additional chunking and embedding information."
+        ),
 ) -> None:
     """
     Sync changed files with the Qdrant database.
     """
-    context = ContextManager(invalidate_cache=invalidate_cache)
+    context = ContextManager(invalidate_cache=invalidate_cache, verbose=verbose)
 
     context.committer.commit()
 
@@ -166,12 +171,17 @@ def update(
             False,
             "--nocache",
             help="Invalidate the AI cache for this commit."
-        )
+        ),
+        verbose: bool = typer.Option(
+            False,
+            "--verbose",
+            help="Show additional chunking and embedding information."
+        ),
 ) -> None:
     """
     `track` and then `commit` in one go.
     """
-    context = ContextManager(invalidate_cache=invalidate_cache)
+    context = ContextManager(invalidate_cache=invalidate_cache, verbose=verbose)
 
     context.watchlist.track()
 
