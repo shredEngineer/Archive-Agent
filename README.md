@@ -6,9 +6,11 @@
 
 **Archive Agent** is an open-source semantic file tracker with OCR + AI search (RAG) and MCP capability.  
 
+![GitHub Release](https://img.shields.io/github/v/release/shredEngineer/Archive-Agent)
+![GitHub License](https://img.shields.io/github/license/shredEngineer/Archive-Agent)
+[![Listed on MCP.so](https://img.shields.io/badge/MCP.so-listed-green)](https://mcp.so/server/Archive-Agent/shredEngineer)
+[![Listed on RAGHub](https://img.shields.io/badge/RAGHub-listed-green)](https://github.com/Andrew-Jang/RAGHub?tab=readme-ov-file#rag-projects)
 [![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/499d8d83-02c8-4c9b-9e4f-8e8391395482)
-[![Listed on MCP.so](https://img.shields.io/badge/MCP.so-listed-yellow)](https://mcp.so/server/Archive-Agent/shredEngineer)
-[![Listed on RAGHub](https://img.shields.io/badge/RAGHub-listed-blue)](https://github.com/Andrew-Jang/RAGHub?tab=readme-ov-file#rag-frameworks)
 
 - **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**
 - **Supported AI providers: [OpenAI](https://platform.openai.com/docs/overview), [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/)**

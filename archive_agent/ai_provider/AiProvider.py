@@ -62,12 +62,14 @@ class AiProvider(ABC):
         elif cache_key in self.cache:
             # Cache read.
             logger.info(f"Cache hit for '{cache_key_prefix}'")
-            return self.cache[cache_key]
+            ai_result: AiResult = self.cache[cache_key]
+            ai_result.total_tokens = 0  # Cached result consumed no tokens
+            return ai_result
 
         else:
             logger.info(f"Cache miss for '{cache_key_prefix}'")
 
-        result = callback(**callback_kwargs)
+        result: AiResult = callback(**callback_kwargs)
 
         # Cache write.
         self.cache[cache_key] = result
