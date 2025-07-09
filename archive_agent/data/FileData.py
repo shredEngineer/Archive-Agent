@@ -187,6 +187,7 @@ class FileData:
         Process file data.
         :return: True if successful, False otherwise.
         """
+        # TODO: Get {PDF page number : PDF line number} array and insert chunk's set of page numbers into chunk payload — see #15
         text = self.decode()
         if text is None:
             logger.warning(f"Failed to process {format_file(self.file_path)}")

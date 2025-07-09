@@ -198,6 +198,8 @@ def build_document_text_from_pages(
     for idx, content in enumerate(page_contents):
         page_parts: List[str] = []
 
+        # TODO: Build {PDF page number : PDF line number} array and pass through to `load_pdf_document`, then return it from there — see #15
+
         if image_texts_per_page is not None:
             page_parts.extend(image_texts_per_page[idx])
 
