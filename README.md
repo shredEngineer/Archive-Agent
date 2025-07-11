@@ -222,6 +222,8 @@ At least 32 GiB RAM is recommended for smooth performance.
 
 ## How Archive Agent works
 
+![Archive Agent Logo](archive_agent/assets/Archive-Agent-Overview-1200x1019.png)
+
 ###  Which files are processed
 
 **Archive Agent** currently supports these file types:
