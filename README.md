@@ -22,8 +22,8 @@
 - Automatic OCR and AI cache save costs and headaches
 - **100% dev-friendly:** Clean docs and code ✨
 
-
-- YouTube explainer: **[How RAG Helped Me Find Any PDF in Seconds](https://www.youtube.com/watch?v=dyKovjez4-g)**
+▶️ **[How I Built the Ultimate AI File Search With RAG & OCR](https://www.youtube.com/watch?v=GOCCWwI25EI)** on *YouTube*  
+[![YouTube: How I Built the Ultimate AI File Search With RAG & OCR](archive_agent/assets/Thumbnail-GOCCWwI25EI.jpg)](https://www.youtube.com/watch?v=GOCCWwI25EI)
 
 ---
 
