@@ -22,8 +22,11 @@
 - Automatic OCR and AI cache save costs and headaches
 - **100% dev-friendly:** Clean docs and code ✨
 
-▶️ **[How I Built the Ultimate AI File Search With RAG & OCR](https://www.youtube.com/watch?v=GOCCWwI25EI)** on *YouTube*  
+---
+
+▶️ **[How I Built the Ultimate AI File Search With RAG & OCR](https://www.youtube.com/watch?v=GOCCWwI25EI)**  
 [![YouTube: How I Built the Ultimate AI File Search With RAG & OCR](archive_agent/assets/Thumbnail-GOCCWwI25EI.jpg)](https://www.youtube.com/watch?v=GOCCWwI25EI)
+*(External link to YouTube)*
 
 ---
 
