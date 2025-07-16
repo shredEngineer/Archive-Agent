@@ -325,13 +325,10 @@ class QdrantManager:
 
     def _dedup_points(self, points: List[ScoredPoint]) -> List[ScoredPoint]:
         """
-        Deduplicate points by file_path and chunk_index, sorting first.
+        Deduplicate points by file_path and chunk_index.
         :param points: Points to deduplicate.
         :return: Unique points.
         """
-        # Sort points by file_path first and by chunk index second.
-        points = sorted(points, key=lambda _point: (_point.payload['file_path'], _point.payload['chunk_index']))
-
         unique_points = []
         seen = set()
         duplicates_by_file = {}
