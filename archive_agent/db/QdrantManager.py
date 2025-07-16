@@ -14,6 +14,7 @@ from qdrant_client.models import (
     FilterSelector,
     FieldCondition,
     MatchValue,
+    MatchAny,
     ScoredPoint,
 )
 
@@ -40,8 +41,10 @@ class QdrantManager:
         server_url: str,
         collection: str,
         vector_size: int,
-        score_min: float,
-        chunks_max: int,
+        retrieve_score_min: float,
+        retrieve_chunks_max: int,
+        rerank_chunks_max: int,
+        expand_chunks_radius: int,
     ):
         """
         Initialize Qdrant manager.
@@ -50,16 +53,20 @@ class QdrantManager:
         :param server_url: Server URL.
         :param collection: Collection name.
         :param vector_size: Vector size.
-        :param score_min: Minimum score of retrieved chunks (`0`...`1`).
-        :param chunks_max: Maximum number of retrieved chunks
+        :param retrieve_score_min: Minimum score of retrieved chunks (`0`...`1`).
+        :param retrieve_chunks_max: Maximum number of retrieved chunks.
+        :param rerank_chunks_max: Number of top chunks to keep after reranking.
+        :param expand_chunks_radius: Number of preceding and following chunks to prepend and append to each reranked chunk.
         """
         self.cli = cli
         self.ai = ai
         self.qdrant = QdrantClient(url=server_url)
         self.collection = collection
         self.vector_size = vector_size
-        self.score_min = score_min
-        self.chunks_max = chunks_max
+        self.retrieve_score_min = retrieve_score_min
+        self.retrieve_chunks_max = retrieve_chunks_max
+        self.rerank_chunks_max = rerank_chunks_max
+        self.expand_chunks_radius = expand_chunks_radius
 
         try:
             if not self.qdrant.collection_exists(collection):
@@ -186,9 +193,9 @@ class QdrantManager:
 
     def search(self, question: str) -> List[ScoredPoint]:
         """
-        Get points relevant to the question.
+        Get reranked points relevant to the question.
         :param question: Question.
-        :return: Points.
+        :return: Reranked points.
         """
         self.cli.format_question(question)
 
@@ -198,16 +205,83 @@ class QdrantManager:
             response = self.qdrant.query_points(
                 collection_name=self.collection,
                 query=vector,
-                score_threshold=self.score_min,
-                limit=self.chunks_max,
+                score_threshold=self.retrieve_score_min,
+                limit=self.retrieve_chunks_max,
                 with_payload=True,
             )
         except UnexpectedResponse as e:
             logger.exception(f"Qdrant query failed: {e}")
             raise typer.Exit(code=1)
 
-        self.cli.format_points(response.points)
-        return response.points
+        points = response.points
+
+        self.cli.format_retrieved_points(points)
+
+        if len(points) > 1:  # Rerank points
+
+            indexed_chunks = {
+                index: point.payload['chunk_text']
+                for index, point in enumerate(points)
+                if point.payload is not None  # makes pyright happy
+            }
+
+            reranked_schema = self.ai.rerank(question=question, indexed_chunks=indexed_chunks)
+            reranked_indices = reranked_schema.reranked_indices
+
+            reranked_indices = reranked_indices[:self.rerank_chunks_max]
+
+            points_reranked = []
+            for index in reranked_indices:
+                points_reranked.append(points[index])
+            points = points_reranked
+
+        self.cli.format_reranked_points(points)
+
+        return points
+
+    def _get_points(self, file_path: str, chunk_indices: List[int]) -> List[ScoredPoint]:
+        """
+        Get points with matching `file_path` and `chunk_index` in `chunk_indices`.
+        :param file_path: File path.
+        :param chunk_indices: Chunk indices.
+        :return: Points.
+        """
+        if not chunk_indices:
+            return []
+
+        try:
+            response = self.qdrant.query_points(
+                collection_name=self.collection,
+                query_filter=Filter(
+                    must=[
+                        FieldCondition(
+                            key='file_path',
+                            match=MatchValue(value=file_path),
+                        ),
+                        FieldCondition(
+                            key='chunk_index',
+                            match=MatchAny(any=chunk_indices),
+                        ),
+                    ],
+                ),
+                with_payload=True,
+                limit=len(chunk_indices),
+            )
+        except UnexpectedResponse as e:
+            logger.exception(f"Qdrant query failed: {e}")
+            raise typer.Exit(code=1)
+
+        points = response.points
+
+        for p in points:
+            print()
+            print(chunk_indices, p.payload['file_path'], p.payload['chunk_index'])
+
+        # TODO: Sort points by chunk_index, ascending
+
+        # TODO: Check that all chunk_indices were found, otherwise logger.critical Missing chunk indices: [...]
+
+        return points
 
     def query(self, question: str) -> Tuple[QuerySchema, str]:
         """
@@ -215,23 +289,49 @@ class QdrantManager:
         :param question: Question.
         :return: (QuerySchema, formatted answer)
         """
-        self.cli.format_question(question)
+        points = self.search(question=question)
 
-        vector = self.ai.embed(question)
+        if self.expand_chunks_radius > 0:  # Expand points
 
-        try:
-            response = self.qdrant.query_points(
-                collection_name=self.collection,
-                query=vector,
-                score_threshold=self.score_min,
-                limit=self.chunks_max,
-                with_payload=True,
-            )
-        except UnexpectedResponse as e:
-            logger.exception(f"Qdrant query failed: {e}")
-            raise typer.Exit(code=1)
+            points_expanded = []
 
-        self.cli.format_points(response.points)
+            for point in points:
+
+                points_expanded.extend(
+                    self._get_points(
+                        file_path=point.payload['file_path'],
+                        chunk_indices=[
+                            index for index in range(
+                                max(
+                                    0,
+                                    point.payload['chunk_index'] - self.expand_chunks_radius
+                                ),
+                                point.payload['chunk_index']
+                            )
+                        ],
+                    )
+                )
+
+                points_expanded.append(point)
+
+                points_expanded.extend(
+                    self._get_points(
+                        file_path=point.payload['file_path'],
+                        chunk_indices=[
+                            index for index in range(
+                                point.payload['chunk_index'] + 1,
+                                min(
+                                    point.payload['chunks_total'],
+                                    point.payload['chunk_index'] + 1 + self.expand_chunks_radius
+                                )
+                            )
+                        ],
+                    )
+                )
+
+            # TODO: Deduplicate points; remove duplicated
+
+            points = points_expanded
 
         context = "\n\n\n\n".join([
             "\n\n".join([
@@ -242,7 +342,7 @@ class QdrantManager:
                 f">>>",
                 f"{point.payload['chunk_text']}\n",
             ])
-            for point in response.points
+            for point in points
             if point.payload is not None  # makes pyright happy
         ])
 
