@@ -271,15 +271,12 @@ class QdrantManager:
             logger.exception(f"Qdrant query failed: {e}")
             raise typer.Exit(code=1)
 
-        points = response.points
+        points = sorted(response.points, key=lambda point: point.payload['chunk_index'])
 
-        for p in points:
-            print()
-            print(chunk_indices, p.payload['file_path'], p.payload['chunk_index'])
-
-        # TODO: Sort points by chunk_index, ascending
-
-        # TODO: Check that all chunk_indices were found, otherwise logger.critical Missing chunk indices: [...]
+        indices_found = {point.payload['chunk_index'] for point in points}
+        indices_missing = set(chunk_indices) - indices_found
+        if indices_missing:
+            logger.critical(f"Missing chunk(s) for {format_file(file_path)}: {sorted(indices_missing)}")
 
         return points
 
@@ -293,6 +290,7 @@ class QdrantManager:
 
         if self.expand_chunks_radius > 0:  # Expand points
 
+            # TODO: put into _expand_points function
             points_expanded = []
 
             for point in points:
@@ -322,17 +320,37 @@ class QdrantManager:
                                 point.payload['chunk_index'] + 1,
                                 min(
                                     point.payload['chunks_total'],
-                                    point.payload['chunk_index'] + 1 + self.expand_chunks_radius
+                                    point.payload['chunk_index'] + self.expand_chunks_radius + 1
                                 )
                             )
                         ],
                     )
                 )
 
-            # TODO: Deduplicate points; remove duplicated
+            # Sort points by file_path first and by chunk index second.
+            points_expanded = sorted(points_expanded, key=lambda _point: (_point.payload['file_path'], _point.payload['chunk_index']))
 
-            points = points_expanded
+            # TODO: Put into _dedup_points function
+            unique_points = []
+            seen = set()
+            duplicates_by_file = {}
+            for p in points_expanded:
+                key = (p.payload['file_path'], p.payload['chunk_index'])
+                if key in seen:
+                    file_path = p.payload['file_path']
+                    duplicates_by_file.setdefault(file_path, set()).add(p.payload['chunk_index'])
+                else:
+                    seen.add(key)
+                    unique_points.append(p)
 
+            if self.cli.VERBOSE_QUERY:
+                for file_path, dups in duplicates_by_file.items():
+                    if dups:
+                        logger.info(f"Deduplicated chunks for {format_file(file_path)}: {sorted(dups)}")
+
+            points = unique_points
+
+        # TODO: put into _context_from_points function
         context = "\n\n\n\n".join([
             "\n\n".join([
                 f"<<< "
