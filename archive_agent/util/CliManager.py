@@ -214,48 +214,75 @@ class CliManager:
         Format chunks of retrieved points.
         :param points: Retrieved points.
         """
+        if len(points) == 0:
+            logger.info(f"⚡ I found nothing")
+            return
+
+        logger.info(f"⚡ I found something: ({len(points)}) retrieved chunk(s):")
+
         for point in points:
 
             assert point.payload is not None
 
             logger.info(
-                f"({point.score * 100:.2f} %) matching "
-                f"chunk ({point.payload['chunk_index'] + 1}) / ({point.payload['chunks_total']}) "
+                f"({point.score * 100:>6.2f} %) matching "
+                f"chunk ({point.payload['chunk_index'] + 1:>5}) / ({point.payload['chunks_total']:>5}) "
                 f"of {format_file(point.payload['file_path'])} "
-                f"@ {format_time(point.payload['file_mtime'])}:"
+                f"@ {format_time(point.payload['file_mtime'])}"
             )
 
             if CliManager.VERBOSE_RETRIEVAL:
                 self.format_chunk(point.payload['chunk_text'])
-
-        if len(points) > 0:
-            logger.info(f"⚡ I found something: ({len(points)}) retrieved chunk(s)")
-        else:
-            logger.info(f"⚡ I found nothing")
 
     def format_reranked_points(self, points: List[ScoredPoint]) -> None:
         """
         Format chunks of reranked points.
         :param points: Reranked points.
         """
+        if len(points) == 0:
+            logger.info(f"⚡ I found nothing")
+            return
+
+        logger.info(f"⚡ I found something: ({len(points)}) reranked chunk(s):")
+
         for point in points:
 
             assert point.payload is not None
 
             logger.info(
-                f"({point.score * 100:.2f} %) matching "
-                f"chunk ({point.payload['chunk_index'] + 1}) / ({point.payload['chunks_total']}) "
+                f"({point.score * 100:>6.2f} %) matching "
+                f"chunk ({point.payload['chunk_index'] + 1:>5}) / ({point.payload['chunks_total']:>5}) "
                 f"of {format_file(point.payload['file_path'])} "
-                f"@ {format_time(point.payload['file_mtime'])}:"
+                f"@ {format_time(point.payload['file_mtime'])}"
             )
 
             if CliManager.VERBOSE_RERANK:
                 self.format_chunk(point.payload['chunk_text'])
 
-        if len(points) > 0:
-            logger.info(f"⚡ I found something: ({len(points)}) reranked chunk(s)")
-        else:
+    def format_expanded_deduped_points(self, points: List[ScoredPoint]) -> None:
+        """
+        Format chunks of expanded and deduplicated points.
+        :param points: Expanded and deduplicated points.
+        """
+        if len(points) == 0:
             logger.info(f"⚡ I found nothing")
+            return
+
+        logger.info(f"⚡ I found something: ({len(points)}) expanded and deduplicated chunk(s):")
+
+        for point in points:
+
+            assert point.payload is not None
+
+            logger.info(
+                (f"({point.score * 100:>6.2f} %) matching " if point.score > 0 else f"(expanded)          ") +
+                f"chunk ({point.payload['chunk_index'] + 1:>5}) / ({point.payload['chunks_total']:>5}) "
+                f"of {format_file(point.payload['file_path'])} "
+                f"@ {format_time(point.payload['file_mtime'])}"
+            )
+
+            if CliManager.VERBOSE_RERANK:
+                self.format_chunk(point.payload['chunk_text'])
 
     def format_chunk(self, chunk: str) -> None:
         """

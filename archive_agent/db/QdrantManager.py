@@ -382,6 +382,7 @@ class QdrantManager:
         if self.expand_chunks_radius > 0:  # Expand points
             points_expanded = self._expand_points(points)
             points = self._dedup_points(points_expanded)
+            self.cli.format_expanded_deduped_points(points)
 
         context = self._context_from_points(points)
 
