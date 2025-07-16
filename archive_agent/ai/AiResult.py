@@ -5,6 +5,7 @@ from typing import Optional, List
 from dataclasses import dataclass, field
 
 from archive_agent.ai_schema.ChunkSchema import ChunkSchema
+from archive_agent.ai_schema.RerankSchema import RerankSchema
 from archive_agent.ai_schema.QuerySchema import QuerySchema
 from archive_agent.ai_schema.VisionSchema import VisionSchema
 
@@ -19,6 +20,6 @@ class AiResult:
 
     output_text: str = field(default="")
 
-    parsed_schema: Optional[ChunkSchema | QuerySchema | VisionSchema] = field(default=None)
+    parsed_schema: Optional[ChunkSchema | RerankSchema | QuerySchema | VisionSchema] = field(default=None)
 
     embedding: List[float] = field(default_factory=list)

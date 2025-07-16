@@ -5,7 +5,7 @@ from typing import List
 from pydantic import BaseModel, ConfigDict
 
 
-class ChunkSchema(BaseModel):
-    chunk_start_lines: List[int]
+class RerankSchema(BaseModel):
+    reranked_indices: List[int]
 
     model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false

@@ -9,6 +9,7 @@ from archive_agent.ai.AiResult import AiResult
 from archive_agent.ai_provider.AiProviderParams import AiProviderParams
 
 from archive_agent.ai_schema.ChunkSchema import ChunkSchema
+from archive_agent.ai_schema.RerankSchema import RerankSchema
 from archive_agent.ai_schema.QuerySchema import QuerySchema
 from archive_agent.ai_schema.VisionSchema import VisionSchema
 
@@ -107,6 +108,50 @@ class LMStudioProvider(AiProvider):
 
         except Exception as e:
             raise AiProviderError(f"Embedding failed:\n{e}")
+
+    def _perform_rerank_callback(self, prompt: str) -> AiResult:
+        """
+        Rerank callback.
+        :param prompt: Prompt.
+        :return: AI result.
+        :raises AiProviderError: On error.
+        """
+        # noinspection PyTypeChecker
+        response = self.client.chat.completions.create(
+            model=self.params.model_rerank,
+            temperature=0.0,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": prompt,
+                        },
+                    ],
+                },
+            ],
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": RerankSchema.__name__,
+                    "schema": RerankSchema.model_json_schema(),
+                    "strict": True,
+                },
+            },
+        )
+
+        json_raw = response.choices[0].message.content
+        try:
+            parsed_schema = RerankSchema.model_validate_json(json_raw)
+        except Exception as e:
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
+
+        return AiResult(
+            total_tokens=response.usage.total_tokens if response.usage else 0,
+            output_text=json_raw,
+            parsed_schema=parsed_schema,
+        )
 
     def _perform_query_callback(self, prompt: str) -> AiResult:
         """

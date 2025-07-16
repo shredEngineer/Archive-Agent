@@ -14,6 +14,7 @@ class AiProviderParams:
             self,
             model_chunk: str,
             model_embed: str,
+            model_rerank: str,
             model_query: str,
             model_vision: str,
             temperature_query: float,
@@ -22,12 +23,14 @@ class AiProviderParams:
         Initialize AI provider parameters.
         :param model_chunk: Model for chunking.
         :param model_embed: Model for embeddings.
+        :param model_rerank: Model for reranking.
         :param model_query: Model for queries.
         :param model_vision: Model for vision (leave empty to disable vision support).
         :param temperature_query: Temperature of query model.
         """
         self.model_chunk = model_chunk
         self.model_embed = model_embed
+        self.model_rerank = model_rerank
         self.model_query = model_query
         self.model_vision = model_vision
         self.temperature_query = temperature_query
@@ -40,6 +43,7 @@ class AiProviderParams:
         params = {
             'model_chunk': self.model_chunk,
             'model_embed': self.model_embed,
+            'model_rerank': self.model_rerank,
             'model_vision': self.model_vision,
 
             # NOTE: Do NOT include query-related parameters, as queries are NOT cached anyway.

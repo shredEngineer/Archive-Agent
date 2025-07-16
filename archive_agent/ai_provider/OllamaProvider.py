@@ -9,6 +9,7 @@ from archive_agent.ai.AiResult import AiResult
 from archive_agent.ai_provider.AiProviderParams import AiProviderParams
 
 from archive_agent.ai_schema.ChunkSchema import ChunkSchema
+from archive_agent.ai_schema.RerankSchema import RerankSchema
 from archive_agent.ai_schema.QuerySchema import QuerySchema
 from archive_agent.ai_schema.VisionSchema import VisionSchema
 
@@ -88,6 +89,36 @@ class OllamaProvider(AiProvider):
         return AiResult(
             total_tokens=response.get("total_tokens", 0),
             embedding=response["embedding"],
+        )
+
+    def _perform_rerank_callback(self, prompt: str) -> AiResult:
+        """
+        Rerank callback.
+        :param prompt: Prompt.
+        :return: AI result.
+        :raises AiProviderError: On error.
+        """
+        response = self.client.chat(
+            model=self.params.model_rerank,
+            messages=[
+                {"role": "user", "content": prompt},
+            ],
+            options={
+                "temperature": 0.0,
+            },
+            format=RerankSchema.model_json_schema(),
+        )
+
+        json_raw = response["message"]["content"]
+        try:
+            parsed_schema = RerankSchema.model_validate_json(json_raw)
+        except Exception as e:
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
+
+        return AiResult(
+            total_tokens=response.get("eval_count", 0),
+            output_text=response["message"]["content"],
+            parsed_schema=parsed_schema,
         )
 
     def _perform_query_callback(self, prompt: str) -> AiResult:

@@ -3,7 +3,7 @@
 
 import json
 import logging
-from typing import Callable, List
+from typing import Callable, List, Dict
 
 import typer
 from rich.console import Console
@@ -16,7 +16,7 @@ from archive_agent.ai.AiResult import AiResult
 
 from archive_agent.ai_schema.QuerySchema import QuerySchema
 
-from archive_agent.util.format import format_file, format_time
+from archive_agent.util.format import format_file, format_time, format_chunk_brief
 
 logger = logging.getLogger(__name__)
 
@@ -27,18 +27,23 @@ class CliManager:
     """
 
     VERBOSE_CHUNK: bool = False  # enabled by --verbose flag
+    VERBOSE_RERANK: bool = False  # enabled by --verbose flag
     VERBOSE_EMBED: bool = False  # enabled by --verbose flag
-    VERBOSE_QUERY: bool = True
+    VERBOSE_QUERY: bool = False  # enabled by --verbose flag
     VERBOSE_VISION: bool = True
-    VERBOSE_RETRIEVAL: bool = True
+    VERBOSE_RETRIEVAL: bool = False  # enabled by --verbose flag
     VERBOSE_USAGE: bool = True
 
     def __init__(self, verbose: bool = False):
         """
         Initialize CLI manager.
+        :param verbose: Verbosity switch.
         """
         CliManager.VERBOSE_CHUNK = verbose
+        CliManager.VERBOSE_RERANK = verbose
         CliManager.VERBOSE_EMBED = verbose
+        CliManager.VERBOSE_QUERY = verbose
+        CliManager.VERBOSE_RETRIEVAL = verbose
 
         self.console = Console(markup=False)
 
@@ -70,7 +75,7 @@ class CliManager:
             logger.info(f"⚡ Archive Agent")
             return typer.prompt(message, prompt_suffix="", **kwargs)
 
-    def format_openai_chunk(
+    def format_ai_chunk(
             self,
             callback: Callable[[], AiResult],
             line_numbered_text: str,
@@ -98,21 +103,53 @@ class CliManager:
 
         return result
 
-    def format_openai_embed(
+    def format_ai_rerank(
             self,
             callback: Callable[[], AiResult],
-            chunk: str,
+            indexed_chunks: Dict[int, str],
     ) -> AiResult:
         """
-        Format chunk to be embedded.
+        Format chunks to be reranked and AI result of rerank callback.
+        :param callback: Rerank callback returning AI result.
+        :param indexed_chunks: Indexed chunks.
+        :return: AI result.
+        """
+        logger.info(f"Reranking...")
+
+        if CliManager.VERBOSE_RERANK:
+            indexed_chunks_str = "\n".join([
+                f"{index:>3} : {format_chunk_brief(chunk=chunk)}"
+                for index, chunk in indexed_chunks.items()
+            ])
+            self.console.print(Panel(f"{indexed_chunks_str}", title="Indexed Chunks", style="blue", border_style="blue"))
+
+        logger.info("⚡ I'm reranking …")
+
+        result = callback()
+
+        if CliManager.VERBOSE_USAGE:
+            logger.info(f"Used ({result.total_tokens}) AI API token(s) for reranking")
+
+        if CliManager.VERBOSE_RERANK:
+            self.format_json(result.output_text)
+
+        return result
+
+    def format_ai_embed(
+            self,
+            callback: Callable[[], AiResult],
+            text: str,
+    ) -> AiResult:
+        """
+        Format text to be embedded.
         :param callback: Embed callback returning AI result.
-        :param chunk: Chunk.
+        :param text: Text.
         :return: AI result.
         """
         logger.info(f"Embedding...")
 
         if CliManager.VERBOSE_EMBED:
-            self.format_chunk(chunk)
+            self.format_chunk(text)
 
         logger.info("⚡ I'm embedding …")
 
@@ -123,7 +160,7 @@ class CliManager:
 
         return result
 
-    def format_openai_query(
+    def format_ai_query(
             self,
             callback: Callable[[], AiResult],
             prompt: str,
@@ -151,7 +188,7 @@ class CliManager:
 
         return result
 
-    def format_openai_vision(
+    def format_ai_vision(
             self,
             callback: Callable[[], AiResult],
     ) -> AiResult:
@@ -172,9 +209,9 @@ class CliManager:
 
         return result
 
-    def format_points(self, points: List[ScoredPoint]) -> None:
+    def format_retrieved_points(self, points: List[ScoredPoint]) -> None:
         """
-        Format chunks of retreived points.
+        Format chunks of retrieved points.
         :param points: Retrieved points.
         """
         for point in points:
@@ -192,7 +229,31 @@ class CliManager:
                 self.format_chunk(point.payload['chunk_text'])
 
         if len(points) > 0:
-            logger.info(f"⚡ I found something: ({len(points)}) matching chunk(s)")
+            logger.info(f"⚡ I found something: ({len(points)}) retrieved chunk(s)")
+        else:
+            logger.info(f"⚡ I found nothing")
+
+    def format_reranked_points(self, points: List[ScoredPoint]) -> None:
+        """
+        Format chunks of reranked points.
+        :param points: Reranked points.
+        """
+        for point in points:
+
+            assert point.payload is not None
+
+            logger.info(
+                f"({point.score * 100:.2f} %) matching "
+                f"chunk ({point.payload['chunk_index'] + 1}) / ({point.payload['chunks_total']}) "
+                f"of {format_file(point.payload['file_path'])} "
+                f"@ {format_time(point.payload['file_mtime'])}:"
+            )
+
+            if CliManager.VERBOSE_RERANK:
+                self.format_chunk(point.payload['chunk_text'])
+
+        if len(points) > 0:
+            logger.info(f"⚡ I found something: ({len(points)}) reranked chunk(s)")
         else:
             logger.info(f"⚡ I found nothing")
 

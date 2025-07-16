@@ -280,78 +280,85 @@ class QdrantManager:
 
         return points
 
-    def query(self, question: str) -> Tuple[QuerySchema, str]:
+    def _expand_points(self, points: List[ScoredPoint]) -> List[ScoredPoint]:
         """
-        Get answer to question using RAG.
-        :param question: Question.
-        :return: (QuerySchema, formatted answer)
+        Expand points by adding preceding and following chunks.
+        :param points: Points to expand.
+        :return: Expanded points.
         """
-        points = self.search(question=question)
+        points_expanded = []
 
-        if self.expand_chunks_radius > 0:  # Expand points
-
-            # TODO: put into _expand_points function
-            points_expanded = []
-
-            for point in points:
-
-                points_expanded.extend(
-                    self._get_points(
-                        file_path=point.payload['file_path'],
-                        chunk_indices=[
-                            index for index in range(
-                                max(
-                                    0,
-                                    point.payload['chunk_index'] - self.expand_chunks_radius
-                                ),
-                                point.payload['chunk_index']
-                            )
-                        ],
-                    )
+        for point in points:
+            points_expanded.extend(
+                self._get_points(
+                    file_path=point.payload['file_path'],
+                    chunk_indices=[
+                        index for index in range(
+                            max(
+                                0,
+                                point.payload['chunk_index'] - self.expand_chunks_radius
+                            ),
+                            point.payload['chunk_index']
+                        )
+                    ],
                 )
+            )
 
-                points_expanded.append(point)
+            points_expanded.append(point)
 
-                points_expanded.extend(
-                    self._get_points(
-                        file_path=point.payload['file_path'],
-                        chunk_indices=[
-                            index for index in range(
-                                point.payload['chunk_index'] + 1,
-                                min(
-                                    point.payload['chunks_total'],
-                                    point.payload['chunk_index'] + self.expand_chunks_radius + 1
-                                )
+            points_expanded.extend(
+                self._get_points(
+                    file_path=point.payload['file_path'],
+                    chunk_indices=[
+                        index for index in range(
+                            point.payload['chunk_index'] + 1,
+                            min(
+                                point.payload['chunks_total'],
+                                point.payload['chunk_index'] + self.expand_chunks_radius + 1
                             )
-                        ],
-                    )
+                        )
+                    ],
                 )
+            )
 
-            # Sort points by file_path first and by chunk index second.
-            points_expanded = sorted(points_expanded, key=lambda _point: (_point.payload['file_path'], _point.payload['chunk_index']))
+        return points_expanded
 
-            # TODO: Put into _dedup_points function
-            unique_points = []
-            seen = set()
-            duplicates_by_file = {}
-            for p in points_expanded:
-                key = (p.payload['file_path'], p.payload['chunk_index'])
-                if key in seen:
-                    file_path = p.payload['file_path']
-                    duplicates_by_file.setdefault(file_path, set()).add(p.payload['chunk_index'])
-                else:
-                    seen.add(key)
-                    unique_points.append(p)
+    def _dedup_points(self, points: List[ScoredPoint]) -> List[ScoredPoint]:
+        """
+        Deduplicate points by file_path and chunk_index, sorting first.
+        :param points: Points to deduplicate.
+        :return: Unique points.
+        """
+        # Sort points by file_path first and by chunk index second.
+        points = sorted(points, key=lambda _point: (_point.payload['file_path'], _point.payload['chunk_index']))
 
-            if self.cli.VERBOSE_QUERY:
-                for file_path, dups in duplicates_by_file.items():
-                    if dups:
-                        logger.info(f"Deduplicated chunks for {format_file(file_path)}: {sorted(dups)}")
+        unique_points = []
+        seen = set()
+        duplicates_by_file = {}
+        for p in points:
+            key = (p.payload['file_path'], p.payload['chunk_index'])
+            if key in seen:
+                file_path = p.payload['file_path']
+                duplicates_by_file.setdefault(file_path, set()).add(p.payload['chunk_index'])
+            else:
+                seen.add(key)
+                unique_points.append(p)
 
-            points = unique_points
+        if self.cli.VERBOSE_QUERY:
+            for file_path, dups in duplicates_by_file.items():
+                if dups:
+                    logger.info(f"Deduplicated chunks for {format_file(file_path)}: {sorted(dups)}")
 
-        # TODO: put into _context_from_points function
-        context = "\n\n\n\n".join([
+        return unique_points
+
+    @staticmethod
+    def _context_from_points(points: List[ScoredPoint]) -> str:
+        """
+        Build context string from points.
+        :param points: Points.
+        :return: Context string.
+        """
+        return "\n\n\n\n".join([
             "\n\n".join([
                 f"<<< "
                 f"Chunk ({point.payload['chunk_index'] + 1}) / ({point.payload['chunks_total']}) "
@@ -363,6 +370,20 @@ class QdrantManager:
             for point in points
             if point.payload is not None  # makes pyright happy
         ])
+
+    def query(self, question: str) -> Tuple[QuerySchema, str]:
+        """
+        Get answer to question using RAG.
+        :param question: Question.
+        :return: (QuerySchema, formatted answer)
+        """
+        points = self.search(question=question)
+
+        if self.expand_chunks_radius > 0:  # Expand points
+            points_expanded = self._expand_points(points)
+            points = self._dedup_points(points_expanded)
+
+        context = self._context_from_points(points)
 
         query_result = self.ai.query(question, context)
         if query_result.reject:

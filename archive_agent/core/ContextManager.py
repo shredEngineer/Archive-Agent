@@ -86,8 +86,10 @@ class ContextManager:
             server_url=self.config.data[self.config.QDRANT_SERVER_URL],
             collection=self.config.data[self.config.QDRANT_COLLECTION],
             vector_size=self.config.data[self.config.AI_VECTOR_SIZE],
-            score_min=self.config.data[self.config.QDRANT_SCORE_MIN],
-            chunks_max=self.config.data[self.config.QDRANT_CHUNKS_MAX],
+            retrieve_score_min=self.config.data[self.config.RETRIEVE_SCORE_MIN],
+            retrieve_chunks_max=self.config.data[self.config.RETRIEVE_CHUNKS_MAX],
+            rerank_chunks_max=self.config.data[self.config.RERANK_CHUNKS_MAX],
+            expand_chunks_radius=self.config.data[self.config.EXPAND_CHUNKS_RADIUS],
         )
 
         self.committer = CommitManager(self.watchlist, self.ai, self.decoder_settings, self.qdrant)
@@ -112,6 +114,7 @@ class ContextManager:
             params=AiProviderParams(
                 model_chunk=self.config.data[self.config.AI_MODEL_CHUNK],
                 model_embed=self.config.data[self.config.AI_MODEL_EMBED],
+                model_rerank=self.config.data[self.config.AI_MODEL_RERANK],
                 model_query=self.config.data[self.config.AI_MODEL_QUERY],
                 model_vision=self.config.data[self.config.AI_MODEL_VISION],
                 temperature_query=self.config.data[self.config.AI_TEMPERATURE_QUERY],

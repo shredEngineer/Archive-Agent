@@ -213,7 +213,7 @@ class FileData:
         for chunk_index, chunk in enumerate(chunks):
             logger.info(f"Processing chunk ({chunk_index + 1}) / ({len(chunks)}) of {format_file(self.file_path)}")
 
-            vector = self.ai.embed(chunk)
+            vector = self.ai.embed(text=chunk)
 
             self.points.append(
                 PointStruct(

@@ -14,12 +14,13 @@
 [![Verified on MCPHub](https://img.shields.io/badge/MCPHub-verified-green)](https://mcphub.com/mcp-servers/shredEngineer/Archive-Agent)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/shredEngineer/Archive-Agent)
 
-- **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine**
+- **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine:**  
+  - Fast and effective [Semantic Chunking](#how-smart-chunking-works)
+  - [Retrieval](#how-chunks-are-retrieved) with [Reranking and Expanding](#how-chunks-are-reranked-and-expanded)
+  - [File tracking](#how-files-are-selected-for-tracking) and [automatic OCR](#ocr-strategies)
 - **Supported AI providers: [OpenAI](https://platform.openai.com/docs/overview), [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/)**
 - **[MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension**
-- Fast and effective semantic chunking (**smart chunking**)
 - [Qdrant](https://qdrant.tech/) vector DB *(running locally)* for storage and search
-- Automatic OCR and AI cache save costs and headaches
 - **100% dev-friendly:** Clean docs and code ✨
 
 ---
@@ -74,10 +75,12 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
     * [LM Studio provider setup](#lm-studio-provider-setup)
   * [How Archive Agent works](#how-archive-agent-works)
     * [Which files are processed](#which-files-are-processed)
-    * [OCR strategies](#ocr-strategies)
     * [How files are processed](#how-files-are-processed)
+    * [OCR strategies](#ocr-strategies)
     * [How smart chunking works](#how-smart-chunking-works)
     * [How chunks are retrieved](#how-chunks-are-retrieved)
+    * [How chunks are reranked and expanded](#how-chunks-are-reranked-and-expanded)
+    * [How answers are generated](#how-answers-are-generated)
     * [How files are selected for tracking](#how-files-are-selected-for-tracking)
   * [Run Archive Agent](#run-archive-agent)
     * [Show list of commands](#show-list-of-commands)
@@ -235,31 +238,8 @@ At least 32 GiB RAM is recommended for smooth performance.
   - Documents:
     - ASCII documents: `.html`, `.htm`
     - Binary documents: `.odt`, `.docx` (including images)
-  - PDF documents: `.pdf` (including images, see note below)
+  - PDF documents: `.pdf` (including images, see [OCR strategies](#ocr-strategies))
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
-
-### OCR strategies
-
-For PDF documents, there are different OCR strategies supported by **Archive Agent**:
-
-- `auto` OCR strategy:
-  - Selects best OCR strategy for each page based on the number of characters extracted from the PDF OCR text layer, if any. 
-  - Decides based on `ocr_auto_threshold` (see [Archive Agent settings](#archive-agent-settings)), the minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict`.
-  - **Optimal trade-off between cost, speed, and accuracy.**
-
-
-- `strict` OCR strategy:
-  - PDF OCR text layer is *ignored*.
-  - PDF pages are treated as images.
-  - **Expensive and slow, but more accurate.**
-
-
-- `relaxed` OCR strategy:
-  - PDF OCR text layer is extracted.
-  - PDF foreground images are decoded, but background images are *ignored*.
-  - **Cheap and fast, but less accurate.**
-
-💡 **Good to know:** You will be prompted to choose an OCR strategy at startup (see [Run Archive Agent](#run-archive-agent)).
 
 ### How files are processed
 
@@ -274,6 +254,32 @@ Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
 
 📌 **Note:** Unsupported files are tracked but not processed.
 
+### OCR strategies
+
+For PDF documents, there are different OCR strategies supported by **Archive Agent**:
+
+- `auto` OCR strategy:
+  - Selects best OCR strategy for each page based on the number of characters extracted from the PDF OCR text layer, if any. 
+  - Decides based on `ocr_auto_threshold`, the minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict`.
+  - **Optimal trade-off between cost, speed, and accuracy.**
+
+
+- `strict` OCR strategy:
+  - PDF OCR text layer is *ignored*.
+  - PDF pages are treated as images.
+  - **Expensive and slow, but more accurate.**
+
+
+- `relaxed` OCR strategy:
+  - PDF OCR text layer is extracted.
+  - PDF foreground images are decoded, but background images are *ignored*.
+  - **Cheap and fast, but less accurate.**
+
+
+See [Archive Agent settings](#archive-agent-settings): `ocr_strategy`, `ocr_auto_threshold`
+
+💡 **Good to know:** You will be prompted to choose an OCR strategy at startup (see [Run Archive Agent](#run-archive-agent)).
+
 ### How smart chunking works
 
 **Archive Agent** processes decoded text like this:
@@ -285,6 +291,8 @@ Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
 - Each vector is turned into a *point* with file metadata.
 - Each *point* is stored in the Qdrant database.
 
+See [Archive Agent settings](#archive-agent-settings): `chunk_lines_block`
+
 💡 **Good to know:** This **smart chunking** improves the accuracy and effectiveness of the retrieval. 
 
 ### How chunks are retrieved
@@ -292,13 +300,27 @@ Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
 **Archive Agent** retrieves chunks related to your question like this:
 - The question is turned into a vector using AI embeddings.
 - Points with similar vectors are retrieved from the Qdrant database.
-- Chunks of points with sufficient score are returned.
+- Only chunks of points with sufficient score are kept.
 
-**Archive Agent** answers your question using retrieved chunks like this:
-- The LLM receives the retrieved chunks as context to the question.
-- The LLM's answer is returned and formatted.
+See [Archive Agent settings](#archive-agent-settings): `retrieve_score_min`, `retrieve_chunks_max`
 
-The LLM's answer is structured to be multi-faceted, making **Archive Agent** a helpful assistant.
+### How chunks are reranked and expanded
+
+**Archive Agent** filters the retrieved chunks .
+
+- The retrieved chunks are reranked by relevance to your question.
+- Only the top relevant chunks are kept (the other chunks are discarded).
+- Each selected chunk is expanded to get a larger context from the relevant documents.
+
+See [Archive Agent settings](#archive-agent-settings): `rerank_chunks_max`, `expand_chunks_radius`
+
+### How answers are generated
+
+**Archive Agent** answers your question using the reranked and expanded chunks like this:
+- The LLM receives the chunks as context to the question.
+- The LLM's answer is returned as structured output and formatted.
+
+💡 **Good to know:** **Archive Agent** uses an answer template that aims to be universally helpful.
 
 ### How files are selected for tracking
 
@@ -434,17 +456,9 @@ To sync changes to your files with the Qdrant database, run this:
 archive-agent commit
 ```
 
-To see additional information on chunking and embedding, pass the `--verbose` option:
+To see additional information on chunking and embedding, pass the `--verbose` option.
 
-```bash
-archive-agent commit --verbose
-```
-
-To bypass the [AI cache](#ai-cache) for this commit, pass the `--nocache` option:
-
-```bash
-archive-agent commit --nocache
-```
+To bypass the [AI cache](#ai-cache) (vision, chunking, embedding) for this commit, pass the `--nocache` option.
 
 💡 **Good to know:** Changes are triggered by:
 - File added
@@ -463,17 +477,9 @@ To `track` and then `commit` in one go, run this:
 archive-agent update
 ```
 
-To see additional information on chunking and embedding, pass the `--verbose` option:
+To see additional information on chunking and embedding, pass the `--verbose` option.
 
-```bash
-archive-agent update --verbose
-```
-
-To bypass the [AI cache](#ai-cache) for this commit, pass the `--nocache` option:
-
-```bash
-archive-agent update --nocache
-```
+To bypass the [AI cache](#ai-cache) (vision, chunking, embedding) for this commit, pass the `--nocache` option.
 
 ### Search your files
 
@@ -485,6 +491,10 @@ Lists files relevant to the question.
 
 📌 **Note:** **Always use quotes** for the question argument, **or skip it** to get an interactive prompt.
 
+To see additional information on embedding, retrieval, reranking and querying, pass the `--verbose` option.
+
+To bypass the [AI cache](#ai-cache) (embedding, reranking) for this search, pass the `--nocache` option.
+
 ### Query your files
 
 ```bash
@@ -494,6 +504,10 @@ archive-agent query "Which files mention donuts?"
 Answers your question using RAG.
 
 📌 **Note:** **Always use quotes** for the question argument, **or skip it** to get an interactive prompt.
+
+To see additional information on embedding, retrieval, reranking and querying, pass the `--verbose` option.
+
+To bypass the [AI cache](#ai-cache) (embedding, reranking) for this query, pass the `--nocache` option.
 
 ### Launch Archive Agent GUI
 
@@ -583,26 +597,28 @@ The profile configuration is contained in the profile folder as `config.json`.
 
 💡 **Good to know:** Use the `switch` CLI command to switch to a new or existing profile (see [Create or switch profile](#create-or-switch-profile)).
 
-
   | Key                    | Description                                                                                      |
   |------------------------|--------------------------------------------------------------------------------------------------|
   | `config_version`       | Config version                                                                                   |
+  | `mcp_server_port`      | MCP server port (default `8008`)                                                                 |
   | `ocr_strategy`         | OCR strategy in [`DecoderSettings.py`](archive_agent/config/DecoderSettings.py)                  |
   | `ocr_auto_threshold`   | Minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict` |
+  | `chunk_lines_block`    | Number of lines per block for chunking                                                           |
+  | `qdrant_server_url`    | URL of the Qdrant server                                                                         |
+  | `qdrant_collection`    | Name of the Qdrant collection                                                                    |
+  | `retrieve_score_min`   | Minimum similarity score of retrieved chunks (`0`...`1`)                                         |
+  | `retrieve_chunks_max`  | Maximum number of retrieved chunks                                                               |
+  | `rerank_chunks_max`    | Number of top chunks to keep after reranking                                                     |
+  | `expand_chunks_radius` | Number of preceding and following chunks to prepend and append to each reranked chunk            |
   | `ai_provider`          | AI provider in [`ai_provider_registry.py`](archive_agent/ai_provider/ai_provider_registry.py)    |
   | `ai_server_url`        | AI server URL                                                                                    |
   | `ai_model_chunk`       | AI model used for chunking                                                                       |
   | `ai_model_embed`       | AI model used for embedding                                                                      |
+  | `ai_model_rerank`      | AI model used for reranking                                                                      |
   | `ai_model_query`       | AI model used for queries                                                                        |
   | `ai_model_vision`      | AI model used for vision (`""` disables vision)                                                  |
   | `ai_vector_size`       | Vector size of embeddings (used for Qdrant collection)                                           |
   | `ai_temperature_query` | Temperature of the query model                                                                   |
-  | `qdrant_server_url`    | URL of the Qdrant server                                                                         |
-  | `qdrant_collection`    | Name of the Qdrant collection                                                                    |
-  | `qdrant_score_min`     | Minimum similarity score of retrieved chunks (`0`...`1`)                                         |
-  | `qdrant_chunks_max`    | Maximum number of retrieved chunks                                                               |
-  | `chunk_lines_block`    | Number of lines per block for chunking                                                           |
-  | `mcp_server_port`      | MCP server port (default `8008`)                                                                 |
 
 ### Watchlist
 
@@ -618,9 +634,10 @@ The watchlist is managed by these commands only:
 Each profile folder also contains an `ai_cache` folder.
 
 The AI cache ensures that, in a given profile:
+- The same image is only OCR-ed once.
 - The same text is only chunked once.
 - The same text is only embedded once.
-- The same image is only OCR-ed once.
+- The same combination of chunks is only reranked once.
 
 This way, **Archive Agent** can quickly resume where it left off if a commit was interrupted.
 
@@ -631,7 +648,7 @@ To bypass the AI cache for a single commit, pass the `--nocache` option to the `
 
 📌 **Note:** To clear the entire AI cache, simply delete the profile's cache folder.
 
-📌 **Technical Note:** **Archive Agent** keys the cache using a composite hash made from the text/image bytes, and of the AI model names for chunking, embedding, and vision.
+📌 **Technical Note:** **Archive Agent** keys the cache using a composite hash made from the text/image bytes, and of the AI model names for chunking, embedding, reranking, and vision.
 Cache keys are deterministic and change generated whenever you change the *chunking*, *embedding* or *vision* AI model names.
 Since cache entries are retained forever, switching back to a prior combination of AI model names will again access the "old" keys.  
 

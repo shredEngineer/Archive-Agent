@@ -144,7 +144,7 @@ def diff() -> None:
 
 @app.command()
 def commit(
-        invalidate_cache: bool = typer.Option(
+        nocache: bool = typer.Option(
             False,
             "--nocache",
             help="Invalidate the AI cache for this commit."
@@ -158,7 +158,7 @@ def commit(
     """
     Sync changed files with the Qdrant database.
     """
-    context = ContextManager(invalidate_cache=invalidate_cache, verbose=verbose)
+    context = ContextManager(invalidate_cache=nocache, verbose=verbose)
 
     context.committer.commit()
 
@@ -167,7 +167,7 @@ def commit(
 
 @app.command()
 def update(
-        invalidate_cache: bool = typer.Option(
+        nocache: bool = typer.Option(
             False,
             "--nocache",
             help="Invalidate the AI cache for this commit."
@@ -181,7 +181,7 @@ def update(
     """
     `track` and then `commit` in one go.
     """
-    context = ContextManager(invalidate_cache=invalidate_cache, verbose=verbose)
+    context = ContextManager(invalidate_cache=nocache, verbose=verbose)
 
     context.watchlist.track()
 
@@ -191,26 +191,50 @@ def update(
 
 
 @app.command()
-def search(question: str = typer.Argument(None)) -> None:
+def search(
+        question: str = typer.Argument(None),
+        nocache: bool = typer.Option(
+            False,
+            "--nocache",
+            help="Invalidate the AI cache for this search."
+        ),
+        verbose: bool = typer.Option(
+            False,
+            "--verbose",
+            help="Show additional embedding and reranking information."
+        ),
+) -> None:
     """
     List files relevant to the question.
     """
-    context = ContextManager()
+    context = ContextManager(invalidate_cache=nocache, verbose=verbose)
 
     if question is None:
         question = context.cli.prompt("What's up?", is_cmd=True)
 
-    _chunks = context.qdrant.search(question)
+    _points = context.qdrant.search(question)
 
     context.ai.usage()
 
 
 @app.command()
-def query(question: str = typer.Argument(None)) -> None:
+def query(
+        question: str = typer.Argument(None),
+        nocache: bool = typer.Option(
+            False,
+            "--nocache",
+            help="Invalidate the AI cache for this query."
+        ),
+        verbose: bool = typer.Option(
+            False,
+            "--verbose",
+            help="Show additional embedding and reranking information."
+        ),
+) -> None:
     """
     Get answer to question using RAG.
     """
-    context = ContextManager()
+    context = ContextManager(invalidate_cache=nocache, verbose=verbose)
 
     if question is None:
         question = context.cli.prompt("What's up?", is_cmd=True)

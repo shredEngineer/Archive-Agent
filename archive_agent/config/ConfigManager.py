@@ -28,25 +28,25 @@ class ConfigManager(StorageManager, AiProviderKeys):
 
     CONFIG_VERSION = 'config_version'
 
-    QDRANT_SERVER_URL = 'qdrant_server_url'
-    QDRANT_COLLECTION = 'qdrant_collection'
-    QDRANT_SCORE_MIN = 'qdrant_score_min'
-    QDRANT_CHUNKS_MAX = 'qdrant_chunks_max'
-    CHUNK_LINES_BLOCK = 'chunk_lines_block'
-
     MCP_SERVER_PORT = 'mcp_server_port'
 
     OCR_STRATEGY = 'ocr_strategy'
     OCR_AUTO_THRESHOLD = 'ocr_auto_threshold'
 
-    DEFAULT_CONFIG = {
-        CONFIG_VERSION: 6,  # DON'T FORGET TO UPDATE BOTH  `CONFIG_VERSION`  AND  `upgrade()`
+    CHUNK_LINES_BLOCK = 'chunk_lines_block'
 
-        QDRANT_SERVER_URL: "http://localhost:6333",
-        QDRANT_COLLECTION: "archive-agent",
-        QDRANT_SCORE_MIN: .2,
-        QDRANT_CHUNKS_MAX: 20,
-        CHUNK_LINES_BLOCK: 50,
+    QDRANT_SERVER_URL = 'qdrant_server_url'
+    QDRANT_COLLECTION = 'qdrant_collection'
+
+    RETRIEVE_SCORE_MIN = 'retrieve_score_min'
+    RETRIEVE_CHUNKS_MAX = 'retrieve_chunks_max'
+
+    RERANK_CHUNKS_MAX = 'rerank_chunks_max'
+
+    EXPAND_CHUNKS_RADIUS = 'expand_chunks_radius'
+
+    DEFAULT_CONFIG = {
+        CONFIG_VERSION: 7,  # TODO:  DON'T FORGET TO UPDATE BOTH  `CONFIG_VERSION`  AND  `upgrade()`
 
         MCP_SERVER_PORT: 8008,
 
@@ -55,11 +55,24 @@ class ConfigManager(StorageManager, AiProviderKeys):
 
         OCR_AUTO_THRESHOLD: 32,
 
+        CHUNK_LINES_BLOCK: 50,
+
+        QDRANT_SERVER_URL: "http://localhost:6333",
+        QDRANT_COLLECTION: "archive-agent",
+
+        RETRIEVE_SCORE_MIN: .2,
+        RETRIEVE_CHUNKS_MAX: 50,
+
+        RERANK_CHUNKS_MAX: 15,
+
+        EXPAND_CHUNKS_RADIUS: 1,
+
         # deferred to `_prompt_ai_provider`
         AiProviderKeys.AI_PROVIDER: "",
         AiProviderKeys.AI_SERVER_URL: "",
         AiProviderKeys.AI_MODEL_CHUNK: "",
         AiProviderKeys.AI_MODEL_EMBED: "",
+        AiProviderKeys.AI_MODEL_RERANK: "",
         AiProviderKeys.AI_MODEL_QUERY: "",
         AiProviderKeys.AI_MODEL_VISION: "",
         AiProviderKeys.AI_VECTOR_SIZE: 0,
@@ -197,6 +210,25 @@ class ConfigManager(StorageManager, AiProviderKeys):
             self.data[self.OCR_STRATEGY] = 'auto'
             logger.warning("Your config has been updated to use the new 'auto' OCR strategy.")
 
+            upgraded = True
+
+        # Option(s) added in v7:
+        # - `ai_model_rerank`
+        # - `rerank_chunks_max`
+        # - `expand_chunks_radius`
+        # Option(s) renamed in v7:
+        # - `qdrant_score_min`   --> `retrieve_score_min`
+        # - `qdrant_chunks_max`  --> `retrieve_chunks_max`
+        if version < 7:
+            self._set_version(7)
+            self._add_option(
+                self.AI_MODEL_RERANK,
+                default=ai_provider_registry[self.data[self.AI_PROVIDER]]["defaults"][self.AI_MODEL_RERANK],
+            )
+            self._add_option(self.RERANK_CHUNKS_MAX)
+            self._add_option(self.EXPAND_CHUNKS_RADIUS)
+            self._rename_option('qdrant_score_min', self.RETRIEVE_SCORE_MIN)
+            self._rename_option('qdrant_chunks_max', self.RETRIEVE_CHUNKS_MAX)
             upgraded = True
 
         return upgraded

@@ -2,12 +2,14 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import logging
-from typing import cast, List
+import json
+from typing import cast, List, Dict
 
 from archive_agent.ai.AiResult import AiResult
 from archive_agent.ai_provider.AiProvider import AiProvider
 
 from archive_agent.ai_schema.ChunkSchema import ChunkSchema
+from archive_agent.ai_schema.RerankSchema import RerankSchema
 from archive_agent.ai_schema.QuerySchema import QuerySchema
 from archive_agent.ai_schema.VisionSchema import VisionSchema
 
@@ -50,7 +52,7 @@ class AiManager(RetryManager):
         ])
 
     @staticmethod
-    def get_prompt_query(question: str, context: str):
+    def get_prompt_query(question: str, context: str) -> str:
         return "\n".join([
             "Act as a RAG query agent for a semantic retrieval system (Retrieval-Augmented Generation / RAG).",
             "Your only source of truth is the provided context. Do NOT use any other knowledge.",
@@ -108,7 +110,32 @@ class AiManager(RetryManager):
         ])
 
     @staticmethod
-    def get_prompt_vision():
+    def get_prompt_rerank(question: str, indexed_chunks_json_text: str) -> str:
+        return "\n".join([
+            "Act as a reranking agent for a semantic retrieval system (Retrieval-Augmented Generation / RAG).",
+            "You are given a list of text chunks as a JSON array, where each array index corresponds to the chunk index.",
+            "Given these chunks and a question, your task is to assess the semantic relevance of each chunk to the question.",
+            "You must output only the `reranked_indices` field, as described below.",
+            "Do not return any explanations or additional fields.",
+            "",
+            "RESPONSE FIELD:",
+            "",
+            "- `reranked_indices`:",
+            "    A list of integer indices, sorted by descending relevance (most relevant first).",
+            "    The list must contain each provided index exactly once.",
+            "",
+            "RERANKING GUIDELINES:",
+            "- Consider only the provided chunk texts and the question.",
+            "- Assess semantic relevance, not superficial similarity.",
+            "- If several chunks are equally relevant, preserve their original order.",
+            "",
+            "Chunks (JSON array):\n" + indexed_chunks_json_text,
+            "",
+            "Question:\n\"\"\"\n" + question + "\n\"\"\"",
+        ])
+
+    @staticmethod
+    def get_prompt_vision() -> str:
         return "\n".join([
             "Act as a vision agent for a semantic retrieval system (Retrieval-Augmented Generation / RAG).",
             "Your task is to extract clean, modular, maximally relevant units of visual information from an image.",
@@ -194,6 +221,7 @@ class AiManager(RetryManager):
 
         self.total_tokens_chunk = 0
         self.total_tokens_embed = 0
+        self.total_tokens_rerank = 0
         self.total_tokens_query = 0
         self.total_tokens_vision = 0
 
@@ -214,12 +242,13 @@ class AiManager(RetryManager):
         Show usage.
         """
         if any([x > 0 for x in [
-            self.total_tokens_chunk, self.total_tokens_embed, self.total_tokens_query, self.total_tokens_vision
+            self.total_tokens_chunk, self.total_tokens_embed, self.total_tokens_rerank, self.total_tokens_query, self.total_tokens_vision
         ]]):
             logger.info(
                 f"Used AI API token(s): "
                 f"({self.total_tokens_chunk}) chunking, "
                 f"({self.total_tokens_embed}) embedding, "
+                f"({self.total_tokens_rerank}) reranking, "
                 f"({self.total_tokens_query}) query, "
                 f"({self.total_tokens_vision}) vision"
             )
@@ -234,12 +263,12 @@ class AiManager(RetryManager):
         :return: ChunkSchema.
         """
         line_numbered_text = "\n".join(prepend_line_numbers(sentences))
-        prompt = self.get_prompt_chunk(line_numbered_text)
-        callback = lambda: self.ai_provider.chunk_callback(prompt)
+        prompt = self.get_prompt_chunk(line_numbered_text=line_numbered_text)
+        callback = lambda: self.ai_provider.chunk_callback(prompt=prompt)
 
         for _ in range(retries):
             try:
-                result: AiResult = self.cli.format_openai_chunk(lambda: self.retry(callback), line_numbered_text)
+                result: AiResult = self.cli.format_ai_chunk(callback=lambda: self.retry(callback), line_numbered_text=line_numbered_text)
                 self.total_tokens_chunk += result.total_tokens
 
                 if result.parsed_schema is None:
@@ -250,7 +279,7 @@ class AiManager(RetryManager):
                 if len(result.parsed_schema.chunk_start_lines) == 0:
                     raise RuntimeError(f"Missing chunk start lines: {result.parsed_schema.chunk_start_lines}")
 
-                # Let's allow some slack from weaker of overloaded LLMs here...
+                # Let's allow some slack from weaker or overloaded LLMs here...
                 if result.parsed_schema.chunk_start_lines[0] != 1:
                     result.parsed_schema.chunk_start_lines.insert(0, 1)
                     logger.warning(f"Fixed first chunk start lines: {result.parsed_schema.chunk_start_lines}")
@@ -271,10 +300,50 @@ class AiManager(RetryManager):
         """
         callback = lambda: self.ai_provider.embed_callback(text)
 
-        result: AiResult = self.cli.format_openai_embed(lambda: self.retry(callback), text)
+        result: AiResult = self.cli.format_ai_embed(callback=lambda: self.retry(callback), text=text)
         self.total_tokens_embed += result.total_tokens
         assert result.embedding is not None
         return result.embedding
+
+    def rerank(self, question: str, indexed_chunks: Dict[int, str], retries: int = 10) -> RerankSchema:
+        """
+        Get reranked chunks based on relevance to question.
+        :param question: Question.
+        :param indexed_chunks: Indexed chunks.
+        :param retries: Number of retries.
+        :return: RerankSchema.
+        """
+        indexed_chunks_json_text = json.dumps(indexed_chunks, ensure_ascii=False, indent=2)
+        prompt = self.get_prompt_rerank(question=question, indexed_chunks_json_text=indexed_chunks_json_text)
+        callback = lambda: self.ai_provider.rerank_callback(prompt=prompt)
+
+        for _ in range(retries):
+            try:
+                result: AiResult = self.cli.format_ai_rerank(callback=lambda: self.retry(callback), indexed_chunks=indexed_chunks)
+                self.total_tokens_rerank += result.total_tokens
+
+                if result.parsed_schema is None:
+                    raise RuntimeError("No parsed schema returned")
+
+                result.parsed_schema = cast(RerankSchema, result.parsed_schema)
+
+                reranked = result.parsed_schema.reranked_indices
+                expected = list(indexed_chunks.keys())
+
+                if sorted(reranked) != sorted(expected):
+                    raise RuntimeError(
+                        f"Reranked indices are not a valid permutation of original indices:\n"
+                        f"Original: {expected}\n"
+                        f"Reranked: {reranked}"
+                    )
+
+                return result.parsed_schema
+
+            except Exception as e:
+                logger.exception(f"Reranking error: {e}")
+                continue  # Retry
+
+        raise RuntimeError("Failed to recover from reranking errors")
 
     def query(self, question: str, context: str) -> QuerySchema:
         """
@@ -283,10 +352,10 @@ class AiManager(RetryManager):
         :param context: RAG context.
         :return: QuerySchema.
         """
-        prompt = self.get_prompt_query(question, context)
-        callback = lambda: self.ai_provider.query_callback(prompt)
+        prompt = self.get_prompt_query(question=question, context=context)
+        callback = lambda: self.ai_provider.query_callback(prompt=prompt)
 
-        result: AiResult = self.cli.format_openai_query(lambda: self.retry(callback), prompt)
+        result: AiResult = self.cli.format_ai_query(callback=lambda: self.retry(callback), prompt=prompt)
         self.total_tokens_query += result.total_tokens
         assert result.parsed_schema is not None
         result.parsed_schema = cast(QuerySchema, result.parsed_schema)
@@ -299,9 +368,9 @@ class AiManager(RetryManager):
         :return: VisionSchema.
         """
         prompt = self.get_prompt_vision()
-        callback = lambda: self.ai_provider.vision_callback(prompt, image_base64)
+        callback = lambda: self.ai_provider.vision_callback(prompt=prompt, image_base64=image_base64)
 
-        result: AiResult = self.cli.format_openai_vision(lambda: self.retry(callback))
+        result: AiResult = self.cli.format_ai_vision(callback=lambda: self.retry(callback))
         self.total_tokens_vision += result.total_tokens
         assert result.parsed_schema is not None
         result.parsed_schema = cast(VisionSchema, result.parsed_schema)

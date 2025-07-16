@@ -13,6 +13,7 @@ from archive_agent.ai.AiResult import AiResult
 from archive_agent.ai_provider.AiProviderParams import AiProviderParams
 
 from archive_agent.ai_schema.ChunkSchema import ChunkSchema
+from archive_agent.ai_schema.RerankSchema import RerankSchema
 from archive_agent.ai_schema.QuerySchema import QuerySchema
 from archive_agent.ai_schema.VisionSchema import VisionSchema
 
@@ -118,6 +119,53 @@ class OpenAiProvider(AiProvider):
         return AiResult(
             total_tokens=response.usage.total_tokens,
             embedding=response.data[0].embedding,
+        )
+
+    def _perform_rerank_callback(self, prompt: str) -> AiResult:
+        """
+        Rerank callback.
+        :param prompt: Prompt.
+        :return: AI result.
+        :raises AiProviderError: On error.
+        """
+        # noinspection PyTypeChecker
+        response = self.client.responses.create(
+            model=self.params.model_rerank,
+            temperature=0,
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": prompt,
+                        },
+                    ],
+                },
+            ],
+            text={
+                "format": {
+                    "type": "json_schema",
+                    "name": RerankSchema.__name__,
+                    "schema": RerankSchema.model_json_schema(),
+                    "strict": True,
+                },
+            },
+        )
+
+        if getattr(response, "refusal", None):
+            raise AiProviderError(getattr(response, "refusal", None))
+
+        json_raw = response.output[0].content[0].text
+        try:
+            parsed_schema = RerankSchema.model_validate_json(json_raw)
+        except Exception as e:
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
+
+        return AiResult(
+            total_tokens=response.usage.total_tokens if response.usage else 0,  # check makes pyright happy
+            output_text=response.output_text,
+            parsed_schema=parsed_schema,
         )
 
     def _perform_query_callback(self, prompt: str) -> AiResult:

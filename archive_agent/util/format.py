@@ -20,7 +20,6 @@ def format_time(timestamp: float) -> str:
 def format_file(file_path: str | pathlib.Path) -> str:
     """
     Format file path as file:// URI, escaping special characters like spaces.
-
     :param file_path: File path.
     :return: File path formatted as file:// URI.
     """
@@ -34,3 +33,14 @@ def format_file(file_path: str | pathlib.Path) -> str:
         uri_path = str(abs_path)
 
     return f"file://{urllib.parse.quote(uri_path, safe='/')}"
+
+
+def format_chunk_brief(chunk: str, max_len: int = 160) -> str:
+    """
+    Format chunk as brief string.
+    :param chunk: Chunk.
+    :param max_len: Maximum string length.
+    :return: Brief string.
+    """
+    chunk_brief = chunk.replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t")
+    return f"{chunk_brief[:max_len]}…" if len(chunk_brief) > max_len else f"{chunk_brief}"

@@ -123,6 +123,29 @@ class AiProvider(ABC):
         )
 
     @abstractmethod
+    def _perform_rerank_callback(self, prompt: str) -> AiResult:
+        """
+        Perform rerank callback.
+        :param prompt: Prompt.
+        :return: AI result.
+        :raises AiProviderError: On error.
+        """
+        raise NotImplementedError
+
+    def rerank_callback(self, prompt: str) -> AiResult:
+        """
+        Rerank callback.
+        :param prompt: Prompt.
+        :return: AI result.
+        :raises AiProviderError: On error.
+        """
+        return self._handle_cached_request(
+            cache_key_prefix="rerank_callback",
+            callback=self._perform_rerank_callback,
+            callback_kwargs=dict(prompt=prompt),
+        )
+
+    @abstractmethod
     def _perform_query_callback(self, prompt: str) -> AiResult:
         """
         Perform query callback.
