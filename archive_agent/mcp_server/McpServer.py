@@ -92,9 +92,8 @@ async def get_answer_rag(question: str) -> Dict[str, Any]:
     :param question: Question.
     :return: {
         "question_rephrased": str,
-        "answer_details_list": List[str],
+        "answer_list": [{"answer": str, "chunk_ref_list": List[str]}],
         "answer_conclusion": str,
-        "chunk_references_list": List[str],
         "follow_up_questions_list": List[str],
         "is_rejected": bool,
         "rejection_reason": Optional[str]
@@ -104,11 +103,11 @@ async def get_answer_rag(question: str) -> Dict[str, Any]:
     assert _context is not None  # makes pyright happy
     query_result, _answer = _context.qdrant.query(question)
     query_result = cast(QuerySchema, query_result)
+
     return {
         "question_rephrased":       query_result.question_rephrased,
-        "answer_details_list":      query_result.answer_list,
+        "answer_list":              [{"answer": item.answer, "chunk_ref_list": item.chunk_ref_list} for item in query_result.answer_list],
         "answer_conclusion":        query_result.answer_conclusion,
-        "chunk_references_list":    query_result.chunk_ref_list,
         "follow_up_questions_list": query_result.follow_up_list,
         "is_rejected":              query_result.reject,
         "rejection_reason":         query_result.rejection_reason,

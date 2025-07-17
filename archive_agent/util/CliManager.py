@@ -310,14 +310,30 @@ class CliManager:
             )
             return ""
 
-        answer_list_text = "\n".join([
-            f"- {answer_text}"
-            for answer_text in query_result.answer_list
-        ])
+        # Create a list of unique references in order of appearance
+        all_refs_ordered = []
+        ref_map = {}
+        for item in query_result.answer_list:
+            for ref in item.chunk_ref_list:
+                if ref not in ref_map:
+                    ref_map[ref] = len(all_refs_ordered) + 1
+                    all_refs_ordered.append(ref)
+
+        answers_formatted = []
+        for item in query_result.answer_list:
+            ref_markers = ""
+            if item.chunk_ref_list:
+                # Sort the references by their appearance order for this answer
+                sorted_refs = sorted(list(set(item.chunk_ref_list)), key=lambda r: ref_map[r])
+                ref_numbers = [ref_map[ref] for ref in sorted_refs]
+                ref_markers = " " + " ".join(f"**[{num}]**" for num in ref_numbers)
+            answers_formatted.append(f"- {item.answer}{ref_markers}")
+
+        answer_list_text = "\n".join(answers_formatted)
 
         chunk_ref_list_text = "\n".join([
-            f"- {chunk_ref}"
-            for chunk_ref in query_result.chunk_ref_list
+            f"**[{i + 1}]** {ref}"
+            for i, ref in enumerate(all_refs_ordered)
         ])
 
         follow_up_list_text = "\n".join([
@@ -325,18 +341,18 @@ class CliManager:
             for follow_up in query_result.follow_up_list
         ])
 
-        answer_text = "\n\n".join([
+        answer_text = "\n\n".join(filter(None, [
             f"### Question",
             f"**{query_result.question_rephrased}**",
             f"### Answers",
             f"{answer_list_text}",
             f"### Conclusion",
             f"**{query_result.answer_conclusion}**",
-            f"### References",
-            f"{chunk_ref_list_text}",
+            f"### References" if chunk_ref_list_text else "",
+            chunk_ref_list_text if chunk_ref_list_text else "",
             f"### Follow-Up Questions",
             f"{follow_up_list_text}",
-        ])
+        ]))
 
         self.console.print(Panel(f"{answer_text}", title="Answer", style="green", border_style="green"))
 

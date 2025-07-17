@@ -26,7 +26,7 @@ class GuiManager:
         """
         Initialize GUI manager.
         """
-        st.set_page_config(page_title="Archive Agent", layout="centered")
+        st.set_page_config(page_title="Archive Agent", page_icon="⚡", layout="centered")
 
         self.context = ContextManager()
 
@@ -105,7 +105,7 @@ class GuiManager:
         Displays answer with a copy button above.
         :param answer: Answer.
         """
-        st.markdown(answer, unsafe_allow_html=True)
+        st.markdown(answer)
         st_copy_to_clipboard(answer, "Copy")
 
 
