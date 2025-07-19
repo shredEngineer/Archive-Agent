@@ -38,13 +38,13 @@ class GuiManager:
         self._render_layout()
 
     @staticmethod
-    def format_chunk_refs(text: str) -> str:
+    def postprocess_answer_text(text: str) -> str:
         """
-        Format chunk reference designators in the text.
+        Postprocess answer text: Make file URIs clickable Markdown links.
         :param text: Text.
         :return: Text.
         """
-        return replace_file_uris_with_markdown(text.replace("<<< ", "").replace(" >>>", ""))
+        return replace_file_uris_with_markdown(text)
 
     def get_answer(self, question: str) -> str:
         """
@@ -53,10 +53,10 @@ class GuiManager:
         :return: Answer.
         """
         query_result, answer_text = self.context.qdrant.query(question)
-        if query_result.reject:
+        if query_result.is_rejected:
             return f"**Query rejected:** {query_result.rejection_reason}"
         else:
-            return self.format_chunk_refs(answer_text)
+            return self.postprocess_answer_text(answer_text)
 
     def _render_layout(self) -> None:
         """

@@ -1,7 +1,7 @@
 [project]
 name = "archive-agent"
-version = "4.3.1"
-description = "Archive Agent is an open-source semantic file tracker with OCR + AI search (RAG) and MCP capability."
+version = "5.0.0"
+description = "Find your files with natural language and ask questions."
 authors = [
     { name = "Dr.-Ing. Paul Wilhelm", email = "paul@wilhelm.dev" },
 ]

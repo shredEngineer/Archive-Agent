@@ -20,8 +20,8 @@ from qdrant_client.models import (
 
 from archive_agent.ai.AiManager import AiManager
 from archive_agent.data.FileData import FileData
-from archive_agent.util.CliManager import CliManager
-from archive_agent.util.format import format_time, format_file
+from archive_agent.core.CliManager import CliManager
+from archive_agent.util.format import format_file
 from archive_agent.ai_schema.QuerySchema import QuerySchema
 
 logger = logging.getLogger(__name__)
@@ -35,16 +35,16 @@ class QdrantManager:
     """
 
     def __init__(
-        self,
-        cli: CliManager,
-        ai: AiManager,
-        server_url: str,
-        collection: str,
-        vector_size: int,
-        retrieve_score_min: float,
-        retrieve_chunks_max: int,
-        rerank_chunks_max: int,
-        expand_chunks_radius: int,
+            self,
+            cli: CliManager,
+            ai: AiManager,
+            server_url: str,
+            collection: str,
+            vector_size: int,
+            retrieve_score_min: float,
+            retrieve_chunks_max: int,
+            rerank_chunks_max: int,
+            expand_chunks_radius: int,
     ):
         """
         Initialize Qdrant manager.
@@ -271,9 +271,13 @@ class QdrantManager:
             logger.exception(f"Qdrant query failed: {e}")
             raise typer.Exit(code=1)
 
-        points = sorted(response.points, key=lambda point: point.payload['chunk_index'])
+        points = sorted(response.points, key=lambda point: (point.payload or {}).get('chunk_index', 0))  # makes pyright happy
 
-        indices_found = {point.payload['chunk_index'] for point in points}
+        indices_found = {
+            point.payload['chunk_index']
+            for point in points
+            if point.payload is not None  # makes pyright happy
+        }
         indices_missing = set(chunk_indices) - indices_found
         if indices_missing:
             logger.critical(f"Missing chunk(s) for {format_file(file_path)}: {sorted(indices_missing)}")
@@ -289,6 +293,9 @@ class QdrantManager:
         points_expanded = []
 
         for point in points:
+
+            assert point.payload is not None  # makes pyright happy
+
             points_expanded.extend(
                 self._get_points(
                     file_path=point.payload['file_path'],
@@ -332,14 +339,17 @@ class QdrantManager:
         unique_points = []
         seen = set()
         duplicates_by_file = {}
-        for p in points:
-            key = (p.payload['file_path'], p.payload['chunk_index'])
+        for point in points:
+
+            assert point.payload is not None  # makes pyright happy
+
+            key = (point.payload['file_path'], point.payload['chunk_index'])
             if key in seen:
-                file_path = p.payload['file_path']
-                duplicates_by_file.setdefault(file_path, set()).add(p.payload['chunk_index'])
+                file_path = point.payload['file_path']
+                duplicates_by_file.setdefault(file_path, set()).add(point.payload['chunk_index'])
             else:
                 seen.add(key)
-                unique_points.append(p)
+                unique_points.append(point)
 
         if self.cli.VERBOSE_QUERY:
             for file_path, dups in duplicates_by_file.items():
@@ -347,26 +357,6 @@ class QdrantManager:
                     logger.info(f"Deduplicated chunks for {format_file(file_path)}: {sorted(dups)}")
 
         return unique_points
-
-    @staticmethod
-    def _context_from_points(points: List[ScoredPoint]) -> str:
-        """
-        Build context string from points.
-        :param points: Points.
-        :return: Context string.
-        """
-        return "\n\n\n\n".join([
-            "\n\n".join([
-                f"<<< "
-                f"Chunk ({point.payload['chunk_index'] + 1}) / ({point.payload['chunks_total']}) "
-                f"of {format_file(point.payload['file_path'])} "
-                f"@ {format_time(point.payload['file_mtime'])} "
-                f">>>",
-                f"{point.payload['chunk_text']}\n",
-            ])
-            for point in points
-            if point.payload is not None  # makes pyright happy
-        ])
 
     def query(self, question: str) -> Tuple[QuerySchema, str]:
         """
@@ -381,12 +371,12 @@ class QdrantManager:
             points = self._dedup_points(points_expanded)
             self.cli.format_expanded_deduped_points(points)
 
-        context = self._context_from_points(points)
-
-        query_result = self.ai.query(question, context)
-        if query_result.reject:
+        query_result = self.ai.query(question, points)
+        if query_result.is_rejected:
             logger.warning(f"Query rejected: \"{query_result.rejection_reason}\"")
 
-        answer_text = self.cli.format_answer(query_result)
+        answer_text = self.ai.get_answer_text(query_result)
+
+        self.cli.format_query(query_result=query_result, answer_text=answer_text)
 
         return query_result, answer_text

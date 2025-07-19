@@ -13,7 +13,7 @@ from archive_agent.ai_schema.RerankSchema import RerankSchema
 from archive_agent.ai_schema.QuerySchema import QuerySchema
 from archive_agent.ai_schema.VisionSchema import VisionSchema
 
-from archive_agent.util.CacheManager import CacheManager
+from archive_agent.core.CacheManager import CacheManager
 
 
 class LMStudioProvider(AiProvider):
@@ -77,6 +77,9 @@ class LMStudioProvider(AiProvider):
         )
 
         json_raw = response.choices[0].message.content
+        if json_raw is None:
+            # Falls die API keinen Content zurückgibt (z.B. bei Funktionsaufruf oder Fehler)
+            raise AiProviderError("Missing JSON")
         try:
             parsed_schema = ChunkSchema.model_validate_json(json_raw)
         except Exception as e:
@@ -142,6 +145,8 @@ class LMStudioProvider(AiProvider):
         )
 
         json_raw = response.choices[0].message.content
+        if json_raw is None:
+            raise AiProviderError("Missing JSON")
         try:
             parsed_schema = RerankSchema.model_validate_json(json_raw)
         except Exception as e:
@@ -186,6 +191,8 @@ class LMStudioProvider(AiProvider):
         )
 
         json_raw = response.choices[0].message.content
+        if json_raw is None:
+            raise AiProviderError("Missing JSON")
         try:
             parsed_schema = QuerySchema.model_validate_json(json_raw)
         except Exception as e:
@@ -240,6 +247,8 @@ class LMStudioProvider(AiProvider):
         )
 
         json_raw = response.choices[0].message.content
+        if json_raw is None:
+            raise AiProviderError("Missing JSON")
         try:
             parsed_schema = VisionSchema.model_validate_json(json_raw)
         except Exception as e:

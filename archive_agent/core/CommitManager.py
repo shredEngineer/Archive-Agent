@@ -16,7 +16,7 @@ from archive_agent.watchlist.WatchlistManager import TrackedFiles, WatchlistMana
 
 from archive_agent.util.format import format_file
 
-from archive_agent.util.lock import file_lock
+from archive_agent.core.lock import file_lock
 
 logger = logging.getLogger(__name__)
 

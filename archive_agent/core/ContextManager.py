@@ -7,8 +7,8 @@ from typing import Optional
 
 from archive_agent.profile.ProfileManager import ProfileManager
 from archive_agent.config.ConfigManager import ConfigManager
-from archive_agent.util.CliManager import CliManager
-from archive_agent.config.DecoderSettings import DecoderSettings
+from archive_agent.core.CliManager import CliManager
+from archive_agent.config.DecoderSettings import DecoderSettings, OcrStrategy
 from archive_agent.watchlist.WatchlistManager import WatchlistManager
 from archive_agent.db.QdrantManager import QdrantManager
 from archive_agent.core.CommitManager import CommitManager
@@ -19,7 +19,7 @@ from archive_agent.ai_provider.ai_provider_registry import ai_provider_registry
 from archive_agent.ai_provider.AiProvider import AiProvider
 from archive_agent.ai_provider.AiProviderParams import AiProviderParams
 
-from archive_agent.util.CacheManager import CacheManager
+from archive_agent.core.CacheManager import CacheManager
 
 
 logger = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ class ContextManager:
         )
 
         self.decoder_settings = DecoderSettings(
-            ocr_strategy=self.config.data[self.config.OCR_STRATEGY],
+            ocr_strategy=OcrStrategy(self.config.data[self.config.OCR_STRATEGY]),
             ocr_auto_threshold=self.config.data[self.config.OCR_AUTO_THRESHOLD],
         )
 

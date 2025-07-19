@@ -6,7 +6,7 @@ from pathlib import Path
 from copy import deepcopy
 from typing import Optional
 
-from archive_agent.util.CliManager import CliManager
+from archive_agent.core.CliManager import CliManager
 
 from archive_agent.util.StorageManager import StorageManager
 

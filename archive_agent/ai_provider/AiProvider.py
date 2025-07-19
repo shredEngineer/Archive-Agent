@@ -5,10 +5,10 @@ import logging
 import json
 import hashlib
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Callable, cast
 
 from archive_agent.ai.AiResult import AiResult
-from archive_agent.util.CacheManager import CacheManager
+from archive_agent.core.CacheManager import CacheManager
 
 from archive_agent.ai_provider.AiProviderParams import AiProviderParams
 
@@ -62,7 +62,7 @@ class AiProvider(ABC):
         elif cache_key in self.cache:
             # Cache read.
             logger.info(f"Cache hit for '{cache_key_prefix}'")
-            ai_result: AiResult = self.cache[cache_key]
+            ai_result: AiResult = cast(AiResult, self.cache[cache_key])
             ai_result.total_tokens = 0  # Cached result consumed no tokens
             return ai_result
 

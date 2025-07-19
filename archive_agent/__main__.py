@@ -19,7 +19,7 @@ from archive_agent.mcp_server.McpServer import McpServer
 app = typer.Typer(
     invoke_without_command=True,
     add_completion=False,
-    help="Archive Agent is an open-source semantic file tracker with OCR + AI search (RAG) and MCP capability.",
+    help="Find your files with natural language and ask questions.",
 )
 
 
@@ -65,7 +65,7 @@ def include(patterns: List[str] = typer.Argument(None)) -> None:
     context = ContextManager()
 
     if not patterns:
-        patterns = [context.cli.prompt("Include pattern?", is_cmd=True)]
+        patterns = [context.cli.prompt("Include pattern?", is_cmd=True).strip()]
 
     for pattern in patterns:
         context.watchlist.include(pattern)
@@ -80,7 +80,7 @@ def exclude(patterns: List[str] = typer.Argument(None)) -> None:
     context = ContextManager()
 
     if not patterns:
-        patterns = [context.cli.prompt("Exclude pattern?", is_cmd=True)]
+        patterns = [context.cli.prompt("Exclude pattern?", is_cmd=True).strip()]
 
     for pattern in patterns:
         context.watchlist.exclude(pattern)
@@ -95,7 +95,7 @@ def remove(patterns: List[str] = typer.Argument(None)) -> None:
     context = ContextManager()
 
     if not patterns:
-        patterns = [context.cli.prompt("Remove pattern?", is_cmd=True)]
+        patterns = [context.cli.prompt("Remove pattern?", is_cmd=True).strip()]
 
     for pattern in patterns:
         context.watchlist.remove(pattern)

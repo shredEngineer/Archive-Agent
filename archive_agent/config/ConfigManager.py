@@ -13,7 +13,7 @@ from archive_agent.config.DecoderSettings import OcrStrategy
 from archive_agent.ai_provider.AiProviderKeys import AiProviderKeys
 from archive_agent.ai_provider.ai_provider_registry import ai_provider_registry
 
-from archive_agent.util.CliManager import CliManager
+from archive_agent.core.CliManager import CliManager
 from archive_agent.util.format import format_file
 
 from archive_agent.util.StorageManager import StorageManager

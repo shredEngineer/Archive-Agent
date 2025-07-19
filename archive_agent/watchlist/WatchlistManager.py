@@ -10,7 +10,7 @@ from typing import Dict, Any
 from archive_agent.data.FileData import FileData
 from archive_agent.util.StorageManager import StorageManager
 from archive_agent.util.format import format_file
-from archive_agent.util.pattern import validate_pattern, resolve_pattern
+from archive_agent.watchlist.pattern import validate_pattern, resolve_pattern
 
 logger = logging.getLogger(__name__)
 
@@ -193,18 +193,18 @@ class WatchlistManager(StorageManager):
         for included_pattern in self.data['included']:
             included_files += resolve_pattern(included_pattern)
         included_files = list(set(included_files))
-        logger.info(f"Matched ({len(included_files)}) unique included file(s)")
+        logger.info(f"- Matched ({len(included_files)}) unique included file(s)")
 
         excluded_files = []
         for excluded_pattern in self.data['excluded']:
             excluded_files += resolve_pattern(excluded_pattern)
         excluded_files = list(set(excluded_files))
-        logger.info(f"Matched ({len(excluded_files)}) unique excluded file(s)")
+        logger.info(f"- Matched ({len(excluded_files)}) unique excluded file(s)")
 
         tracked_files_old = self.data['tracked'].keys()
         tracked_files_new = sorted([file for file in included_files if file not in excluded_files])
 
-        logger.info(f"Ignoring ({len(included_files) - len(tracked_files_new)}) file(s)")
+        logger.info(f"- Ignoring ({len(included_files) - len(tracked_files_new)}) file(s)")
 
         logger.info(f"Tracking ({len(tracked_files_new)}) file(s):")
 
@@ -240,10 +240,10 @@ class WatchlistManager(StorageManager):
 
         unchanged_count = len(tracked_files_new) - len(added_files) - len(changed_files)
 
-        logger.info(f"({len(added_files)}) added file(s)")
-        logger.info(f"({len(removed_files)}) removed file(s)")
-        logger.info(f"({len(changed_files)}) changed file(s)")
-        logger.info(f"({unchanged_count}) unchanged file(s)")
+        logger.info(f"- ({len(added_files)}) added file(s)")
+        logger.info(f"- ({len(removed_files)}) removed file(s)")
+        logger.info(f"- ({len(changed_files)}) changed file(s)")
+        logger.info(f"- ({unchanged_count}) unchanged file(s)")
 
         self.data['tracked'] = tracked_dict_new
         self.save()

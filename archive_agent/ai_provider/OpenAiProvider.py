@@ -4,6 +4,7 @@
 import typer
 import logging
 import os
+from typing import Any, cast
 
 from openai import OpenAI
 
@@ -17,7 +18,7 @@ from archive_agent.ai_schema.RerankSchema import RerankSchema
 from archive_agent.ai_schema.QuerySchema import QuerySchema
 from archive_agent.ai_schema.VisionSchema import VisionSchema
 
-from archive_agent.util.CacheManager import CacheManager
+from archive_agent.core.CacheManager import CacheManager
 
 logger = logging.getLogger(__name__)
 
@@ -93,14 +94,18 @@ class OpenAiProvider(AiProvider):
         if getattr(response, "refusal", None):
             raise AiProviderError(getattr(response, "refusal", None))
 
-        json_raw = response.output[0].content[0].text
+        # Pyright: We know this is always a text response in our use-case.
+        content_item = response.output[0].content[0]  # type: ignore[reportAttributeAccessIssue]
+        json_raw = getattr(content_item, "text", None)
+        if json_raw is None:
+            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})")
         try:
             parsed_schema = ChunkSchema.model_validate_json(json_raw)
         except Exception as e:
             raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
 
         return AiResult(
-            total_tokens=response.usage.total_tokens if response.usage else 0,  # check makes pyright happy
+            total_tokens=response.usage.total_tokens if response.usage else 0,
             output_text=response.output_text,
             parsed_schema=parsed_schema,
         )
@@ -156,14 +161,18 @@ class OpenAiProvider(AiProvider):
         if getattr(response, "refusal", None):
             raise AiProviderError(getattr(response, "refusal", None))
 
-        json_raw = response.output[0].content[0].text
+        # Pyright: We know this is always a text response in our use-case.
+        content_item = response.output[0].content[0]  # type: ignore[reportAttributeAccessIssue]
+        json_raw = getattr(content_item, "text", None)
+        if json_raw is None:
+            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})")
         try:
             parsed_schema = RerankSchema.model_validate_json(json_raw)
         except Exception as e:
             raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
 
         return AiResult(
-            total_tokens=response.usage.total_tokens if response.usage else 0,  # check makes pyright happy
+            total_tokens=response.usage.total_tokens if response.usage else 0,
             output_text=response.output_text,
             parsed_schema=parsed_schema,
         )
@@ -203,14 +212,18 @@ class OpenAiProvider(AiProvider):
         if getattr(response, "refusal", None):
             raise AiProviderError(getattr(response, "refusal", None))
 
-        json_raw = response.output[0].content[0].text
+        # Pyright: We know this is always a text response in our use-case.
+        content_item = response.output[0].content[0]  # type: ignore[reportAttributeAccessIssue]
+        json_raw = getattr(content_item, "text", None)
+        if json_raw is None:
+            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})")
         try:
             parsed_schema = QuerySchema.model_validate_json(json_raw)
         except Exception as e:
             raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
 
         return AiResult(
-            total_tokens=response.usage.total_tokens if response.usage else 0,  # check makes pyright happy
+            total_tokens=response.usage.total_tokens if response.usage else 0,
             output_text=response.output_text,
             parsed_schema=parsed_schema,
         )
@@ -226,7 +239,7 @@ class OpenAiProvider(AiProvider):
         # noinspection PyTypeChecker
         response = self.client.responses.create(
             model=self.params.model_vision,
-            input=[
+            input=cast(Any, [
                 {
                     "role": "user",
                     "content": [
@@ -240,7 +253,7 @@ class OpenAiProvider(AiProvider):
                         },
                     ],
                 },
-            ],
+            ]),
             text={
                 "format": {
                     "type": "json_schema",
@@ -257,14 +270,18 @@ class OpenAiProvider(AiProvider):
         if getattr(response, "refusal", None):
             raise AiProviderError(getattr(response, "refusal", None))
 
-        json_raw = response.output[0].content[0].text
+        # Pyright: We know this is always a text response in our use-case.
+        content_item = response.output[0].content[0]  # type: ignore[reportAttributeAccessIssue]
+        json_raw = getattr(content_item, "text", None)
+        if json_raw is None:
+            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})")
         try:
             parsed_schema = VisionSchema.model_validate_json(json_raw)
         except Exception as e:
             raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
 
         return AiResult(
-            total_tokens=response.usage.total_tokens if response.usage else 0,  # check makes pyright happy
+            total_tokens=response.usage.total_tokens if response.usage else 0,
             output_text=response.output_text,
             parsed_schema=parsed_schema,
         )

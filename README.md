@@ -4,7 +4,11 @@
 
 # ⚡ Archive Agent
 
-**Archive Agent** is an open-source semantic file tracker with OCR + AI search (RAG) and MCP capability.  
+**Find your files with natural language and ask questions.**
+
+A smart file indexer with AI search (RAG engine), automatic OCR, and MCP interface.  
+
+[**v5.0.0 RELEASE NOTES** — Thanks to all beta testers](v5.0.0-ReleaseNotes.md)
 
 ![GitHub Release](https://img.shields.io/github/v/release/shredEngineer/Archive-Agent)
 ![GitHub License](https://img.shields.io/github/license/shredEngineer/Archive-Agent)
@@ -14,41 +18,55 @@
 [![Verified on MCPHub](https://img.shields.io/badge/MCPHub-verified-green)](https://mcphub.com/mcp-servers/shredEngineer/Archive-Agent)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/shredEngineer/Archive-Agent)
 
-- **Smart Indexer with [RAG](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) Engine:**  
-  - Fast and effective [Semantic Chunking](#how-smart-chunking-works)
-  - [Retrieval](#how-chunks-are-retrieved) with [Reranking and Expanding](#how-chunks-are-reranked-and-expanded)
-  - [File tracking](#how-files-are-selected-for-tracking) and [automatic OCR](#ocr-strategies)
-- **Supported AI providers: [OpenAI](https://platform.openai.com/docs/overview), [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/)**
-- **[MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension**
-- [Qdrant](https://qdrant.tech/) vector DB *(running locally)* for storage and search
-- **100% dev-friendly:** Clean docs and code ✨
+**Features**:
+- Indexes [plaintext, documents, PDFs, images](#which-files-are-processed) ([automatic OCR](#ocr-strategies))
+- Search and query files using AI ([OpenAI](https://platform.openai.com/docs/overview), [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/))
+- [MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension included
+
+
+**Usage**:
+- [Selects and tracks files using patterns](#how-files-are-selected-for-tracking) like `~/Documents/*.pdf` 
+- Changes across files are tracked and commited to local database  
+
+
+**Search and Query (RAG ¹) quality features**:  
+- Database Files are split into chunks using [semantic chunking](#how-smart-chunking-works)
+- [RAG engine](#how-chunks-are-retrieved) uses [reranking and expanding](#how-chunks-are-reranked-and-expanded) of retrieved chunks
+ 
+¹ *[Retrieval Augmented Generation](https://en.wikipedia.org/wiki/Retrieval-augmented_generation)*
 
 ---
 
-▶️ **[How I Built the Ultimate AI File Search With RAG & OCR](https://www.youtube.com/watch?v=GOCCWwI25EI)**  
-[![YouTube: How I Built the Ultimate AI File Search With RAG & OCR](archive_agent/assets/Thumbnail-GOCCWwI25EI.jpg)](https://www.youtube.com/watch?v=GOCCWwI25EI)
-*(External link to YouTube)*
+💡 Overview of **Archive Agent** processing and control:
+[(enlarge)](archive_agent/assets/Archive-Agent-Overview-1200x1019.png)
+
+![Archive Agent Overview](archive_agent/assets/Archive-Agent-Overview-small.png)
 
 ---
-
-**Just getting started?  
-👉 [Install Archive Agent on Linux](#install-archive-agent)**
-
-**Want to know the nitty-gritty details?  
-👉 [How Archive Agent works](#how-archive-agent-works)**
-
-**Looking for the CLI command reference?  
-👉 [Run Archive Agent](#run-archive-agent)**
-
-**Looking for the MCP tool reference?  
-👉 [MCP Tools](#mcp-tools)**
-
-**Want to upgrade for the latest features?  
-👉 [Update Archive Agent](#update-archive-agent)**
 
 🍀 **Collaborators welcome**  
 You are invited to contribute to this open source project!  
 Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues) and [submit pull requests](https://github.com/shredEngineer/Archive-Agent/pulls) anytime.
+
+▶️ **[Learn about Archive Agent](https://youtube.com/playlist?list=PLK0uOAnKcdRQSYnV32GHqV8ZAnKstJ-GU&si=QH4MfEmreVEXoa-q)**: (external link to YouTube playlist)  
+[![YouTube: Archive Agent (Playlist)](archive_agent/assets/Thumbnail-GOCCWwI25EI.jpg)](https://youtube.com/playlist?list=PLK0uOAnKcdRQSYnV32GHqV8ZAnKstJ-GU&si=QH4MfEmreVEXoa-q)  
+
+---
+
+**Just getting started?**  
+🟢 [Install Archive Agent on Linux](#install-archive-agent)
+
+**Want to know the nitty-gritty details?**  
+🔬 [How Archive Agent works](#how-archive-agent-works)
+
+**Looking for the CLI command reference?**  
+💻 [Run Archive Agent](#run-archive-agent)
+
+**Looking for the MCP tool reference?**  
+🧰 [MCP Tools](#mcp-tools)
+
+**Want to upgrade for the latest features?**  
+⬆️ [Update Archive Agent](#update-archive-agent)
 
 ---
 
@@ -56,10 +74,10 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
 
 ![](archive_agent/assets/Screenshot-CLI.png)
 
-📷 Screenshot of **graphical** user interface (GUI):
-[(enlarge)](archive_agent/assets/Screenshot-GUI.png)
+📷 Screencapture of **graphical** user interface (GUI):
+[(enlarge)](archive_agent/assets/Screencapture-GUI.mov)
 
-![](archive_agent/assets/Screenshot-GUI.png)
+![](archive_agent/assets/Screencapture-GUI.mov)
 
 ## Structure
 
@@ -78,6 +96,7 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
     * [How files are processed](#how-files-are-processed)
     * [OCR strategies](#ocr-strategies)
     * [How smart chunking works](#how-smart-chunking-works)
+    * [How chunks are linked to page/line numbers](#how-chunks-are-linked-to-pageline-numbers)
     * [How chunks are retrieved](#how-chunks-are-retrieved)
     * [How chunks are reranked and expanded](#how-chunks-are-reranked-and-expanded)
     * [How answers are generated](#how-answers-are-generated)
@@ -108,8 +127,8 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
   * [Qdrant database](#qdrant-database)
   * [Developer's guide](#developers-guide)
     * [Important modules](#important-modules)
-    * [Testing and code analysis](#testing-and-code-analysis)
-  * [Known bugs](#known-bugs)
+    * [Code testing and analysis](#code-testing-and-analysis)
+  * [Known ISSUES](#known-issues)
   * [Licensed under GNU GPL v3.0](#licensed-under-gnu-gpl-v30)
 <!-- TOC -->
 
@@ -228,8 +247,6 @@ At least 32 GiB RAM is recommended for smooth performance.
 
 ## How Archive Agent works
 
-![Archive Agent Logo](archive_agent/assets/Archive-Agent-Overview-1200x1019.png)
-
 ###  Which files are processed
 
 **Archive Agent** currently supports these file types:
@@ -294,6 +311,15 @@ See [Archive Agent settings](#archive-agent-settings): `ocr_strategy`, `ocr_auto
 See [Archive Agent settings](#archive-agent-settings): `chunk_lines_block`
 
 💡 **Good to know:** This **smart chunking** improves the accuracy and effectiveness of the retrieval. 
+
+### How chunks are linked to page/line numbers
+
+For PDFs, chunks are mapped to page number ranges (`[min]` or `[min:max]`) based on the lines they span during extraction.
+
+For non-PDF documents, chunks are mapped to line number ranges similarly.
+Mappings are mechanical per line append in loaders, but sentence splitting normalization joins paragraphs,
+so ranges for sentences within a paragraph are the full paragraph's min:max (approximate sub-line mapping).
+Displayed in chunk refs if available; "no page/line data" otherwise.
 
 ### How chunks are retrieved
 
@@ -656,7 +682,7 @@ Since cache entries are retained forever, switching back to a prior combination 
 
 ## Qdrant database
 
-The Qdrant database is stored in `~/.archive-agent-qdrant-storage/`.
+The [Qdrant](https://qdrant.tech/) database is stored in `~/.archive-agent-qdrant-storage/`.
 
 📌 **Note:** This folder is created by the Qdrant Docker image running as root.
 
@@ -668,22 +694,25 @@ The Qdrant database is stored in `~/.archive-agent-qdrant-storage/`.
 
 **Archive Agent** was written from scratch for educational purposes (on either end of the software).
 
+💡 **Good to know:** Tracking the `test_data/` gets you started with *some* kind of test data. 
+
 ### Important modules
 
 To get started, check out these epic modules:
 
+- Files are processed in [`archive_agent/data/FileData.py`](archive_agent/data/FileData.py)
 - The app context is initialized in [`archive_agent/core/ContextManager.py`](archive_agent/core/ContextManager.py)
 - The default config is defined in [`archive_agent/config/ConfigManager.py`](archive_agent/config/ConfigManager.py)  
 - The CLI commands are defined in [`archive_agent/__main__.py`](archive_agent/__main__.py)
 - The commit logic is implemented in [`archive_agent/core/CommitManager.py`](archive_agent/core/CommitManager.py)
-- The CLI verbosity is handled in [`archive_agent/util/CliManager.py`](archive_agent/util/CliManager.py)
+- The CLI verbosity is handled in [`archive_agent/util/CliManager.py`](archive_agent/core/CliManager.py)
 - The GUI is implemented in [`archive_agent/core/GuiManager.py`](archive_agent/core/GuiManager.py)
 - The AI API prompts for chunking, embedding, vision, and querying are defined in [`archive_agent/ai/AiManager.py`](archive_agent/ai/AiManager.py) 
 - The AI provider registry is located in [`archive_agent/ai_provider/ai_provider_registry.py`](archive_agent/ai_provider/ai_provider_registry.py)
 
 If you miss something or spot bad patterns, feel free to contribute and refactor!
 
-### Testing and code analysis
+### Code testing and analysis
 
 To run unit tests, check types, and check style, run this:
 
@@ -693,7 +722,7 @@ To run unit tests, check types, and check style, run this:
 
 (Some remaining type errors need to be fixed…)
 
-## Known bugs
+## Known ISSUES
 
 - [ ] While `track` initially reports a file as *added*, subsequent `track` calls report it as *changed*. 
 
@@ -702,6 +731,18 @@ To run unit tests, check types, and check style, run this:
   - Removing a tracked file sets `{size=0, mtime=0, diff=removed}`.
   - Restoring a tracked file sets `{size=X, mtime=Y, diff=added}`.
   - Because `size` and `mtime` were cleared, we lost the information to detect a restored file.
+
+
+- [ ] AI vision is employed on empty images as well, even though they could be easily detected locally and skipped. 
+
+
+- [ ] PDF vector images may not convert as expected, due to missing tests. (`strict` OCR strategy would certainly help in the meantime.) 
+
+
+- [ ] Binary document page numbers (e.g., `.docx`) are not supported yet.
+
+
+- [ ] Lines info in references is buggy (and only approximate due to SpaCy sentence splitting).
 
 ---
 

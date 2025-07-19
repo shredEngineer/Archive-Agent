@@ -108,8 +108,8 @@ async def get_answer_rag(question: str) -> Dict[str, Any]:
         "question_rephrased":       query_result.question_rephrased,
         "answer_list":              [{"answer": item.answer, "chunk_ref_list": item.chunk_ref_list} for item in query_result.answer_list],
         "answer_conclusion":        query_result.answer_conclusion,
-        "follow_up_questions_list": query_result.follow_up_list,
-        "is_rejected":              query_result.reject,
+        "follow_up_questions_list": query_result.follow_up_questions_list,
+        "is_rejected":              query_result.is_rejected,
         "rejection_reason":         query_result.rejection_reason,
     }
 

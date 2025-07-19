@@ -35,19 +35,6 @@ def replace_file_uris_with_markdown(text: str) -> str:
     return pattern.sub(replacer, text)
 
 
-def group_blocks_of_sentences(sentences: List[str], sentences_per_block: int) -> List[List[str]]:
-    """
-    Group sentences into blocks of multiple sentences.
-    :param sentences: Sentences.
-    :param sentences_per_block: Sentences per block.
-    :return: Blocks of multiple sentences.
-    """
-    return [
-        sentences[i:i + sentences_per_block]
-        for i in range(0, len(sentences), sentences_per_block)
-    ]
-
-
 def prepend_line_numbers(sentences: List[str]) -> List[str]:
     """
     Prepend line numbers to sentences.

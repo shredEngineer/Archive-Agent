@@ -32,4 +32,4 @@ class DecoderSettings:
         self.ocr_strategy = ocr_strategy
         self.ocr_auto_threshold = ocr_auto_threshold
 
-        logger.info(f"Using OCR strategy: '{self.ocr_strategy}'")
+        logger.info(f"Using OCR strategy: '{self.ocr_strategy.value}'")

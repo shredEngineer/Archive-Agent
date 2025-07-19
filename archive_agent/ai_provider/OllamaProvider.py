@@ -13,7 +13,7 @@ from archive_agent.ai_schema.RerankSchema import RerankSchema
 from archive_agent.ai_schema.QuerySchema import QuerySchema
 from archive_agent.ai_schema.VisionSchema import VisionSchema
 
-from archive_agent.util.CacheManager import CacheManager
+from archive_agent.core.CacheManager import CacheManager
 
 
 class OllamaProvider(AiProvider):
