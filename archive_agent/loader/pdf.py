@@ -136,12 +136,9 @@ def build_document_text_from_pages(
         pages_per_line.pop()
 
     full_text = "\n".join(all_lines)
-    logger.critical(  # TODO REMOVE
-        f"[DEBUG] full_text.splitlines(): {len(full_text.splitlines())}, pages_per_line: {len(pages_per_line)}"
-    )
-    assert len(full_text.splitlines()) == len(pages_per_line), (
-        f"pages_per_line length mismatch: {len(pages_per_line)} for {len(full_text.splitlines())} lines"
-    )
+
+    assert len(full_text.splitlines()) == len(pages_per_line), \
+        f"Mismatch: pages_per_line[{len(pages_per_line)}] pages VS full_text[{len(full_text.splitlines())}] lines"
 
     return DocumentContent(text=full_text, pages_per_line=pages_per_line)
 
