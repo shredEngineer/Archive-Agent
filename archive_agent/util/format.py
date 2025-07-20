@@ -63,9 +63,14 @@ def get_point_reference_info(point: ScoredPoint) -> str:
     else:
         page_line_info = None
 
-    reference_info = f"{page_line_info} ({chunk_info})" if page_line_info is not None else f"({chunk_info})"
+    origin_info = f"{page_line_info} ({chunk_info})" if page_line_info is not None else f"({chunk_info})"
 
-    return f"{format_file(point.payload['file_path'])} {reference_info} ({format_time(point.payload['file_mtime'])})"
+    reference_info = f"{format_file(point.payload['file_path'])} {origin_info} ({format_time(point.payload['file_mtime'])})"
+
+    if page_line_info is None:
+        logger.warning(f"Chunk added by Archive Agent < 5.0.0 is missing lines and pages info: {reference_info}")
+
+    return reference_info
 
 
 def format_chunk_brief(chunk: str, max_len: int = 160) -> str:
