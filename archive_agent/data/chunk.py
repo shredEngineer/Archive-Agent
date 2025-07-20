@@ -187,6 +187,17 @@ def generate_chunks_with_ranges(
         chunk_lines_block: int,
         file_path: str
 ) -> List[ChunkWithRange]:
+    """
+    Chunkify a list of sentences into AI-determined chunks, carrying over leftover sentences where needed,
+    and annotate each chunk with the corresponding (min, max) line reference range.
+
+    :param sentences: List of full document sentences.
+    :param sentence_reference_ranges: List of (min, max) line references corresponding to each sentence.
+    :param ai: The AI manager instance providing the chunking logic.
+    :param chunk_lines_block: Number of sentences per block to be chunked.
+    :param file_path: Path to the originating file (used for logging and labeling).
+    :return: List of ChunkWithRange objects containing the formatted chunk and its reference range.
+    """
     if len(sentence_reference_ranges) != len(sentences):
         logger.error(
             f"Reference range mismatch: "
@@ -202,6 +213,7 @@ def generate_chunks_with_ranges(
     carry: Optional[str] = None
     carry_min: int = 0
     carry_max: int = 0
+    last_carry_header: Optional[str] = None
 
     idx = 0
     for block_index, block_of_sentences in enumerate(blocks_of_sentences):
@@ -237,7 +249,7 @@ def generate_chunks_with_ranges(
 
             logger.info(f"Chunk {len(chunks_with_ranges) + 1}: sentences {r_start}:{r_end}, range ({r_min}, {r_max})")
 
-            body = f"\n".join(block_of_sentences[r_start - 1:r_end - 1])
+            body = "\n".join(block_of_sentences[r_start - 1:r_end - 1])
             chunk = format_chunk(
                 file_path=file_path,
                 header=headers[i],
@@ -254,12 +266,15 @@ def generate_chunks_with_ranges(
             carry_min = min(valid_mins) if valid_mins else 0
             carry_max = max(valid_maxs) if valid_maxs else 0
 
+            last_carry_header = headers[-1]
+
     if carry:
+        assert last_carry_header is not None, "Internal error: carry exists but no header was recorded"
         final_chunk_line_count: int = len(carry.splitlines())
         logger.info(f"Appending final carry of ({final_chunk_line_count}) lines; final chunk has ({final_chunk_line_count}) lines")
         formatted_carry = format_chunk(
             file_path=file_path,
-            header="Continuation Chunk",
+            header=last_carry_header,
             body=carry,
         )
         chunks_with_ranges.append(ChunkWithRange(formatted_carry, (carry_min, carry_max)))
