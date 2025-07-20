@@ -23,7 +23,8 @@ A smart file indexer with AI search (RAG engine), automatic OCR, and MCP interfa
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/shredEngineer/Archive-Agent)
 
 **Features**:
-- Indexes [plaintext, documents, PDFs, images](#which-files-are-processed) ([automatic OCR](#ocr-strategies))
+- Indexes [plaintext, documents, PDFs, images](#which-files-are-processed)
+- Uses [automatic OCR](#ocr-strategies) and entity extraction for image processing
 - Search and query files using AI ([OpenAI](https://platform.openai.com/docs/overview), [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/))
 - [MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension included
 
