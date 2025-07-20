@@ -524,9 +524,13 @@ class AiManager(RetryManager):
         result: AiResult = self.cli.format_ai_query(callback=lambda: self.retry(callback), prompt=prompt)
         self.total_tokens_query += result.total_tokens
         assert result.parsed_schema is not None
-        result.parsed_schema = cast(QuerySchema, result.parsed_schema)
-        result.parsed_schema = self.format_query_references(query_result=result.parsed_schema, points=points)
-        return result.parsed_schema
+        query_result = cast(QuerySchema, result.parsed_schema)
+        query_result = self.format_query_references(query_result=query_result, points=points)
+
+        if query_result.is_rejected:
+            self.ai_provider.cache.pop()  # Immediately remove rejected AI result from cache
+
+        return query_result
 
     def vision(self, image_base64: str) -> VisionSchema:
         """
@@ -540,5 +544,9 @@ class AiManager(RetryManager):
         result: AiResult = self.cli.format_ai_vision(callback=lambda: self.retry(callback))
         self.total_tokens_vision += result.total_tokens
         assert result.parsed_schema is not None
-        result.parsed_schema = cast(VisionSchema, result.parsed_schema)
-        return result.parsed_schema
+        vision_result = cast(VisionSchema, result.parsed_schema)
+
+        if vision_result.is_rejected:
+            self.ai_provider.cache.pop()  # Immediately remove rejected AI result from cache
+
+        return vision_result

@@ -105,10 +105,6 @@ class FileData:
 
         if vision_result.is_rejected:
             logger.critical(f"Image rejected: {vision_result.rejection_reason}")
-
-            # Immediately remove rejected AI result from cache.
-            self.ai.ai_provider.cache.pop()
-
             return None
 
         return vision_result.answer
