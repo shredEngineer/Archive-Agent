@@ -70,14 +70,13 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
 
 ---
 
+📷 Screencapture of **graphical** user interface (GUI):
+
+https://github.com/user-attachments/assets/8b787afa-28ad-4a59-a1bc-4febba496e0c
+
 📷 Screenshot of **command-line** interface (CLI):
 
 ![](archive_agent/assets/Screenshot-CLI.png)
-
-📷 Screencapture of **graphical** user interface (GUI):
-[(enlarge)](archive_agent/assets/Screencapture-GUI.mov)
-
-![](archive_agent/assets/Screencapture-GUI.mov)
 
 ## Structure
 
