@@ -34,7 +34,7 @@ A smart file indexer with AI search (RAG engine), automatic OCR, and MCP interfa
 
 
 **Search and Query (RAG ¹) quality features**:  
-- Files are split into chunks using [semantic chunking with chunk headers](#how-smart-chunking-works)
+- Files are split using [semantic chunking with context headers](#how-smart-chunking-works)
 - [RAG engine](#how-chunks-are-retrieved) uses [reranking and expanding](#how-chunks-are-reranked-and-expanded) of retrieved chunks
  
 ¹ *[Retrieval Augmented Generation](https://en.wikipedia.org/wiki/Retrieval-augmented_generation)*
@@ -301,7 +301,7 @@ See [Archive Agent settings](#archive-agent-settings): `ocr_strategy`, `ocr_auto
 - Sentences are grouped into reasonably-sized blocks.
 - **Each block is split into smaller chunks using an AI model.**
   - Block boundaries are handled gracefully (last chunk carries over).
-- Each chunk is prefixed with a *chunk header* (additional context improves search).
+- Each chunk is prefixed with a *context header* (improves search).
 - Each chunk is turned into a vector using AI embeddings.
 - Each vector is turned into a *point* with file metadata.
 - Each *point* is stored in the Qdrant database.
