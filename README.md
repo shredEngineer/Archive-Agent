@@ -730,13 +730,16 @@ To run unit tests, check types, and check style, run this:
 - [ ] AI vision is employed on empty images as well, even though they could be easily detected locally and skipped. 
 
 
-- [ ] PDF vector images may not convert as expected, due to missing tests. (`strict` OCR strategy would certainly help in the meantime.) 
+- [ ] PDF vector images may not convert as expected, due to missing tests. (Using `strict` OCR strategy would certainly help in the meantime.) 
 
 
 - [ ] Binary document page numbers (e.g., `.docx`) are not supported yet.
 
 
 - [ ] Lines info in references is buggy (and only approximate due to SpaCy sentence splitting).
+
+
+- [ ] AI cache does not handle `AiResult` schema migration yet. (If you encounter errors, passing the `--nocache` flag or deleting all AI cache folders would certainly help in the meantime.)
 
 ---
 
