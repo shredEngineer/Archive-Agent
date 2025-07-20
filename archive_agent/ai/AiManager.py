@@ -4,11 +4,12 @@
 import logging
 import json
 import hashlib
-from typing import cast, List, Dict
+from typing import cast, Dict, List
 
 from qdrant_client.http.models import ScoredPoint
 
 from archive_agent.ai.AiResult import AiResult
+from archive_agent.ai.AiVisionLogic import AiVisionLogic
 from archive_agent.ai_provider.AiProvider import AiProvider
 
 from archive_agent.ai_schema.ChunkSchema import ChunkSchema
@@ -31,66 +32,11 @@ class AiManager(RetryManager):
 
     @staticmethod
     def get_prompt_vision() -> str:
-        return "\n".join([
-            "Act as a vision agent for a semantic retrieval system (Retrieval-Augmented Generation / RAG).",
-            "Your task is to extract clean, modular, maximally relevant units of visual information from an image.",
-            "You must output structured information using the exact response fields described below.",
-            "Do not return any explanations, commentary, or additional fields.",
-            "",
-            "RESPONSE FIELDS:",
-            "",
-            "- `answer`:",
-            "    Output format and content depend on the type of visual input (see input-type rules below).",
-            "",
-            "- `is_rejected`:",
-            "    A Boolean flag. Set `is_rejected: true` ONLY if the image is unreadable or corrupted",
-            "    and cannot be meaningfully processed.",
-            "    If `is_rejected` is true, leave `answer` blank and populate `rejection_reason`.",
-            "",
-            "- `rejection_reason`:",
-            "    A short, factual reason for rejection.",
-            "    Required ONLY if `is_rejected` is `true`. Leave this field blank if `is_rejected` is `false`.",
-            "    Examples: 'image is too blurred to read', 'image file is corrupted',",
-            "    'image contains unreadable or distorted text'",
-            "",
-            "EXTRACTION RULE SETS:",
-            "",
-            "- TEXT EXTRACTION RULES:",
-            "    - Transcribe all visible text exactly as shown.",
-            "    - Preserve natural reading order and line breaks.",
-            "    - Retain structural hierarchy when meaningful, but ignore visual layout artifacts such as columns,",
-            "      pagination, or borders.",
-            "    - DO NOT use any formatting, interpretation, or commentary.",
-            "    - All output must be optimized for downstream semantic indexing in RAG systems.",
-            "",
-            "- VISUAL DESCRIPTION RULES:",
-            "    - For any embedded figures, labeled diagrams, UI elements, or illustrations:",
-            "        - Output a concise, sentence-level description of what is visually present.",
-            "        - Focus on semantic content such as labels, arrows, flow, structure, and spatial relationships.",
-            "    - All mathematical formulas MUST be in LaTeX and enclosed in inline $...$ delimiters.",
-            "    - DO NOT describe decorative elements, shadows, backgrounds, or textures.",
-            "    - DO NOT add interpretation, commentary, or markdown formatting.",
-            "",
-            "INPUT-TYPE RULES:",
-            "",
-            "1. Scanned documents, printed articles, books, or typewritten pages:",
-            "    - Apply TEXT EXTRACTION RULES to capture all readable text.",
-            "    - Apply VISUAL DESCRIPTION RULES to any embedded figures or labeled diagrams.",
-            "",
-            "2. Handwritten notes, whiteboards, blackboards, labeled sketches, diagrams, charts, figures,",
-            "    technical illustrations, or UI elements:",
-            "    - Apply both TEXT EXTRACTION RULES and VISUAL DESCRIPTION RULES.",
-            "    - Output a sequence of concise, discrete sentences in plain paragraph form.",
-            "",
-            "IMPORTANT GLOBAL CONSTRAINTS:",
-            "- Select the correct output behavior based solely on the visual characteristics of the image.",
-            "- The `answer` field MUST strictly follow the rules above — no hybrids, no markdown, no commentary.",
-            "- Every output unit MUST be clean, faithful to the image, and suitable for downstream semantic indexing.",
-            "- Only set `is_rejected: true` if the image is technically unreadable or corrupted, and cannot be interpreted",
-            "  meaningfully (e.g. blurred, distorted, broken file).",
-            "",
-            "Image input is provided separately.",
-        ])
+        return AiVisionLogic.get_prompt_vision()
+
+    @staticmethod
+    def format_vision_answer(vision_result: VisionSchema) -> str:
+        return AiVisionLogic.format_vision_answer(vision_result)
 
     @staticmethod
     def get_prompt_chunk(line_numbered_text: str) -> str:
@@ -118,7 +64,7 @@ class AiManager(RetryManager):
             "- Each chunk MUST be semantically coherent.",
             "- Each chunk SHOULD be about 100 words.",
             "- Chunks must NOT be shorter than 10 lines or 100 words.",
-            "- Exception: allow smaller chunks if strictly necessary ",
+            "- Exception: allow smaller chunks if strictly necessary",
             "  (e.g., at the end of the text, or if the content cannot be grouped larger without breaking coherence).",
             "- Detect structure (e.g., Markdown headings.",
             "- Headings must not be a chunk alone.",

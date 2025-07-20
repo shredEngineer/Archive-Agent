@@ -107,7 +107,9 @@ class FileData:
             logger.critical(f"Image rejected: {vision_result.rejection_reason}")
             return None
 
-        return vision_result.answer
+        answer = self.ai.format_vision_answer(vision_result)
+
+        return answer
 
     def decode(self) -> Optional[DocumentContent]:
         if self.decoder_func is not None:
