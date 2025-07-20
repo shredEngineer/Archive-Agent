@@ -44,7 +44,7 @@ A smart file indexer with AI search (RAG engine), automatic OCR, and MCP interfa
 💡 Overview of **Archive Agent** processing and control:
 [(enlarge)](archive_agent/assets/Archive-Agent-Overview-1200x1019.png)
 
-![Archive Agent Overview](archive_agent/assets/Archive-Agent-Overview-small.png)
+![Archive Agent Overview](archive_agent/assets/Archive-Agent-Overview-1200x1019.png)
 
 ---
 
