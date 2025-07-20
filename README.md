@@ -716,8 +716,6 @@ To run unit tests, check types, and check style, run this:
 ./audit.sh
 ```
 
-(Some remaining type errors need to be fixed…)
-
 ## Known ISSUES
 
 - [ ] While `track` initially reports a file as *added*, subsequent `track` calls report it as *changed*. 
