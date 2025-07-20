@@ -97,14 +97,21 @@ class AiManager(RetryManager):
         return "\n".join([
             "You are a chunking agent for a semantic retrieval system (Retrieval-Augmented Generation / RAG).",
             "Segment the text into semantically coherent chunks.",
-            "Output ONLY the `chunk_start_lines` field as described below.",
-            "No explanations. No extra fields.",
+            "You must output structured information using the exact response fields described below.",
+            "Do NOT return any explanations or additional fields.",
             "",
-            "RESPONSE FIELD:",
+            "RESPONSE FIELDS:",
+            "",
             "- `chunk_start_lines`:",
             "    List of line numbers. Each marks the start of a chunk.",
             "    The first value MUST be 1 (the first line).",
             "    The list must be strictly increasing. No duplicates.",
+            "",
+            "- `headers`:",
+            "    List of one-line header strings, one for each chunk, same order as `chunk_start_lines`.",
+            "    Each header must clearly and succinctly summarize the main topic or content of the chunk in a single line.",
+            "    If a chunk starts with a heading, include its topic but clarify as needed.",
+            "    Do not use generic, repeated, or placeholder headers.",
             "",
             "CHUNKING RULES:",
             "- Review the ENTIRE text BEFORE deciding chunk boundaries.",
@@ -444,10 +451,17 @@ class AiManager(RetryManager):
                 if len(result.parsed_schema.chunk_start_lines) == 0:
                     raise RuntimeError(f"Missing chunk start lines: {result.parsed_schema.chunk_start_lines}")
 
+                if len(result.parsed_schema.chunk_start_lines) != len(result.parsed_schema.headers):
+                    raise RuntimeError(
+                        f"Mismatch: "
+                        f"chunk_start_lines[{len(result.parsed_schema.chunk_start_lines)}] != headers[{len(result.parsed_schema.headers)}]"
+                    )
+
                 # Let's allow some slack from weaker or overloaded LLMs here...
                 if result.parsed_schema.chunk_start_lines[0] != 1:
                     result.parsed_schema.chunk_start_lines.insert(0, 1)
-                    logger.warning(f"Fixed first chunk start lines: {result.parsed_schema.chunk_start_lines}")
+                    result.parsed_schema.headers.insert(0, "")  # Add empty header for first chunk
+                    logger.warning(f"Fixed first chunk start lines: {result.parsed_schema.chunk_start_lines} (added empty header)")
 
                 return result.parsed_schema
 

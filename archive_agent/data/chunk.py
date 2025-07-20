@@ -164,6 +164,22 @@ def _normalize_inline_whitespace(text: str) -> str:
     return text.strip()
 
 
+def format_chunk(file_path: str, header: str, body: str):
+    """
+    Format chunk.
+    :param file_path: File path.
+    :param header: Chunk header.
+    :param body: Chunk body.
+    :return: Formatted chunk.
+    """
+    return "\n".join([
+        f"# {format_file(file_path)}",
+        f"# {header}",
+        f"",
+        body,
+    ])
+
+
 def generate_chunks_with_ranges(
         sentences: List[str],
         sentence_reference_ranges: List[Tuple[int, int]],
@@ -187,7 +203,7 @@ def generate_chunks_with_ranges(
     carry_min: int = 0
     carry_max: int = 0
 
-    idx = 0  # <-- This replaces destructive slicing!
+    idx = 0
     for block_index, block_of_sentences in enumerate(blocks_of_sentences):
         block_len = len(block_of_sentences)
         block_sentence_reference_ranges = sentence_reference_ranges[idx: idx+block_len]
@@ -206,12 +222,12 @@ def generate_chunks_with_ranges(
         logger.debug(f"Chunking block {block_index + 1}: {len(block_of_sentences)} sentences, range {range_start} to {range_stop}")
 
         chunk_result = ai.chunk(block_of_sentences)
-
         ranges = chunk_start_to_ranges(chunk_result.chunk_start_lines, len(block_of_sentences))
+        headers = chunk_result.headers
 
         block_chunks, carry = extract_chunks_and_carry(block_of_sentences, ranges)
 
-        for r_start, r_end in ranges[:-1] if carry else ranges:
+        for i, (r_start, r_end) in enumerate(ranges[:-1] if carry else ranges):
             r_reference_ranges = block_sentence_reference_ranges[r_start - 1:r_end - 1]
 
             valid_mins = [min_r for min_r, _ in r_reference_ranges if min_r > 0]
@@ -221,7 +237,13 @@ def generate_chunks_with_ranges(
 
             logger.info(f"Chunk {len(chunks_with_ranges) + 1}: sentences {r_start}:{r_end}, range ({r_min}, {r_max})")
 
-            chunk = "\n".join(block_of_sentences[r_start - 1:r_end - 1])
+            body = f"\n".join(block_of_sentences[r_start - 1:r_end - 1])
+            chunk = format_chunk(
+                file_path=file_path,
+                header=headers[i],
+                body=body,
+            )
+
             chunks_with_ranges.append(ChunkWithRange(chunk, (r_min, r_max)))
 
         if carry:
@@ -235,6 +257,11 @@ def generate_chunks_with_ranges(
     if carry:
         final_chunk_line_count: int = len(carry.splitlines())
         logger.info(f"Appending final carry of ({final_chunk_line_count}) lines; final chunk has ({final_chunk_line_count}) lines")
-        chunks_with_ranges.append(ChunkWithRange(carry, (carry_min, carry_max)))
+        formatted_carry = format_chunk(
+            file_path=file_path,
+            header="Continuation Chunk",
+            body=carry,
+        )
+        chunks_with_ranges.append(ChunkWithRange(formatted_carry, (carry_min, carry_max)))
 
     return chunks_with_ranges

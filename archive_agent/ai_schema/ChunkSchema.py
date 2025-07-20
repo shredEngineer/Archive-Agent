@@ -7,5 +7,6 @@ from pydantic import BaseModel, ConfigDict
 
 class ChunkSchema(BaseModel):
     chunk_start_lines: List[int]
+    headers: List[str]
 
     model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
