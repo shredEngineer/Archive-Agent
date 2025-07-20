@@ -182,13 +182,15 @@ def extract_text_from_images_per_page(
 
                     text = image_to_text_callback(img)
 
-                    if text:
-                        page_image_texts.append(f"[Image] {text}")
-                    else:
+                    if text is None:
                         logger.warning(
                             f"Image ({i + 1}) on page ({index + 1}) / ({len(page_contents)}): "
                             f"Returned no text"
                         )
+                        page_image_texts.append("[UNPROCESSABLE Image]")
+                    else:
+                        page_image_texts.append(f"[Image] {text}")
+
             except Exception as e:
                 logger.warning(
                     f"Image ({i + 1}) on page ({index + 1}) / ({len(page_contents)}): "
