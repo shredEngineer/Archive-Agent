@@ -585,8 +585,7 @@ However, to get the latest features, you should update your installation regular
 To update your **Archive Agent** installation, run this in the installation directory:
 
 ```bash
-git pull
-./install.sh
+./update.sh
 ```
 
 📌 **Note:** If updating doesn't work, try removing the installation directory and then [Install Archive Agent](#install-archive-agent) again.
