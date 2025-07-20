@@ -41,13 +41,6 @@ A smart file indexer with AI search (RAG engine), automatic OCR, and MCP interfa
 
 ---
 
-💡 Overview of **Archive Agent** processing and control:
-[(enlarge)](archive_agent/assets/Archive-Agent-Overview-1200x1019.png)
-
-![Archive Agent Overview](archive_agent/assets/Archive-Agent-Overview-small.png)
-
----
-
 🍀 **Collaborators welcome**  
 You are invited to contribute to this open source project!  
 Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues) and [submit pull requests](https://github.com/shredEngineer/Archive-Agent/pulls) anytime.
@@ -245,6 +238,11 @@ At least 32 GiB RAM is recommended for smooth performance.
 ---
 
 ## How Archive Agent works
+
+💡 Overview of **Archive Agent** processing and control:
+[(enlarge)](archive_agent/assets/Archive-Agent-Overview-1200x1019.png)
+
+![Archive Agent Overview](archive_agent/assets/Archive-Agent-Overview-small.png)
 
 ###  Which files are processed
 
