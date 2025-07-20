@@ -206,7 +206,7 @@ def generate_chunks_with_ranges(
     idx = 0
     for block_index, block_of_sentences in enumerate(blocks_of_sentences):
         block_len = len(block_of_sentences)
-        block_sentence_reference_ranges = sentence_reference_ranges[idx: idx+block_len]
+        block_sentence_reference_ranges = sentence_reference_ranges[idx: idx + block_len]
         idx += block_len
 
         logger.info(f"Chunking block ({block_index + 1}) / ({len(blocks_of_sentences)}) of {format_file(file_path)}")
