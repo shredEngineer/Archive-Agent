@@ -72,7 +72,9 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
 
 📷 Screencapture of **graphical** user interface (GUI):
 
-https://github.com/user-attachments/assets/8b787afa-28ad-4a59-a1bc-4febba496e0c
+https://github.com/user-attachments/assets/40ce857f-aeeb-4d2b-99bc-262b93f9cf82
+
+---
 
 📷 Screenshot of **command-line** interface (CLI):
 
