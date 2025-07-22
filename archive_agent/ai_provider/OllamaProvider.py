@@ -15,6 +15,8 @@ from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 
 from archive_agent.core.CacheManager import CacheManager
 
+import json
+
 
 class OllamaProvider(AiProvider):
     """
@@ -62,11 +64,13 @@ class OllamaProvider(AiProvider):
             format=ChunkSchema.model_json_schema(),
         )
 
+        formatted_response = json.dumps(response, indent=2, default=str)
+
         json_raw = response["message"]["content"]
         try:
             parsed_schema = ChunkSchema.model_validate_json(json_raw)
         except Exception as e:
-            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
         return AiResult(
             total_tokens=response.get("eval_count", 0),
@@ -109,11 +113,13 @@ class OllamaProvider(AiProvider):
             format=RerankSchema.model_json_schema(),
         )
 
+        formatted_response = json.dumps(response, indent=2, default=str)
+
         json_raw = response["message"]["content"]
         try:
             parsed_schema = RerankSchema.model_validate_json(json_raw)
         except Exception as e:
-            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
         return AiResult(
             total_tokens=response.get("eval_count", 0),
@@ -139,11 +145,13 @@ class OllamaProvider(AiProvider):
             format=QuerySchema.model_json_schema(),
         )
 
+        formatted_response = json.dumps(response, indent=2, default=str)
+
         json_raw = response["message"]["content"]
         try:
             parsed_schema = QuerySchema.model_validate_json(json_raw)
         except Exception as e:
-            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
         return AiResult(
             total_tokens=response.get("eval_count", 0),
@@ -172,11 +180,13 @@ class OllamaProvider(AiProvider):
             format=VisionSchema.model_json_schema(),
         )
 
+        formatted_response = json.dumps(response, indent=2, default=str)
+
         json_raw = response["message"]["content"]
         try:
             parsed_schema = VisionSchema.model_validate_json(json_raw)
         except Exception as e:
-            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
         return AiResult(
             total_tokens=response.get("eval_count", 0),

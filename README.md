@@ -274,12 +274,6 @@ Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
 
 For PDF documents, there are different OCR strategies supported by **Archive Agent**:
 
-- `auto` OCR strategy:
-  - Selects best OCR strategy for each page based on the number of characters extracted from the PDF OCR text layer, if any. 
-  - Decides based on `ocr_auto_threshold`, the minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict`.
-  - **Optimal trade-off between cost, speed, and accuracy.**
-
-
 - `strict` OCR strategy:
   - PDF OCR text layer is *ignored*.
   - PDF pages are treated as images.
@@ -292,7 +286,16 @@ For PDF documents, there are different OCR strategies supported by **Archive Age
   - **Cheap and fast, but less accurate.**
 
 
+- `auto` OCR strategy:
+  - Selects best OCR strategy for each page based on the number of characters extracted from the PDF OCR text layer, if any. 
+  - Decides based on `ocr_auto_threshold`, the minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict`.
+  - **Trade-off between cost, speed, and accuracy.**
+
+
 See [Archive Agent settings](#archive-agent-settings): `ocr_strategy`, `ocr_auto_threshold`
+
+📌 **Note:** The `strict` OCR strategy is recommended for best results.
+PDF documents often contain small images related to page style/layout which cause overhead while contributing little information or even cluttering the result.
 
 💡 **Good to know:** You will be prompted to choose an OCR strategy at startup (see [Run Archive Agent](#run-archive-agent)).
 
@@ -776,6 +779,9 @@ To run unit tests, check types, and check style, run this:
 
 
 - [ ] AI cache does not handle `AiResult` schema migration yet. (If you encounter errors, passing the `--nocache` flag or deleting all AI cache folders would certainly help in the meantime.)
+
+
+- [ ] Rejected images (e.g., due to OpenAI content filter policy violation) from PDF pages in `strict` OCR mode are currently left empty instead of resorting to text extracted from PDF OCR layer (if any).
 
 ---
 

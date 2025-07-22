@@ -9,6 +9,7 @@ from archive_agent.ai_provider.LMStudioProvider import LMStudioProvider
 
 
 ai_provider_registry = {
+    # first entry is used as default for new profiles
 
     "openai": {
         "class": OpenAiProvider,
@@ -54,5 +55,7 @@ ai_provider_registry = {
             AiProviderKeys.AI_TEMPERATURE_QUERY: 1.0,
         },
     },
+
+    # TODO: Add Gemini, Grok, Claude providers
 
 }

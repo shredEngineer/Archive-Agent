@@ -8,9 +8,10 @@ logger = logging.getLogger(__name__)
 
 
 class OcrStrategy(Enum):
-    AUTO = 'auto'
+    # first value is used as default for new profiles
     STRICT = 'strict'
     RELAXED = 'relaxed'
+    AUTO = 'auto'
 
 
 class DecoderSettings:

@@ -1,6 +1,8 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
+import json
+
 from openai import OpenAI
 
 from archive_agent.ai_provider.AiProvider import AiProvider
@@ -76,14 +78,15 @@ class LMStudioProvider(AiProvider):
             },
         )
 
+        formatted_response = json.dumps(response.__dict__, indent=2, default=str)
+
         json_raw = response.choices[0].message.content
         if json_raw is None:
-            # Falls die API keinen Content zurückgibt (z.B. bei Funktionsaufruf oder Fehler)
-            raise AiProviderError("Missing JSON")
+            raise AiProviderError(f"Missing JSON\n{formatted_response}")
         try:
             parsed_schema = ChunkSchema.model_validate_json(json_raw)
         except Exception as e:
-            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
         return AiResult(
             total_tokens=response.usage.total_tokens if response.usage else 0,
@@ -144,13 +147,15 @@ class LMStudioProvider(AiProvider):
             },
         )
 
+        formatted_response = json.dumps(response.__dict__, indent=2, default=str)
+
         json_raw = response.choices[0].message.content
         if json_raw is None:
-            raise AiProviderError("Missing JSON")
+            raise AiProviderError(f"Missing JSON\n{formatted_response}")
         try:
             parsed_schema = RerankSchema.model_validate_json(json_raw)
         except Exception as e:
-            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
         return AiResult(
             total_tokens=response.usage.total_tokens if response.usage else 0,
@@ -190,13 +195,15 @@ class LMStudioProvider(AiProvider):
             },
         )
 
+        formatted_response = json.dumps(response.__dict__, indent=2, default=str)
+
         json_raw = response.choices[0].message.content
         if json_raw is None:
-            raise AiProviderError("Missing JSON")
+            raise AiProviderError(f"Missing JSON\n{formatted_response}")
         try:
             parsed_schema = QuerySchema.model_validate_json(json_raw)
         except Exception as e:
-            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
         return AiResult(
             total_tokens=response.usage.total_tokens if response.usage else 0,
@@ -246,13 +253,15 @@ class LMStudioProvider(AiProvider):
             },
         )
 
+        formatted_response = json.dumps(response.__dict__, indent=2, default=str)
+
         json_raw = response.choices[0].message.content
         if json_raw is None:
-            raise AiProviderError("Missing JSON")
+            raise AiProviderError(f"Missing JSON\n{formatted_response}")
         try:
             parsed_schema = VisionSchema.model_validate_json(json_raw)
         except Exception as e:
-            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
         return AiResult(
             total_tokens=response.usage.total_tokens if response.usage else 0,

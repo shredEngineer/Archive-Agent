@@ -1,9 +1,11 @@
+# TODO: Move `format_ai_chunk` to `AiChunk` etc.
+
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import json
 import logging
-from typing import Callable, List, Dict
+from typing import Callable, List, Dict, cast
 
 import typer
 from rich.console import Console
@@ -15,6 +17,7 @@ from qdrant_client.models import ScoredPoint
 from archive_agent.ai.AiResult import AiResult
 
 from archive_agent.ai.query.AiQuery import QuerySchema
+from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 
 from archive_agent.util.format import format_chunk_brief, get_point_reference_info
 
@@ -93,7 +96,7 @@ class CliManager:
 
         logger.info("⌛  Awaiting AI chunking …")
 
-        result = callback()
+        result: AiResult = callback()
 
         if CliManager.VERBOSE_USAGE:
             logger.info(f"Used ({result.total_tokens}) AI API token(s) for chunking")
@@ -125,7 +128,7 @@ class CliManager:
 
         logger.info("⌛  Awaiting AI reranking …")
 
-        result = callback()
+        result: AiResult = callback()
 
         if CliManager.VERBOSE_USAGE:
             logger.info(f"Used ({result.total_tokens}) AI API token(s) for reranking")
@@ -153,7 +156,7 @@ class CliManager:
 
         logger.info("⌛  Awaiting AI embedding …")
 
-        result = callback()
+        result: AiResult = callback()
 
         if CliManager.VERBOSE_USAGE:
             logger.info(f"Used ({result.total_tokens}) AI API token(s) for embedding")
@@ -178,7 +181,7 @@ class CliManager:
 
         logger.info("⌛  Awaiting AI response …")
 
-        result = callback()
+        result: AiResult = callback()
 
         if CliManager.VERBOSE_USAGE:
             logger.info(f"Used ({result.total_tokens}) AI API token(s) for query")
@@ -199,10 +202,21 @@ class CliManager:
         """
         logger.info("⌛  Awaiting AI vision …")
 
-        result = callback()
+        result: AiResult = callback()
 
         if CliManager.VERBOSE_VISION:
-            self.format_json(result.output_text)
+            vision_result = cast(VisionSchema, result.parsed_schema)
+            if vision_result.is_rejected:
+                self.console.print(
+                    Panel(
+                        f"{vision_result.rejection_reason}",
+                        title="Vision rejected",
+                        style="red",
+                        border_style="red"
+                    )
+                )
+            else:
+                self.format_json(result.output_text)
 
         if CliManager.VERBOSE_USAGE:
             logger.info(f"Used ({result.total_tokens}) AI API token(s) for vision")

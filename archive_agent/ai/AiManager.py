@@ -52,6 +52,8 @@ class AiManager(RetryManager):
         self.total_tokens_query = 0
         self.total_tokens_vision = 0
 
+        # NOTE: This switches between `AiVisionEntity` and `AiVisionOCR` modules
+        # TODO: Use enum instead of 'entity' and 'ocr' literals
         self.requested: Optional[str] = None
 
         RetryManager.__init__(
@@ -101,18 +103,14 @@ class AiManager(RetryManager):
                 self.total_tokens_chunk += result.total_tokens
 
                 if result.parsed_schema is None:
+                    self.ai_provider.cache.pop()  # Immediately remove rejected AI result from cache
                     raise RuntimeError("No parsed schema returned")
 
                 result.parsed_schema = cast(ChunkSchema, result.parsed_schema)
 
                 if len(result.parsed_schema.chunk_start_lines) == 0:
+                    self.ai_provider.cache.pop()  # Immediately remove rejected AI result from cache
                     raise RuntimeError(f"Missing chunk start lines: {result.parsed_schema.chunk_start_lines}")
-
-                if len(result.parsed_schema.chunk_start_lines) != len(result.parsed_schema.headers):
-                    raise RuntimeError(
-                        f"Mismatch: "
-                        f"chunk_start_lines[{len(result.parsed_schema.chunk_start_lines)}] != headers[{len(result.parsed_schema.headers)}]"
-                    )
 
                 # Let's allow some slack from weaker or overloaded LLMs here...
                 if result.parsed_schema.chunk_start_lines[0] != 1:
@@ -120,12 +118,24 @@ class AiManager(RetryManager):
                     result.parsed_schema.headers.insert(0, "")  # Add empty header for first chunk
                     logger.warning(f"Fixed first chunk start lines: {result.parsed_schema.chunk_start_lines} (added empty header)")
 
+                if len(result.parsed_schema.chunk_start_lines) != len(result.parsed_schema.headers):
+                    self.ai_provider.cache.pop()  # Immediately remove rejected AI result from cache
+                    logger.warning(
+                        f"Mismatch: "
+                        f"chunk_start_lines[{len(result.parsed_schema.chunk_start_lines)}] != headers[{len(result.parsed_schema.headers)}]"
+                    )
+                    while len(result.parsed_schema.headers) < len(result.parsed_schema.chunk_start_lines):
+                        result.parsed_schema.headers.append("")
+                        logger.warning("Added empty `header` item to align with `chunk_start_lines`")
+                    self.ai_provider.cache.pop()  # Clear cache to avoid reusing padded result
+
                 return result.parsed_schema
 
             except Exception as e:
                 logger.exception(f"Chunking error: {e}")
                 continue  # Retry
 
+        self.ai_provider.cache.pop()  # Immediately remove rejected AI result from cache
         raise RuntimeError("Failed to recover from chunking errors")
 
     def embed(self, text: str) -> List[float]:
@@ -159,6 +169,7 @@ class AiManager(RetryManager):
                 self.total_tokens_rerank += result.total_tokens
 
                 if result.parsed_schema is None:
+                    self.ai_provider.cache.pop()  # Immediately remove rejected AI result from cache
                     raise RuntimeError("No parsed schema returned")
 
                 rerank_result = cast(RerankSchema, result.parsed_schema)
@@ -173,6 +184,7 @@ class AiManager(RetryManager):
                 expected = list(indexed_chunks.keys())
 
                 if sorted(reranked) != sorted(expected):
+                    self.ai_provider.cache.pop()  # Immediately remove rejected AI result from cache
                     raise RuntimeError(
                         f"Reranked indices are not a valid permutation of original indices:\n"
                         f"Original: {expected}\n"
@@ -185,6 +197,7 @@ class AiManager(RetryManager):
                 logger.exception(f"Reranking error: {e}")
                 continue  # Retry
 
+        self.ai_provider.cache.pop()  # Immediately remove rejected AI result from cache
         raise RuntimeError("Failed to recover from reranking errors")
 
     def query(self, question: str, points: List[ScoredPoint]) -> QuerySchema:

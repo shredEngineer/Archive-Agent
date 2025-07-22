@@ -4,6 +4,7 @@
 import typer
 import logging
 import os
+import json
 from typing import Any, cast
 
 from openai import OpenAI
@@ -91,18 +92,20 @@ class OpenAiProvider(AiProvider):
             },
         )
 
-        if getattr(response, "refusal", None):
-            raise AiProviderError(getattr(response, "refusal", None))
+        formatted_response = json.dumps(response.__dict__, indent=2, default=str)
+
+        if getattr(response, 'refusal', None):
+            raise AiProviderError(f"Chunk refusal\n{formatted_response}")
 
         # Pyright: We know this is always a text response in our use-case.
         content_item = response.output[0].content[0]  # type: ignore[reportAttributeAccessIssue]
-        json_raw = getattr(content_item, "text", None)
+        json_raw = getattr(content_item, 'text', None)
         if json_raw is None:
-            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})")
+            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})\n{formatted_response}")
         try:
             parsed_schema = ChunkSchema.model_validate_json(json_raw)
         except Exception as e:
-            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
         return AiResult(
             total_tokens=response.usage.total_tokens if response.usage else 0,
@@ -158,18 +161,20 @@ class OpenAiProvider(AiProvider):
             },
         )
 
-        if getattr(response, "refusal", None):
-            raise AiProviderError(getattr(response, "refusal", None))
+        formatted_response = json.dumps(response.__dict__, indent=2, default=str)
+
+        if getattr(response, 'refusal', None):
+            raise AiProviderError(f"Rerank refusal\n{formatted_response}")
 
         # Pyright: We know this is always a text response in our use-case.
         content_item = response.output[0].content[0]  # type: ignore[reportAttributeAccessIssue]
-        json_raw = getattr(content_item, "text", None)
+        json_raw = getattr(content_item, 'text', None)
         if json_raw is None:
-            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})")
+            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})\n{formatted_response}")
         try:
             parsed_schema = RerankSchema.model_validate_json(json_raw)
         except Exception as e:
-            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
         return AiResult(
             total_tokens=response.usage.total_tokens if response.usage else 0,
@@ -209,18 +214,20 @@ class OpenAiProvider(AiProvider):
             },
         )
 
-        if getattr(response, "refusal", None):
-            raise AiProviderError(getattr(response, "refusal", None))
+        formatted_response = json.dumps(response.__dict__, indent=2, default=str)
+
+        if getattr(response, 'refusal', None):
+            raise AiProviderError(f"Query refusal\n{formatted_response}")
 
         # Pyright: We know this is always a text response in our use-case.
         content_item = response.output[0].content[0]  # type: ignore[reportAttributeAccessIssue]
-        json_raw = getattr(content_item, "text", None)
+        json_raw = getattr(content_item, 'text', None)
         if json_raw is None:
-            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})")
+            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})\n{formatted_response}")
         try:
             parsed_schema = QuerySchema.model_validate_json(json_raw)
         except Exception as e:
-            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
         return AiResult(
             total_tokens=response.usage.total_tokens if response.usage else 0,
@@ -264,21 +271,51 @@ class OpenAiProvider(AiProvider):
             },
         )
 
-        if response.status == 'incomplete':
-            raise AiProviderError("Vision response incomplete, probably due to token limits")
+        formatted_response = json.dumps(response.__dict__, indent=2, default=str)
 
-        if getattr(response, "refusal", None):
-            raise AiProviderError(getattr(response, "refusal", None))
+        if response.status == 'incomplete':
+            openai_incomplete_details = getattr(response, 'incomplete_details', None)
+            if openai_incomplete_details is not None:
+                openai_incomplete_details_reason = getattr(openai_incomplete_details, 'reason', None)
+                if openai_incomplete_details_reason == 'content_filter':
+                    logger.critical(f"Vision content filter triggered by OpenAI\n{formatted_response}")
+                    return AiResult(
+                        total_tokens=response.usage.total_tokens if response.usage else 0,
+                        output_text="",
+                        parsed_schema=VisionSchema(
+                            is_rejected=True,
+                            rejection_reason="Vision content filter triggered by OpenAI",
+                            entities=[],
+                            relations=[],
+                            answer=""
+                        )
+                    )
+            raise AiProviderError(f"Vision response incomplete for unknown/unhandled reason\n{formatted_response}")
+
+        openai_refusal = getattr(response, 'refusal', None)
+        if openai_refusal is not None:
+            logger.critical(f"Vision refusal triggered by OpenAI\n{formatted_response}")
+            return AiResult(
+                total_tokens=response.usage.total_tokens if response.usage else 0,
+                output_text="",
+                parsed_schema=VisionSchema(
+                    is_rejected=True,
+                    rejection_reason=f"Refusal by OpenAI: {openai_refusal}",
+                    entities=[],
+                    relations=[],
+                    answer=""
+                )
+            )
 
         # Pyright: We know this is always a text response in our use-case.
         content_item = response.output[0].content[0]  # type: ignore[reportAttributeAccessIssue]
-        json_raw = getattr(content_item, "text", None)
+        json_raw = getattr(content_item, 'text', None)
         if json_raw is None:
-            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})")
+            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})\n{formatted_response}")
         try:
             parsed_schema = VisionSchema.model_validate_json(json_raw)
         except Exception as e:
-            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}")
+            raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
         return AiResult(
             total_tokens=response.usage.total_tokens if response.usage else 0,

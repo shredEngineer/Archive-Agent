@@ -108,6 +108,8 @@ class RetryManager:
                     # ollama
                     RequestError, ResponseError,
 
+                    # TODO: Handle errors of any newly introduced AI providers
+
                     # low-level
                     requests.exceptions.RequestException,
             ) as e:
