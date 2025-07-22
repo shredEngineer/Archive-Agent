@@ -2,11 +2,37 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import logging
+from typing import List
+
+from pydantic import BaseModel, ConfigDict
 
 from archive_agent.ai.vision.AiVisionRelation import AiVisionRelation
-from archive_agent.ai.vision.VisionSchema import VisionSchema
 
 logger = logging.getLogger(__name__)
+
+
+class Entity(BaseModel):
+    name: str
+    description: str
+
+    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
+
+
+class Relation(BaseModel):
+    subject: str
+    predicate: str
+    object: str
+
+    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
+
+
+class VisionSchema(BaseModel):
+    entities: List[Entity]
+    relations: List[Relation]
+    is_rejected: bool
+    rejection_reason: str
+
+    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
 
 
 class AiVision:

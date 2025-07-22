@@ -19,11 +19,10 @@ from qdrant_client.models import (
 )
 
 from archive_agent.ai.AiManager import AiManager
-from archive_agent.ai.query.AiQuery import AiQuery
+from archive_agent.ai.query.AiQuery import AiQuery, QuerySchema
 from archive_agent.data.FileData import FileData
 from archive_agent.core.CliManager import CliManager
 from archive_agent.util.format import format_file
-from archive_agent.ai.query.QuerySchema import QuerySchema
 
 logger = logging.getLogger(__name__)
 

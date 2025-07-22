@@ -2,8 +2,19 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import logging
+from typing import List
+
+from pydantic import BaseModel, ConfigDict
 
 logger = logging.getLogger(__name__)
+
+
+class RerankSchema(BaseModel):
+    reranked_indices: List[int]
+    is_rejected: bool
+    rejection_reason: str
+
+    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
 
 
 class AiRerank:

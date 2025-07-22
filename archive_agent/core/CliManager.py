@@ -14,7 +14,7 @@ from qdrant_client.models import ScoredPoint
 
 from archive_agent.ai.AiResult import AiResult
 
-from archive_agent.ai.query.QuerySchema import QuerySchema
+from archive_agent.ai.query.AiQuery import QuerySchema
 
 from archive_agent.util.format import format_chunk_brief, get_point_reference_info
 

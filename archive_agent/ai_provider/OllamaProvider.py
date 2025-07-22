@@ -8,10 +8,10 @@ from archive_agent.ai_provider.AiProviderError import AiProviderError
 from archive_agent.ai.AiResult import AiResult
 from archive_agent.ai_provider.AiProviderParams import AiProviderParams
 
-from archive_agent.ai.chunk.ChunkSchema import ChunkSchema
-from archive_agent.ai.rerank.RerankSchema import RerankSchema
-from archive_agent.ai.query.QuerySchema import QuerySchema
-from archive_agent.ai.vision.VisionSchema import VisionSchema
+from archive_agent.ai.chunk.AiChunk import ChunkSchema
+from archive_agent.ai.rerank.AiRerank import RerankSchema
+from archive_agent.ai.query.AiQuery import QuerySchema
+from archive_agent.ai.vision.AiVision import VisionSchema
 
 from archive_agent.core.CacheManager import CacheManager
 

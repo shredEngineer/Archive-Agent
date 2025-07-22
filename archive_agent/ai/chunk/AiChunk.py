@@ -2,8 +2,18 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import logging
+from typing import List
+
+from pydantic import BaseModel, ConfigDict
 
 logger = logging.getLogger(__name__)
+
+
+class ChunkSchema(BaseModel):
+    chunk_start_lines: List[int]
+    headers: List[str]
+
+    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
 
 
 class AiChunk:

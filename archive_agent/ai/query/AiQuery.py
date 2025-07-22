@@ -5,13 +5,29 @@ import logging
 import hashlib
 from typing import List
 
+from pydantic import BaseModel, ConfigDict
 from qdrant_client.http.models import ScoredPoint
-
-from archive_agent.ai.query.QuerySchema import QuerySchema
 
 from archive_agent.util.format import get_point_reference_info
 
 logger = logging.getLogger(__name__)
+
+
+class AnswerItem(BaseModel):
+    answer: str
+    chunk_ref_list: List[str]
+    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
+
+
+class QuerySchema(BaseModel):
+    question_rephrased: str
+    answer_list: List[AnswerItem]
+    answer_conclusion: str
+    follow_up_questions_list: List[str]
+    is_rejected: bool
+    rejection_reason: str
+
+    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
 
 
 class AiQuery:

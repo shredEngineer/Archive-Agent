@@ -8,16 +8,11 @@ from typing import cast, Dict, List
 from qdrant_client.http.models import ScoredPoint
 
 from archive_agent.ai.AiResult import AiResult
-from archive_agent.ai.chunk.AiChunk import AiChunk
-from archive_agent.ai.query.AiQuery import AiQuery
-from archive_agent.ai.rerank.AiRerank import AiRerank
-from archive_agent.ai.vision.AiVision import AiVision
+from archive_agent.ai.chunk.AiChunk import AiChunk, ChunkSchema
+from archive_agent.ai.query.AiQuery import AiQuery, QuerySchema
+from archive_agent.ai.rerank.AiRerank import AiRerank, RerankSchema
+from archive_agent.ai.vision.AiVision import AiVision, VisionSchema
 from archive_agent.ai_provider.AiProvider import AiProvider
-
-from archive_agent.ai.chunk.ChunkSchema import ChunkSchema
-from archive_agent.ai.rerank.RerankSchema import RerankSchema
-from archive_agent.ai.query.QuerySchema import QuerySchema
-from archive_agent.ai.vision.VisionSchema import VisionSchema
 
 from archive_agent.core.CliManager import CliManager
 from archive_agent.util.RetryManager import RetryManager
