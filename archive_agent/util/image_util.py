@@ -30,7 +30,7 @@ def image_resize_safe(
     image_copy.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
 
     if image_copy.width != image.width or image_copy.height != image.height:
-        logger.warning(
+        logger.info(
             f"Resized image "
             f"from ({image.width} × {image.height} px) "
             f"to ({image_copy.width} × {image_copy.height} px)"
