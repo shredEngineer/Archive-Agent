@@ -16,10 +16,10 @@ A smart file indexer with AI search (RAG engine), automatic OCR, and MCP interfa
 
 ![GitHub Release](https://img.shields.io/github/v/release/shredEngineer/Archive-Agent)
 ![GitHub License](https://img.shields.io/github/license/shredEngineer/Archive-Agent)
-[![Listed on MCP.so](https://img.shields.io/badge/MCP.so-listed-green)](https://mcp.so/server/Archive-Agent/shredEngineer)
 [![Listed on RAGHub](https://img.shields.io/badge/RAGHub-listed-green)](https://github.com/Andrew-Jang/RAGHub?tab=readme-ov-file#rag-projects)
-[![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/499d8d83-02c8-4c9b-9e4f-8e8391395482)
 [![Verified on MCPHub](https://img.shields.io/badge/MCPHub-verified-green)](https://mcphub.com/mcp-servers/shredEngineer/Archive-Agent)
+[![Listed on MCP.so](https://img.shields.io/badge/MCP.so-listed-green)](https://mcp.so/server/Archive-Agent/shredEngineer)
+[![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/499d8d83-02c8-4c9b-9e4f-8e8391395482)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/shredEngineer/Archive-Agent)
 
 **Features**:
