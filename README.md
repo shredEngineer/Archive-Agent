@@ -211,7 +211,7 @@ If the Ollama provider is selected, **Archive Agent** requires Ollama running at
 With the default [Archive Agent Settings](#archive-agent-settings), these Ollama models are expected to be installed: 
 
 ```bash
-ollama pull llama3.1:8b             # for chunk/query
+ollama pull llama3.1:8b             # for chunk/rerank/query
 ollama pull llava:7b-v1.6           # for vision
 ollama pull nomic-embed-text:v1.5   # for embed
 ```
@@ -228,7 +228,7 @@ If the LM Studio provider is selected, **Archive Agent** requires LM Studio runn
 With the default [Archive Agent Settings](#archive-agent-settings), these LM Studio models are expected to be installed: 
 
 ```bash
-meta-llama-3.1-8b-instruct              # for chunk/query
+meta-llama-3.1-8b-instruct              # for chunk/rerank/query
 llava-v1.5-7b                           # for vision
 text-embedding-nomic-embed-text-v1.5    # for embed
 ```
@@ -313,12 +313,18 @@ See [Archive Agent settings](#archive-agent-settings): `chunk_lines_block`
 
 ### How chunks are linked to page/line numbers
 
-For PDFs, chunks are mapped to page number ranges (`[min]` or `[min:max]`) based on the lines they span during extraction.
+To ensure that every chunk can be traced back to its origin, **Archive Agent** maps chunks to the page or line numbers of the source file. This is especially useful for PDFs and long documents.
 
-For non-PDF documents, chunks are mapped to line number ranges similarly.
-Mappings are mechanical per line append in loaders, but sentence splitting normalization joins paragraphs,
-so ranges for sentences within a paragraph are the full paragraph's min:max (approximate sub-line mapping).
-Displayed in chunk refs if available; "no page/line data" otherwise.
+**For line-based files (e.g., `.txt`):**
+- A direct line-to-sentence mapping is used. Each non-empty line is treated as a sentence, and its reference is the line number.
+
+**For page-based files (e.g., `.pdf`):**
+- The document is converted to text, and each line is assigned a page number.
+- The text is split into sentences using `spaCy`. 
+
+For each sentence, **Archive Agent** determines the range of lines (or pages) it spans. This results in a `[min:max]` reference for each sentence.
+
+When sentences are grouped into chunks, the reference for the chunk becomes the combined range of all sentences within it. This provides a precise `[min:max]` page or line range for each chunk, which is displayed alongside search results. If no page or line data is available for a file, it will be indicated.
 
 ### How chunks are retrieved
 
