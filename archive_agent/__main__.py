@@ -44,6 +44,8 @@ def switch(profile_name: str = typer.Argument("")) -> None:
     """
     Create or switch profile.
     """
+    logger.info("💡 You can enter an existing or NEW name")
+
     _context = ContextManager(profile_name=profile_name)
 
 
@@ -70,6 +72,8 @@ def include(patterns: List[str] = typer.Argument(None)) -> None:
     for pattern in patterns:
         context.watchlist.include(pattern)
 
+    logger.info("💡 Don't forget to track files  (archive-agent track)")
+
 
 # noinspection PyShadowingNames
 @app.command()
@@ -85,6 +89,8 @@ def exclude(patterns: List[str] = typer.Argument(None)) -> None:
     for pattern in patterns:
         context.watchlist.exclude(pattern)
 
+    logger.info("💡 Don't forget to track files  (archive-agent track)")
+
 
 # noinspection PyShadowingNames
 @app.command()
@@ -99,6 +105,8 @@ def remove(patterns: List[str] = typer.Argument(None)) -> None:
 
     for pattern in patterns:
         context.watchlist.remove(pattern)
+
+    logger.info("💡 Don't forget to track files  (archive-agent track)")
 
 
 @app.command()
@@ -118,7 +126,11 @@ def track() -> None:
     """
     context = ContextManager()
 
-    context.watchlist.track()
+    n = context.watchlist.track()
+
+    if n > 0:
+        logger.info("💡 Commit your tracked files now  (archive-agent commit)")
+        logger.info("💡 OR list added/removed/changed  (archive-agent diff)")
 
 
 # noinspection PyShadowingBuiltins
@@ -129,6 +141,8 @@ def list() -> None:
     """
     context = ContextManager()
 
+    logger.info("💡 Always track your files first  (archive-agent track)")
+
     context.watchlist.list()
 
 
@@ -138,6 +152,8 @@ def diff() -> None:
     Show the list of changed files.
     """
     context = ContextManager()
+
+    logger.info("💡 Always track your files first  (archive-agent track)")
 
     context.watchlist.diff()
 
@@ -159,6 +175,8 @@ def commit(
     Sync changed files with the Qdrant database.
     """
     context = ContextManager(invalidate_cache=nocache, verbose=verbose)
+
+    logger.info("💡 Always track your files first  (archive-agent track)")
 
     context.committer.commit()
 
@@ -209,6 +227,8 @@ def search(
     """
     context = ContextManager(invalidate_cache=nocache, verbose=verbose)
 
+    logger.info("💡 Ask your question — be as specific as possible")
+
     if question is None:
         question = context.cli.prompt("What's up?", is_cmd=True)
 
@@ -236,6 +256,8 @@ def query(
     """
     context = ContextManager(invalidate_cache=nocache, verbose=verbose)
 
+    logger.info("💡 Ask your question — be as specific as possible")
+
     if question is None:
         question = context.cli.prompt("What's up?", is_cmd=True)
 
@@ -249,6 +271,8 @@ def gui() -> None:
     """
     Launch browser-based GUI.
     """
+    logger.info("💡 GUI is starting, just a sec…")
+
     gui_path = pathlib.Path(__file__).parent / "core" / "GuiManager.py"
     subprocess.run(["streamlit", "run", str(gui_path)])
 
@@ -259,6 +283,8 @@ def mcp() -> None:
     Start MCP server.
     """
     context = ContextManager()
+
+    logger.info("💡 GUI is starting, just a sec…")
 
     # TODO: Allow for graceful CTRL+C shutdown without the `asyncio.exceptions.CancelledError`
     mcp_server = McpServer(context=context, port=context.config.data[context.config.MCP_SERVER_PORT])

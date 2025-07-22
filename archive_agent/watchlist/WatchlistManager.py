@@ -182,9 +182,10 @@ class WatchlistManager(StorageManager):
         """
         return self.data['excluded']
 
-    def track(self):
+    def track(self) -> int:
         """
         Resolve all patterns and track changed files.
+        :return: Total number of added, removed, changes files.
         """
         logger.info(f"Resolving ({len(self.data['included'])}) included / "
                     f"({len(self.data['excluded'])}) excluded pattern(s):")
@@ -247,6 +248,8 @@ class WatchlistManager(StorageManager):
 
         self.data['tracked'] = tracked_dict_new
         self.save()
+
+        return len(added_files) + len(removed_files) + len(changed_files)
 
     def get_tracked_files(self) -> TrackedFiles:
         """

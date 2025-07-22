@@ -358,8 +358,15 @@ See [Archive Agent settings](#archive-agent-settings): `rerank_chunks_max`, `exp
 
 - Patterns can be actual file paths.
 - Patterns can be paths containing wildcards that resolve to actual file paths.
-- Patterns must be specified as (or resolve to) *absolute* paths, e.g. `/home/user/Documents/*.txt` (or `~/Documents/*.txt`).
-- Patterns may use the wildcard `**` to match any files and zero or more directories, subdirectories, and symbolic links to directories.
+
+
+- 💡 **Patterns must be specified as (or resolve to) *absolute* paths, e.g. `/home/user/Documents/*.txt` (or `~/Documents/*.txt`).**
+
+
+- 💡 **Use the wildcard `*` to match any file in the given directory.**
+
+
+- 💡 **Use the wildcard `**` to match any files and zero or more directories, subdirectories, and symbolic links to directories.**
 
 There are *included patterns* and *excluded patterns*:
 
@@ -377,6 +384,27 @@ This approach gives you the best control over the specific files or file types t
 - **Profile name**
 - **AI provider** (see [AI Provider Setup](#ai-provider-setup))
 - **OCR strategy** (see [OCR strategies](#ocr-strategies))
+
+### Quickstart
+
+For example, to [track](#how-files-are-selected-for-tracking) your documents and images, run this:
+
+```bash
+archive-agent include "~/Documents/**" "~/Images/**"
+archive-agent update
+```
+
+To start the GUI, run this:
+
+```bash
+archive-agent 
+```
+
+Or, to ask questions from the command line:
+
+```bash
+archive-agent query "Which files mention donuts?"
+```
 
 ### Show list of commands
 
@@ -411,7 +439,7 @@ See [Archive Agent settings](#archive-agent-settings) for details.
 
 ### Add included patterns
 
-To add one or more included patterns, run this:
+To add one or more included [patterns](#how-files-are-selected-for-tracking), run this:
 
 ```bash
 archive-agent include "~/Documents/*.txt"
@@ -422,7 +450,7 @@ archive-agent include "~/Documents/*.txt"
 
 ### Add excluded patterns
 
-To add one or more excluded patterns, run this:
+To add one or more excluded [patterns](#how-files-are-selected-for-tracking), run this:
 
 ```bash
 archive-agent exclude "~/Documents/*.txt"
