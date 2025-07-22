@@ -91,7 +91,7 @@ class CliManager:
         if CliManager.VERBOSE_CHUNK:
             self.console.print(Panel(f"{line_numbered_text}", title="Text", style="blue", border_style="blue"))
 
-        logger.info("⚡ I'm chunking …")
+        logger.info("⌛  Awaiting AI chunking …")
 
         result = callback()
 
@@ -123,7 +123,7 @@ class CliManager:
             ])
             self.console.print(Panel(f"{indexed_chunks_str}", title="Indexed Chunks", style="blue", border_style="blue"))
 
-        logger.info("⚡ I'm reranking …")
+        logger.info("⌛  Awaiting AI reranking …")
 
         result = callback()
 
@@ -151,7 +151,7 @@ class CliManager:
         if CliManager.VERBOSE_EMBED:
             self.format_chunk(text)
 
-        logger.info("⚡ I'm embedding …")
+        logger.info("⌛  Awaiting AI embedding …")
 
         result = callback()
 
@@ -176,7 +176,7 @@ class CliManager:
         if CliManager.VERBOSE_QUERY:
             self.console.print(Panel(f"{prompt}", title="Query", style="magenta", border_style="magenta"))
 
-        logger.info("⚡ I'm thinking …")
+        logger.info("⌛  Awaiting AI response …")
 
         result = callback()
 
@@ -197,7 +197,7 @@ class CliManager:
         :param callback: Vision callback returning AI result.
         :return: AI result.
         """
-        logger.info("⚡ I'm looking at it …")
+        logger.info("⌛  Awaiting AI vision …")
 
         result = callback()
 
@@ -223,10 +223,10 @@ class CliManager:
         :param points: Retrieved points.
         """
         if len(points) == 0:
-            logger.info(f"⚡ I found nothing")
+            logger.info(f"⚠️  No results")
             return
 
-        logger.info(f"⚡ I found something: ({len(points)}) retrieved chunk(s):")
+        logger.info(f"✅  Retrieved ({len(points)}) chunk(s):")
 
         for point in points:
 
@@ -243,10 +243,10 @@ class CliManager:
         :param points: Reranked points.
         """
         if len(points) == 0:
-            logger.info(f"⚡ I found nothing")
+            logger.info(f"⚠️  No results")
             return
 
-        logger.info(f"⚡ I found something: ({len(points)}) reranked chunk(s):")
+        logger.info(f"✅  Reranked and limited down to ({len(points)}) chunk(s):")
 
         for point in points:
 
@@ -263,10 +263,10 @@ class CliManager:
         :param points: Expanded and deduplicated points.
         """
         if len(points) == 0:
-            logger.info(f"⚡ I found nothing")
+            logger.info(f"⚠️  No results")
             return
 
-        logger.info(f"⚡ I found something: ({len(points)}) expanded and deduplicated chunk(s):")
+        logger.info(f"✅  Expanded and deduplicated down to ({len(points)}) chunk(s):")
 
         for point in points:
 
@@ -301,7 +301,5 @@ class CliManager:
             self.console.print(
                 Panel(f"{query_result.rejection_reason}", title="Query rejected", style="red", border_style="red")
             )
-
-        self.console.print(Panel(f"{answer_text}", title="Answer", style="green", border_style="green"))
-
-        logger.info("⚡ That's it!")
+        else:
+            self.console.print(Panel(f"{answer_text}", title="Answer", style="green", border_style="green"))

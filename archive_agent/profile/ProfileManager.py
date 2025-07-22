@@ -52,7 +52,7 @@ class ProfileManager(StorageManager):
         if profile_name is not None:
             if profile_name == "":
                 profile_name = self.cli.prompt(
-                    "Profile to create or switch to:",
+                    "🤔  Profile to create or switch to:",
                     is_cmd=False,
                     default=self.data[self.PROFILE_NAME],
                 )

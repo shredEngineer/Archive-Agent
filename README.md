@@ -95,6 +95,7 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
     * [How answers are generated](#how-answers-are-generated)
     * [How files are selected for tracking](#how-files-are-selected-for-tracking)
   * [Run Archive Agent](#run-archive-agent)
+    * [Quickstart](#quickstart)
     * [Show list of commands](#show-list-of-commands)
     * [Create or switch profile](#create-or-switch-profile)
     * [Open current profile config in nano](#open-current-profile-config-in-nano)

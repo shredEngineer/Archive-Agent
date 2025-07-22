@@ -35,6 +35,10 @@ def root(ctx: typer.Context) -> None:
 
     # Show help.
     typer.echo(ctx.get_help())
+
+    if _context.watchlist.isEmpty():
+        logger.info("💡  Include your first files  ('archive-agent include')")
+
     raise typer.Exit()
 
 
@@ -44,7 +48,7 @@ def switch(profile_name: str = typer.Argument("")) -> None:
     """
     Create or switch profile.
     """
-    logger.info("💡 You can enter an existing or NEW name")
+    logger.info("💡  You can enter an existing or NEW name")
 
     _context = ContextManager(profile_name=profile_name)
 
@@ -67,12 +71,12 @@ def include(patterns: List[str] = typer.Argument(None)) -> None:
     context = ContextManager()
 
     if not patterns:
-        patterns = [context.cli.prompt("Include pattern?", is_cmd=True).strip()]
+        patterns = [context.cli.prompt("🤔  Include pattern?", is_cmd=True).strip()]
 
     for pattern in patterns:
         context.watchlist.include(pattern)
 
-    logger.info("💡 Don't forget to track files  (archive-agent track)")
+    logger.info("💡  Don't forget to track files  ('archive-agent track')")
 
 
 # noinspection PyShadowingNames
@@ -84,12 +88,12 @@ def exclude(patterns: List[str] = typer.Argument(None)) -> None:
     context = ContextManager()
 
     if not patterns:
-        patterns = [context.cli.prompt("Exclude pattern?", is_cmd=True).strip()]
+        patterns = [context.cli.prompt("🤔  Exclude pattern?", is_cmd=True).strip()]
 
     for pattern in patterns:
         context.watchlist.exclude(pattern)
 
-    logger.info("💡 Don't forget to track files  (archive-agent track)")
+    logger.info("💡  Don't forget to track files  ('archive-agent track')")
 
 
 # noinspection PyShadowingNames
@@ -101,12 +105,12 @@ def remove(patterns: List[str] = typer.Argument(None)) -> None:
     context = ContextManager()
 
     if not patterns:
-        patterns = [context.cli.prompt("Remove pattern?", is_cmd=True).strip()]
+        patterns = [context.cli.prompt("🤔  Remove pattern?", is_cmd=True).strip()]
 
     for pattern in patterns:
         context.watchlist.remove(pattern)
 
-    logger.info("💡 Don't forget to track files  (archive-agent track)")
+    logger.info("💡  Don't forget to track files  ('archive-agent track')")
 
 
 @app.command()
@@ -117,6 +121,9 @@ def patterns() -> None:
     context = ContextManager()
 
     context.watchlist.patterns()
+
+    if context.watchlist.isEmpty():
+        logger.info("💡  Include your first files  ('archive-agent include')")
 
 
 @app.command()
@@ -129,8 +136,13 @@ def track() -> None:
     n = context.watchlist.track()
 
     if n > 0:
-        logger.info("💡 Commit your tracked files now  (archive-agent commit)")
-        logger.info("💡 OR list added/removed/changed  (archive-agent diff)")
+        logger.info("💡  Commit your tracked files now  ('archive-agent commit')")
+        logger.info("💡  OR list added/removed/changed  ('archive-agent diff')")
+
+    if context.watchlist.isEmpty():
+        logger.info("💡  Include your first files  ('archive-agent include')")
+    else:
+        logger.info("💡  Ready to get some answers?  ('archive-agent query')")
 
 
 # noinspection PyShadowingBuiltins
@@ -141,7 +153,7 @@ def list() -> None:
     """
     context = ContextManager()
 
-    logger.info("💡 Always track your files first  (archive-agent track)")
+    logger.info("💡  Always track your files first  ('archive-agent track')")
 
     context.watchlist.list()
 
@@ -153,7 +165,7 @@ def diff() -> None:
     """
     context = ContextManager()
 
-    logger.info("💡 Always track your files first  (archive-agent track)")
+    logger.info("💡  Always track your files first  ('archive-agent track')")
 
     context.watchlist.diff()
 
@@ -176,11 +188,16 @@ def commit(
     """
     context = ContextManager(invalidate_cache=nocache, verbose=verbose)
 
-    logger.info("💡 Always track your files first  (archive-agent track)")
+    logger.info("💡  Always track your files first  ('archive-agent track')")
 
     context.committer.commit()
 
     context.ai.usage()
+
+    if context.watchlist.isEmpty():
+        logger.info("💡  Include your first files  ('archive-agent include')")
+    else:
+        logger.info("💡  Ready to get some answers?  ('archive-agent query')")
 
 
 @app.command()
@@ -207,6 +224,11 @@ def update(
 
     context.ai.usage()
 
+    if context.watchlist.isEmpty():
+        logger.info("💡  Include your first files  ('archive-agent include')")
+    else:
+        logger.info("💡  Ready to get some answers?  ('archive-agent query')")
+
 
 @app.command()
 def search(
@@ -227,10 +249,10 @@ def search(
     """
     context = ContextManager(invalidate_cache=nocache, verbose=verbose)
 
-    logger.info("💡 Ask your question — be as specific as possible")
+    logger.info("💡  Ask your question — be as specific as possible")
 
     if question is None:
-        question = context.cli.prompt("What's up?", is_cmd=True)
+        question = context.cli.prompt("😎  Hit me", is_cmd=True)
 
     _points = context.qdrant.search(question)
 
@@ -256,14 +278,16 @@ def query(
     """
     context = ContextManager(invalidate_cache=nocache, verbose=verbose)
 
-    logger.info("💡 Ask your question — be as specific as possible")
+    logger.info("💡  Ask your question — be as specific as possible")
 
     if question is None:
-        question = context.cli.prompt("What's up?", is_cmd=True)
+        question = context.cli.prompt("😎  Hit me", is_cmd=True)
 
     _query_result, _answer_text = context.qdrant.query(question)
 
     context.ai.usage()
+
+    logger.info("⚡  Process finished")
 
 
 @app.command()
@@ -271,7 +295,7 @@ def gui() -> None:
     """
     Launch browser-based GUI.
     """
-    logger.info("💡 GUI is starting, just a sec…")
+    logger.info("💡  GUI is starting, just a sec…")
 
     gui_path = pathlib.Path(__file__).parent / "core" / "GuiManager.py"
     subprocess.run(["streamlit", "run", str(gui_path)])
@@ -284,7 +308,7 @@ def mcp() -> None:
     """
     context = ContextManager()
 
-    logger.info("💡 GUI is starting, just a sec…")
+    logger.info("💡  GUI is starting, just a sec…")
 
     # TODO: Allow for graceful CTRL+C shutdown without the `asyncio.exceptions.CancelledError`
     mcp_server = McpServer(context=context, port=context.config.data[context.config.MCP_SERVER_PORT])

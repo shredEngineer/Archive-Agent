@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Semantic Chunking for RAG Systems: Guidelines and Examples</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 750px;
+            margin: 2em auto;
+            padding: 2em;
+            background: #fafbfc;
+            color: #222;
+        }
+        h1, h2, h3 {
+            color: #003366;
+        }
+        img.hero {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 2em;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+        }
+        ul {
+            margin-top: 0.5em;
+            margin-bottom: 2em;
+        }
+    </style>
+</head>
+<body>
+    <img class="hero" src="https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=900&q=80"
+         alt="Abstract concept image representing information and chunking" />
+    
+    <h1>Introduction</h1>
+    <p>
+        Semantic chunking is crucial for retrieval-augmented generation (RAG) systems. The process involves splitting documents into meaningful units, allowing large language models to operate efficiently and retrieve relevant knowledge. The effectiveness of chunking directly impacts retrieval accuracy.
+    </p>
+
+    <h2>Motivation</h2>
+    <p>
+        Chunking enables granular access to content. This supports improved search, summarization, and question answering. It also supports scalable document processing.
+    </p>
+
+    <h1>Related Work</h1>
+    <p>
+        Prior work in chunking has explored both syntactic and semantic methods. Syntactic approaches use structure such as headings or paragraph breaks. Semantic chunking attempts to preserve topic coherence, even across multiple paragraphs.
+    </p>
+
+    <h2>Syntactic Chunking</h2>
+    <p>
+        Methods relying on formatting cues, such as Markdown or HTML headings, often split text by section. While easy to automate, this can fragment related ideas or isolate small sections.
+    </p>
+
+    <h2>Semantic Chunking</h2>
+    <p>
+        Semantic chunking uses content analysis—often via embeddings or topic models—to find natural boundaries in meaning. This often results in larger, more meaningful text blocks.
+    </p>
+
+    <h1>Implementation Guidelines</h1>
+    <p>
+        The following rules ensure coherent and useful chunks for downstream applications:
+    </p>
+    <ul>
+        <li>Each chunk should ideally be around 100 words.</li>
+        <li>Chunks must not be shorter than 10 lines or 100 words, except at the end or in cases of necessity.</li>
+        <li>Headings are grouped with their content.</li>
+        <li>Very short sections may be merged to preserve coherence.</li>
+    </ul>
+
+    <h1>Example Cases</h1>
+
+    <h2>Case 1: Long Section</h2>
+    <p>
+        This section is deliberately long. It demonstrates how a chunker should group several paragraphs under one heading if they address the same topic. The chunk should not be split mid-topic, even if it exceeds the ideal word count.
+    </p>
+    <p>
+        Additional supporting details are included here to ensure the chunk is long enough for the test. The boundary should be set at a clear topic change, not an arbitrary line or word limit. This paragraph continues the topic, making it part of the same chunk. If another subheading followed with just a sentence, the chunker should consider merging it with more content.
+    </p>
+
+    <h2>Case 2: Two Short Headings</h2>
+
+    <h3>Short A</h3>
+    <p>A very brief point.</p>
+
+    <h3>Short B</h3>
+    <p>Another short statement.</p>
+
+    <p>
+        Both of these are too brief to stand alone, so they should be grouped with the next semantically related section.
+    </p>
+
+    <h2>Case 3: Minimal Content at End</h2>
+</body>
+</html>

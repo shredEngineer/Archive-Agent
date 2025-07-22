@@ -144,7 +144,7 @@ class AiManager(RetryManager):
             "        Each entry must stand alone as an informative, complete response.",
             "    - `chunk_ref_list`:",
             "        A list of reference designators indicating which chunks informed this specific answer.",
-            "        These MUST follow the exact format as provided in the context: `<<< ChunkRef_0123456789ABCDEF >>>`,",
+            "        These MUST follow the exact format as provided in the context: `<<< 0123456789ABCDEF >>>`,",
             "        where `0123456789ABCDEF` is a 16-character hex string.",
             "        DO NOT include any chunk references anywhere else except in this list.",
             "",

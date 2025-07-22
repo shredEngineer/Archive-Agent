@@ -89,4 +89,4 @@ try:
 except PackageNotFoundError:
     __version__ = "unknown"
 
-logger.info(f"Archive Agent: Version {__version__}")
+logger.info(f"⚡ Archive Agent: Version {__version__}")

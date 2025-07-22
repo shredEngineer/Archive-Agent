@@ -330,3 +330,10 @@ class WatchlistManager(StorageManager):
             self.data['tracked'][file_data.file_path]['diff'] = self.DIFF_NONE
 
         self.save()
+
+    def isEmpty(self) -> bool:
+        """
+        Check for blank watchlist.
+        :return: True if no patterns are included or excluded, False otherwise.
+        """
+        return len(self.data['included']) == 0 and len(self.data['excluded']) == 0
