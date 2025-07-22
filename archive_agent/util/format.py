@@ -65,7 +65,7 @@ def get_point_reference_info(point: ScoredPoint) -> str:
 
     origin_info = f"{page_line_info} ({chunk_info})" if page_line_info is not None else f"({chunk_info})"
 
-    reference_info = f"{format_file(point.payload['file_path'])} {origin_info} ({format_time(point.payload['file_mtime'])})"
+    reference_info = f"{format_file(point.payload['file_path'])} · {origin_info} · ({format_time(point.payload['file_mtime'])})"
 
     if page_line_info is None:
         logger.warning(

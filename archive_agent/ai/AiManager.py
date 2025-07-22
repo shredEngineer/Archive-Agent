@@ -159,7 +159,8 @@ class AiManager(RetryManager):
 
                 rerank_result = cast(RerankSchema, result.parsed_schema)
 
-                if rerank_result.is_rejected:
+                ai_is_stupid = rerank_result.reranked_indices == [0]  # Let's allow some slack from weaker or overloaded LLMs here...
+                if rerank_result.is_rejected or ai_is_stupid:
                     self.ai_provider.cache.pop()  # Immediately remove rejected AI result from cache
                     logger.critical(f"⚠️  Reranking context rejected: \"{rerank_result.rejection_reason}\"")
                     return rerank_result
