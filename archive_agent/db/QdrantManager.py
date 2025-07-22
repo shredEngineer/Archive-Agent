@@ -1,3 +1,8 @@
+# TODO:
+#  - Implement Pydantic schema for point metadata.
+#  - Add "version" field for migration.
+#  - Add chunk "from_image" flag.
+
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
