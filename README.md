@@ -321,8 +321,7 @@ To ensure that every chunk can be traced back to its origin, **Archive Agent** m
 **For page-based files (e.g., `.pdf`):**
 - The document is converted to text, and each line is assigned a page number.
 - The text is split into sentences using `spaCy`. 
-
-For each sentence, **Archive Agent** determines the range of lines (or pages) it spans. This results in a `[min:max]` reference for each sentence.
+- For each sentence, **Archive Agent** determines the range of pages it spans. This results in a `[min:max]` reference for each sentence.
 
 When sentences are grouped into chunks, the reference for the chunk becomes the combined range of all sentences within it. This provides a precise `[min:max]` page or line range for each chunk, which is displayed alongside search results. If no page or line data is available for a file, it will be indicated.
 
