@@ -6,7 +6,7 @@ from typing import Dict, Any, List, cast, Optional
 
 from archive_agent.core.ContextManager import ContextManager
 
-from archive_agent.ai_schema.QuerySchema import QuerySchema
+from archive_agent.ai.query.QuerySchema import QuerySchema
 
 from qdrant_client.models import ScoredPoint
 

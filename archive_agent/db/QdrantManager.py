@@ -19,10 +19,11 @@ from qdrant_client.models import (
 )
 
 from archive_agent.ai.AiManager import AiManager
+from archive_agent.ai.query.AiQuery import AiQuery
 from archive_agent.data.FileData import FileData
 from archive_agent.core.CliManager import CliManager
 from archive_agent.util.format import format_file
-from archive_agent.ai_schema.QuerySchema import QuerySchema
+from archive_agent.ai.query.QuerySchema import QuerySchema
 
 logger = logging.getLogger(__name__)
 
@@ -226,9 +227,15 @@ class QdrantManager:
             }
 
             reranked_schema = self.ai.rerank(question=question, indexed_chunks=indexed_chunks)
-            reranked_indices = reranked_schema.reranked_indices
 
-            reranked_indices = reranked_indices[:self.rerank_chunks_max]
+            if not reranked_schema.is_rejected:
+                reranked_indices = reranked_schema.reranked_indices
+            else:
+                reranked_indices = range(len(points))  # Fallback
+
+            if len(reranked_indices) > self.rerank_chunks_max:
+                logger.info(f"ℹ️  Limiting ({len(reranked_indices)}) reranked chunks down to ({self.rerank_chunks_max})")
+                reranked_indices = reranked_indices[:self.rerank_chunks_max]
 
             points_reranked = []
             for index in reranked_indices:
@@ -373,9 +380,9 @@ class QdrantManager:
 
         query_result = self.ai.query(question, points)
         if query_result.is_rejected:
-            logger.warning(f"Query rejected: \"{query_result.rejection_reason}\"")
+            logger.warning(f"⚠️  Query rejected: \"{query_result.rejection_reason}\"")
 
-        answer_text = self.ai.get_answer_text(query_result)
+        answer_text = AiQuery.get_answer_text(query_result)
 
         self.cli.format_query(query_result=query_result, answer_text=answer_text)
 

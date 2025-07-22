@@ -4,10 +4,10 @@
 from typing import Optional, List
 from dataclasses import dataclass, field
 
-from archive_agent.ai_schema.ChunkSchema import ChunkSchema
-from archive_agent.ai_schema.RerankSchema import RerankSchema
-from archive_agent.ai_schema.QuerySchema import QuerySchema
-from archive_agent.ai_schema.VisionSchema import VisionSchema
+from archive_agent.ai.chunk.ChunkSchema import ChunkSchema
+from archive_agent.ai.rerank.RerankSchema import RerankSchema
+from archive_agent.ai.query.QuerySchema import QuerySchema
+from archive_agent.ai.vision.VisionSchema import VisionSchema
 
 
 @dataclass

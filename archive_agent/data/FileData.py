@@ -11,6 +11,7 @@ from PIL import Image
 from qdrant_client.models import PointStruct
 
 from archive_agent.ai.AiManager import AiManager
+from archive_agent.ai.vision.AiVision import AiVision
 from archive_agent.config.DecoderSettings import DecoderSettings
 from archive_agent.data.DocumentContent import DocumentContent
 from archive_agent.util.format import format_file
@@ -104,10 +105,10 @@ class FileData:
         vision_result = self.ai.vision(image_base64)
 
         if vision_result.is_rejected:
-            logger.critical(f"Image rejected: {vision_result.rejection_reason}")
+            logger.critical(f"⚠️  Image rejected: \"{vision_result.rejection_reason}\"")
             return None
 
-        answer = self.ai.format_vision_answer(vision_result)
+        answer = AiVision.format_vision_answer(vision_result)
 
         return answer
 
