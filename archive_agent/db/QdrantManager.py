@@ -3,7 +3,7 @@
 
 import typer
 import logging
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
@@ -386,3 +386,40 @@ class QdrantManager:
         self.cli.format_query(query_result=query_result, answer_text=answer_text)
 
         return query_result, answer_text
+
+    def get_stats(self) -> Dict[str, int]:
+        """
+        Get stats, e.g. files and chunks counts.
+        :return: Dict.
+        """
+        try:
+            count_result = self.qdrant.count(
+                collection_name=self.collection,
+                count_filter=Filter(
+                    must=[
+                    ]
+                ),
+                exact=True,
+            )
+
+            # Get unique file paths using scroll with distinct field
+            scroll_result = self.qdrant.scroll(
+                collection_name=self.collection,
+                scroll_filter=Filter(
+                    must=[
+                    ]
+                ),
+                limit=1000,  # Adjust limit as needed
+                with_payload=True,
+            )
+
+            unique_files = len({point.payload['file_path'] for point in scroll_result[0] if point.payload is not None})
+
+        except UnexpectedResponse as e:
+            logger.exception(f"Qdrant count failed: {e}")
+            raise typer.Exit(code=1)
+
+        return {
+            'chunks_count': count_result.count,
+            'files_count': unique_files,
+        }

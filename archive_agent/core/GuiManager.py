@@ -62,23 +62,21 @@ class GuiManager:
         """
         Render GUI with centered image and search form.
         """
+        stats = self.context.qdrant.get_stats()
+        files_count = stats['files_count']
+        chunks_count = stats['chunks_count']
+
         image_path = Path(__file__).parent.parent / "assets" / "Archive-Agent-800x300.png"
 
         cols = st.columns(3)
         with cols[0]:
             st.markdown(
-                f"**Archive Agent v{__version__}**"
-            )
-            st.markdown(
-                f"[Qdrant dashboard]({self.context.config.data[self.context.config.QDRANT_SERVER_URL]}/dashboard)"
+                f"**Archive Agent v{__version__}**  \n"
+                f"<small>({chunks_count}) chunks, ({files_count}) files</small>  \n"
+                f"<small>[Qdrant dashboard]({self.context.config.data[self.context.config.QDRANT_SERVER_URL]}/dashboard)</small>",
+                unsafe_allow_html=True,
             )
 
-            # TODO: Implement files and chunks count.
-            # files_count = "NaN"
-            # chunks_count = "NaN"
-            # st.markdown(f"📄 {files_count} files")
-            # st.markdown(f"🧩 {chunks_count} chunks")
-            pass
         with cols[2]:
             st.image(image_path, width=400)
 
