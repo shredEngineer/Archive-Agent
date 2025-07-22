@@ -2,40 +2,96 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import logging
-from typing import List
+from typing import Callable, Dict, List, Tuple
 
-from pydantic import BaseModel, ConfigDict
-
-from archive_agent.ai.vision.AiVisionRelation import AiVisionRelation
+from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 
 logger = logging.getLogger(__name__)
 
 
-class Entity(BaseModel):
-    name: str
-    description: str
+class AiVisionRelation:
+    """
+    Registry for all canonical relation types and their human formatting.
+    """
+    _registry: Dict[str, Tuple[str, Callable[[str, str], str]]] = {}
 
-    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
+    @classmethod
+    def register(cls, predicate: str, description: str, formatter: Callable[[str, str], str]) -> None:
+        """
+        Register a relation type with its description and formatter.
+        """
+        cls._registry[predicate] = (description, formatter)
+
+    @classmethod
+    def all_predicates(cls) -> List[str]:
+        """
+        Return all registered relation type keys.
+        """
+        return list(cls._registry.keys())
+
+    @classmethod
+    def format(cls, predicate: str, subject: str, object_: str) -> str:
+        """
+        Format a relation using its formatter. Fallback to generic for unknown.
+        """
+        if predicate in cls._registry:
+            _, fmt = cls._registry[predicate]
+            return fmt(subject, object_)
+        # Fallback: Graceful, readable, still parseable.
+        return f"The {subject} {predicate.replace('_', ' ')} the {object_}."
+
+    @classmethod
+    def for_prompt(cls) -> str:
+        """
+        Returns formatted lines for prompt inclusion, defining each relation.
+        """
+        lines = []
+        for pred, (desc, fmt) in cls._registry.items():
+            example = fmt("X", "Y")
+            lines.append(f"- `{pred}`: {desc} (e.g., \"{example}\")")
+        return "\n".join(lines)
 
 
-class Relation(BaseModel):
-    subject: str
-    predicate: str
-    object: str
+# Initialize canonical relations
+AiVisionRelation.register("left_of",
+                          "X is visually to the left of Y.",
+                          lambda s, o: f"The {s} is positioned to the left of the {o}.")
+AiVisionRelation.register("right_of",
+                          "X is visually to the right of Y.",
+                          lambda s, o: f"The {s} is positioned to the right of the {o}.")
+AiVisionRelation.register("above",
+                          "X is visually above Y.",
+                          lambda s, o: f"The {s} is positioned above the {o}.")
+AiVisionRelation.register("below",
+                          "X is visually below Y.",
+                          lambda s, o: f"The {s} is positioned below the {o}.")
+AiVisionRelation.register("inside",
+                          "X is inside Y.",
+                          lambda s, o: f"The {s} is located within the {o}.")
+AiVisionRelation.register("contains",
+                          "X contains Y.",
+                          lambda s, o: f"The {s} contains the {o}.")
+AiVisionRelation.register("part_of",
+                          "X is a part of Y.",
+                          lambda s, o: f"The {s} is a component of the {o}.")
+AiVisionRelation.register("describes",
+                          "X describes Y (e.g., text describes a figure or object).",
+                          lambda s, o: f"The {s} describes the entity {o}.")
+AiVisionRelation.register("references",
+                          "X references Y (e.g., text or document refers to an entity).",
+                          lambda s, o: f"The {s} refers to the entity {o}.")
+AiVisionRelation.register("links_to",
+                          "X is connected to Y in a visual or logical flow.",
+                          lambda s, o: f"The {s} is connected to the {o} in a flow.")
+AiVisionRelation.register("has_attribute",
+                          "X has the attribute Y (e.g., object has value, date, or property).",
+                          lambda s, o: f"The {s} has the attribute {o}.")
+AiVisionRelation.register("defines",
+                          "X defines Y (e.g., term defines a concept).",
+                          lambda s, o: f"The {s} defines the concept of {o}.")
 
-    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
 
-
-class VisionSchema(BaseModel):
-    entities: List[Entity]
-    relations: List[Relation]
-    is_rejected: bool
-    rejection_reason: str
-
-    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
-
-
-class AiVision:
+class AiVisionEntity:
 
     @staticmethod
     def get_prompt_vision() -> str:
@@ -75,6 +131,10 @@ class AiVision:
             "    Required ONLY if `is_rejected` is `true`. Leave this field blank if `is_rejected` is `false`.",
             "    Examples: 'image is too blurred to read', 'image file is corrupted'",
             "",
+            "ADDITIONAL REQUIRED BLANK FIELDS:"
+            "",
+            "- `answer`: Empty string."
+            "",
             "EXTRACTION RULES:",
             "",
             "- ENTITY EXTRACTION:",
@@ -104,6 +164,7 @@ class AiVision:
             "- Ensure all entities are used in at least one relation, if possible, to maximize connectivity.",
             "- Only set `is_rejected: true` if the image is technically unreadable or corrupted, and cannot be interpreted",
             "  meaningfully (e.g. blurred, distorted, broken file).",
+            "- ALWAYS include the additional required blank `answer` field.",
             "",
             "Image input is provided separately."
         ])

@@ -47,6 +47,7 @@ def group_blocks_of_sentences(sentences: List[str], sentences_per_block: int) ->
     return [sentences[i:i + sentences_per_block] for i in range(0, len(sentences), sentences_per_block)]
 
 
+# noinspection PyDefaultArgument
 def split_sentences(text: str, per_line_references: List[int] = []) -> Tuple[List[str], List[Tuple[int, int]]]:
     """
     Split text into sentences and assign per-sentence reference ranges.

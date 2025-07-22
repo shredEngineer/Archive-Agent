@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from archive_agent.ai.chunk.AiChunk import ChunkSchema
 from archive_agent.ai.rerank.AiRerank import RerankSchema
 from archive_agent.ai.query.AiQuery import QuerySchema
-from archive_agent.ai.vision.AiVision import VisionSchema
+from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 
 
 @dataclass

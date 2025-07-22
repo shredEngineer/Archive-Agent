@@ -3,7 +3,7 @@
 
 import logging
 import json
-from typing import cast, Dict, List
+from typing import cast, Dict, List, Optional
 
 from qdrant_client.http.models import ScoredPoint
 
@@ -11,7 +11,9 @@ from archive_agent.ai.AiResult import AiResult
 from archive_agent.ai.chunk.AiChunk import AiChunk, ChunkSchema
 from archive_agent.ai.query.AiQuery import AiQuery, QuerySchema
 from archive_agent.ai.rerank.AiRerank import AiRerank, RerankSchema
-from archive_agent.ai.vision.AiVision import AiVision, VisionSchema
+from archive_agent.ai.vision.AiVisionEntity import AiVisionEntity
+from archive_agent.ai.vision.AiVisionOCR import AiVisionOCR
+from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 from archive_agent.ai_provider.AiProvider import AiProvider
 
 from archive_agent.core.CliManager import CliManager
@@ -49,6 +51,8 @@ class AiManager(RetryManager):
         self.total_tokens_rerank = 0
         self.total_tokens_query = 0
         self.total_tokens_vision = 0
+
+        self.requested: Optional[str] = None
 
         RetryManager.__init__(
             self,
@@ -211,7 +215,16 @@ class AiManager(RetryManager):
         :param image_base64: Image as UTF-8 encoded Base64 string.
         :return: VisionSchema.
         """
-        prompt = AiVision.get_prompt_vision()
+        if self.requested == 'entity':
+            prompt = AiVisionEntity.get_prompt_vision()
+        elif self.requested == 'ocr':
+            prompt = AiVisionOCR.get_prompt_vision()
+        else:
+            logger.critical("BUG DETECTED: Unrequested call to `AiManager.vision()` — falling back to OCR")
+            prompt = AiVisionOCR.get_prompt_vision()
+
+        self.requested = None
+
         callback = lambda: self.ai_provider.vision_callback(prompt=prompt, image_base64=image_base64)
 
         result: AiResult = self.cli.format_ai_vision(callback=lambda: self.retry(callback))
@@ -223,3 +236,9 @@ class AiManager(RetryManager):
             self.ai_provider.cache.pop()  # Immediately remove rejected AI result from cache
 
         return vision_result
+
+    def request_entity(self):
+        self.requested = 'entity'
+
+    def request_ocr(self):
+        self.requested = 'ocr'

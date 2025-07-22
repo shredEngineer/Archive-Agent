@@ -134,6 +134,7 @@ class AiQuery:
             page_range,
         ])
 
+        # noinspection PyTypeChecker
         return hashlib.sha1(point_str.encode('utf-8')).hexdigest()[:16]
 
     @staticmethod

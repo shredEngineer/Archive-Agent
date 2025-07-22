@@ -53,4 +53,5 @@ class AiProviderParams:
 
         key_str = json.dumps(params, sort_keys=True)
 
+        # noinspection PyTypeChecker
         return hashlib.sha256(key_str.encode('utf-8')).hexdigest()

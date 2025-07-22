@@ -11,7 +11,9 @@ from PIL import Image
 from qdrant_client.models import PointStruct
 
 from archive_agent.ai.AiManager import AiManager
-from archive_agent.ai.vision.AiVision import AiVision
+from archive_agent.ai.vision.AiVisionEntity import AiVisionEntity
+from archive_agent.ai.vision.AiVisionOCR import AiVisionOCR
+from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 from archive_agent.config.DecoderSettings import DecoderSettings
 from archive_agent.data.DocumentContent import DocumentContent
 from archive_agent.util.format import format_file
@@ -49,15 +51,17 @@ class FileData:
 
         self.points: List[PointStruct] = []
 
-        self.image_to_text_callback = self.image_to_text if self.ai.ai_provider.supports_vision else None
+        self.image_to_text_callback_entity = self.image_to_text_entity if self.ai.ai_provider.supports_vision else None
+        self.image_to_text_callback_ocr = self.image_to_text_ocr if self.ai.ai_provider.supports_vision else None
 
         self.decoder_func: Optional[DecoderCallable] = self.get_decoder_func()
 
     def get_decoder_func(self) -> Optional[DecoderCallable]:
         if is_image(self.file_path):
+            # Use entity extraction for image
             return lambda: load_image(
                 file_path=self.file_path,
-                image_to_text_callback=self.image_to_text_callback,
+                image_to_text_callback=self.image_to_text_callback_entity,
             )
 
         elif is_plaintext(self.file_path):
@@ -71,15 +75,17 @@ class FileData:
             )
 
         elif is_binary_document(self.file_path):
+            # Use entity extraction for image in binary document
             return lambda: load_binary_document(
                 file_path=self.file_path,
-                image_to_text_callback=self.image_to_text_callback,
+                image_to_text_callback=self.image_to_text_callback_entity,
             )
 
         elif is_pdf_document(self.file_path):
+            # Use OCR for PDF page
             return lambda: load_pdf_document(
                 file_path=self.file_path,
-                image_to_text_callback=self.image_to_text_callback,
+                image_to_text_callback=self.image_to_text_callback_ocr,
                 decoder_settings=self.decoder_settings,
             )
 
@@ -88,7 +94,7 @@ class FileData:
     def is_processable(self) -> bool:
         return self.decoder_func is not None
 
-    def image_to_text(self, image: Image.Image) -> Optional[str]:
+    def image_to_text(self, image: Image.Image) -> Optional[VisionSchema]:
         if image.mode != "RGB":
             logger.info(f"Converted image from '{image.mode}' to 'RGB'")
             image = image.convert("RGB")
@@ -108,9 +114,25 @@ class FileData:
             logger.critical(f"⚠️  Image rejected: \"{vision_result.rejection_reason}\"")
             return None
 
-        answer = AiVision.format_vision_answer(vision_result)
+        return vision_result
 
-        return answer
+    def image_to_text_ocr(self, image: Image.Image) -> Optional[str]:
+        logger.info("Requesting OCR")
+        self.ai.request_ocr()
+        vision_result = self.image_to_text(image)
+        if vision_result is not None:
+            return AiVisionOCR.format_vision_answer(vision_result)
+        else:
+            return None
+
+    def image_to_text_entity(self, image: Image.Image) -> Optional[str]:
+        logger.info("Requesting entity extraction")
+        self.ai.request_entity()
+        vision_result = self.image_to_text(image)
+        if vision_result is not None:
+            return AiVisionEntity.format_vision_answer(vision_result)
+        else:
+            return None
 
     def decode(self) -> Optional[DocumentContent]:
         if self.decoder_func is not None:
