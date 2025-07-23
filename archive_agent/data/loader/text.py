@@ -50,7 +50,7 @@ def load_plaintext(file_path: str) -> Optional[DocumentContent]:
 
     text = str(best_match)
     lines = text.splitlines()
-    # Each text line maps to its original (absolute) line number, starting at 1
+
     line_numbers = list(range(1, len(lines) + 1)) if lines else []
 
     return DocumentContent(text=text, lines_per_line=line_numbers)
@@ -139,36 +139,34 @@ def load_binary_document(
     images = load_binary_document_images(file_path)
 
     lines = text.splitlines()
-    page_numbers = [-1] * len(lines) if lines else []
+    line_numbers = list(range(1, len(lines) + 1)) if lines else []
 
-    # Attach OCR image text as new lines, all with page -1 for now
     if images:
         if image_to_text_callback is None:
             logger.warning(f"Image vision is DISABLED in your current configuration")
             logger.warning(f"IGNORING ({len(images)}) document image(s)")
         else:
+            current_line_num = len(line_numbers) + 1
             for image_index, image in enumerate(images):
                 logger.info(f"Converting document image ({image_index + 1}) / ({len(images)})...")
                 image_text = image_to_text_callback(image)
                 if image_text:
-                    image_lines = image_text.splitlines()
-                    # Each image line is its own new line, all with page -1
-                    for line in image_lines:
-                        lines.append(f"[Image] {line}" if line.strip() else "[Image]")
-                        page_numbers.append(-1)
+                    lines.append(f"[Image] {image_text}")
+                    line_numbers.append(current_line_num)
                 else:
+                    lines.append(f"[Unprocessable Image]")
+                    line_numbers.append(current_line_num)
                     logger.warning(
                         f"Image ({image_index + 1}) on page ({image_index + 1}) / ({len(images)}): "
-                        f"Returned no text"
+                        f"Unprocessable image"
                     )
 
-    # Rebuild final text and check mapping
     text = "\n".join(lines)
-    assert len(text.splitlines()) == len(page_numbers), (
-        f"pages_per_line length mismatch: {len(page_numbers)} for {len(text.splitlines())} lines"
-    )
 
-    return DocumentContent(text=text, pages_per_line=page_numbers)
+    assert len(text.splitlines()) == len(line_numbers), \
+        f"lines_per_line length mismatch: {len(line_numbers)} for {len(text.splitlines())} lines"
+
+    return DocumentContent(text=text, lines_per_line=line_numbers)
 
 
 def load_binary_document_images(file_path: str) -> List[Image.Image]:
@@ -182,6 +180,7 @@ def load_binary_document_images(file_path: str) -> List[Image.Image]:
         with zipfile.ZipFile(file_path, "r") as archive:
             for zip_file_path in archive.namelist():
                 if is_image(zip_file_path):
+                    # noinspection PyUnresolvedReferences
                     with archive.open(zip_file_path) as image_stream:
                         image = Image.open(io.BytesIO(image_stream.read()))
                         image.load()  # Prevent lazy I/O; load into memory NOW.

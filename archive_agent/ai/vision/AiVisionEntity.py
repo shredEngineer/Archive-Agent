@@ -172,7 +172,7 @@ class AiVisionEntity:
     @staticmethod
     def format_vision_answer(vision_result: VisionSchema) -> str:
         """
-        Format vision result as a single paragraph of atomic, human-readable statements.
+        Format vision result as single line (without linebreaks).
         Each statement is explicit, self-contained, and optimized for RAG embedding.
         Relations are formatted first, followed by descriptions for entities not used in relations.
         """
