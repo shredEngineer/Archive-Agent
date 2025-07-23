@@ -12,8 +12,6 @@ https://github.com/user-attachments/assets/1cd8211e-6e5b-4e61-8ccc-74c140697abc
 
 A smart file indexer with AI search (RAG engine), automatic OCR, and MCP interface.  
 
-[**v5.0.0 RELEASE NOTES** — Thanks to all beta testers](v5.0.0-ReleaseNotes.md)
-
 ![GitHub Release](https://img.shields.io/github/v/release/shredEngineer/Archive-Agent)
 ![GitHub License](https://img.shields.io/github/license/shredEngineer/Archive-Agent)
 [![Listed on RAGHub](https://img.shields.io/badge/RAGHub-listed-green)](https://github.com/Andrew-Jang/RAGHub?tab=readme-ov-file#rag-projects)
