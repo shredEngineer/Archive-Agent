@@ -1,6 +1,90 @@
-# archive_agent/data/chunk.py
 # Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 # This file is part of Archive Agent. See LICENSE for details.
+
+"""
+    ## Overview of Text Processing and Chunking
+
+    This module turns raw document text into searchable chunks for Archive Agent.
+    It extends the README's sections on "smart chunking" and "chunk references."
+    The focus is on making chunks meaningful and traceable.
+    It handles both line-based and page-based files in the same way.
+
+    ### Key Concepts for Beginners
+
+    - **Text Input**: Starts with plain text from files like `.txt` or `.pdf`.
+      Optional list of numbers—one per line—for line numbers or page numbers.
+
+    - **Processing Steps**: Cleans text by removing extra spaces.
+      Groups into paragraphs.
+      Splits into sentences using `spaCy`.
+      Chunks with AI help.
+
+    - **Tracing Back**: Each chunk gets a range like `(2,4)` for pages 2 to 4.
+      Ranges are approximate due to joining and splitting content.
+
+    - **Special Marker `(0,0)`**: Placeholder for items without a real reference, like paragraph breaks.
+      Ignored later to avoid fake "page 0".
+
+    ### Specs: What the Module Must Do
+
+    - **Agnostic Handling**: Treat line numbers and page numbers the same—no special cases.
+      Default to `(0,0)` if no numbers are given.
+
+    - **Structure Preservation**: Keep paragraph breaks using empty strings `""`.
+      Respect Markdown lists as separate paragraphs.
+
+    - **Sentence Splitting**: Join paragraph lines with spaces.
+      Use `spaCy` to break into sentences.
+
+    - **Range Approximation**: For sentences spanning lines, aggregate to min-max.
+      For example, lines 1 to 3 become `(1,3)`.
+      Ignore `(0,0)` in final chunks.
+
+    - **Chunking**: Group sentences into blocks.
+      Call AI for splits and headers.
+      Handle leftovers with carry-over across blocks.
+
+    - **Output**: Paired dataclasses for text and range.
+      From splitting: `List[SentenceWithRange]`.
+      From chunking: `List[ChunkWithRange]`.
+
+    - **Robustness**: Handle short or missing references by defaulting to 0.
+      Return empty list `[]` for empty input.
+      Skip blanks.
+
+    ### Implementation Details for Developers
+
+    - **Function `split_sentences`**: Main entry point.
+      Strips lines.
+      Builds paragraph blocks in `_build_para_blocks` (handles blanks and Markdown).
+      Normalizes whitespace in `_normalize_inline_whitespace`.
+      Sentencizes in `_process_para_block` (uses bisect for reference aggregation).
+      Inserts `"" (0,0)` for breaks.
+      Returns `List[SentenceWithRange]`.
+
+    - **Function `generate_chunks_with_ranges`**: Takes sentences.
+      Groups blocks.
+      Calls callback for `ChunkSchema` (starts and headers).
+      Extracts chunks and carry.
+      Aggregates ranges in `_aggregate_ranges` (filters >0).
+      Formats in `_format_chunk`.
+      Returns `List[ChunkWithRange]`.
+
+    - **Sentinel `(0,0)` Handling**: Inserted for breaks or no references.
+      Filtered in aggregation to keep traces clean.
+      No inheritance to maintain honest mapping.
+
+    - **Edge Cases**: Short references default to 0.
+      Monotonic references preserved in min-max.
+      `spaCy` model `xx_sent_ud_sm` for multi-language support.
+
+    - **Types**: `ReferenceList=List[int]`.
+      `SentenceRange=Tuple[int, int]`.
+      Dataclasses avoid parallel lists.
+
+    For tests, see `test_chunk.py`.
+    For integration, see `FileData.py`.
+"""
 
 import logging
 import re

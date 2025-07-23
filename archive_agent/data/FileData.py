@@ -1,4 +1,3 @@
-# archive_agent/data/FileData.py
 # Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 # This file is part of Archive Agent. See LICENSE for details.
 
@@ -42,6 +41,14 @@ class FileData:
             file_path: str,
             file_meta: Dict[str, Any],
     ):
+        """
+        Initialize FileData with AI manager, decoder settings, file path, and metadata.
+
+        :param ai: AI manager instance.
+        :param decoder_settings: Decoder settings.
+        :param file_path: Path to the file.
+        :param file_meta: File metadata.
+        """
         self.ai = ai
         self.decoder_settings = decoder_settings
 
@@ -58,6 +65,11 @@ class FileData:
         self.decoder_func: Optional[DecoderCallable] = self.get_decoder_func()
 
     def get_decoder_func(self) -> Optional[DecoderCallable]:
+        """
+        Determine the appropriate decoder function based on file type.
+
+        :return: Decoder function or None if unsupported.
+        """
         if is_image(self.file_path):
             # Use entity extraction for image
             return lambda: load_image(
@@ -93,9 +105,20 @@ class FileData:
         return None
 
     def is_processable(self) -> bool:
+        """
+        Check if the file is processable based on decoder availability.
+
+        :return: True if processable, False otherwise.
+        """
         return self.decoder_func is not None
 
     def image_to_text(self, image: Image.Image) -> Optional[VisionSchema]:
+        """
+        Convert image to RGB if needed, resize, and process with AI vision.
+
+        :param image: PIL Image object.
+        :return: VisionSchema result or None if failed.
+        """
         if image.mode != "RGB":
             logger.info(f"Converted image from '{image.mode}' to 'RGB'")
             image = image.convert("RGB")
@@ -118,6 +141,12 @@ class FileData:
         return vision_result
 
     def image_to_text_ocr(self, image: Image.Image) -> Optional[str]:
+        """
+        Request OCR on the image and format the result.
+
+        :param image: PIL Image object.
+        :return: OCR text or None if failed.
+        """
         logger.info("Requesting OCR")
         self.ai.request_ocr()
         vision_result = self.image_to_text(image)
@@ -127,6 +156,12 @@ class FileData:
             return None
 
     def image_to_text_entity(self, image: Image.Image) -> Optional[str]:
+        """
+        Request entity extraction on the image and format the result.
+
+        :param image: PIL Image object.
+        :return: Entity text or None if failed.
+        """
         logger.info("Requesting entity extraction")
         self.ai.request_entity()
         vision_result = self.image_to_text(image)
@@ -136,6 +171,11 @@ class FileData:
             return None
 
     def decode(self) -> Optional[DocumentContent]:
+        """
+        Decode the file using the determined decoder function.
+
+        :return: DocumentContent or None if failed or unsupported.
+        """
         if self.decoder_func is not None:
             try:
                 return self.decoder_func()
@@ -147,9 +187,20 @@ class FileData:
         return None
 
     def chunk_callback(self, block_of_sentences: List[str]) -> ChunkSchema:
+        """
+        Callback for chunking a block of sentences using AI.
+
+        :param block_of_sentences: List of sentences to chunk.
+        :return: ChunkSchema result.
+        """
         return self.ai.chunk(block_of_sentences)
 
     def process(self) -> bool:
+        """
+        Process the file: decode, split, chunk, embed, and create points.
+
+        :return: True if successful, False otherwise.
+        """
         doc_content = self.decode()
         if doc_content is None:
             logger.warning(f"Failed to process {format_file(self.file_path)}")
