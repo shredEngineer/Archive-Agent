@@ -13,8 +13,8 @@ import pypandoc
 from charset_normalizer import from_path
 
 from archive_agent.util.format import format_file
-from archive_agent.loader.image import ImageToTextCallback
-from archive_agent.loader.image import is_image
+from archive_agent.data.loader.image import ImageToTextCallback
+from archive_agent.data.loader.image import is_image
 from archive_agent.util.text_util import utf8_tempfile
 
 from archive_agent.data.DocumentContent import DocumentContent

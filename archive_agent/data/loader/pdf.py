@@ -14,7 +14,7 @@ from PIL import Image
 from archive_agent.config.DecoderSettings import OcrStrategy, DecoderSettings
 from archive_agent.data.DocumentContent import DocumentContent
 from archive_agent.util.format import format_file
-from archive_agent.loader.image import ImageToTextCallback
+from archive_agent.data.loader.image import ImageToTextCallback
 
 logger = logging.getLogger(__name__)
 

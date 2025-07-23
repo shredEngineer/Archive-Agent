@@ -11,18 +11,19 @@ from PIL import Image
 from qdrant_client.models import PointStruct
 
 from archive_agent.ai.AiManager import AiManager
+from archive_agent.ai.chunk.AiChunk import ChunkSchema
 from archive_agent.ai.vision.AiVisionEntity import AiVisionEntity
 from archive_agent.ai.vision.AiVisionOCR import AiVisionOCR
 from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 from archive_agent.config.DecoderSettings import DecoderSettings
 from archive_agent.data.DocumentContent import DocumentContent
 from archive_agent.util.format import format_file
-from archive_agent.loader.pdf import is_pdf_document, load_pdf_document
-from archive_agent.loader.image import is_image, load_image
+from archive_agent.data.loader.pdf import is_pdf_document, load_pdf_document
+from archive_agent.data.loader.image import is_image, load_image
 from archive_agent.util.image_util import image_resize_safe, image_to_base64
-from archive_agent.loader.text import is_plaintext, load_plaintext
-from archive_agent.loader.text import is_ascii_document, load_ascii_document
-from archive_agent.loader.text import is_binary_document, load_binary_document
+from archive_agent.data.loader.text import is_plaintext, load_plaintext
+from archive_agent.data.loader.text import is_ascii_document, load_ascii_document
+from archive_agent.data.loader.text import is_binary_document, load_binary_document
 from archive_agent.data.chunk import generate_chunks_with_ranges, split_sentences
 
 
@@ -145,6 +146,9 @@ class FileData:
         logger.warning(f"Cannot process {format_file(self.file_path)}")
         return None
 
+    def chunk_callback(self, block_of_sentences: List[str]) -> ChunkSchema:
+        return self.ai.chunk(block_of_sentences)
+
     def process(self) -> bool:
         doc_content = self.decode()
         if doc_content is None:
@@ -152,12 +156,11 @@ class FileData:
             return False
 
         per_line_references = doc_content.pages_per_line if doc_content.pages_per_line is not None else doc_content.lines_per_line or []
-        sentences, sentence_reference_ranges = split_sentences(doc_content.text, per_line_references)
+        sentences_with_ranges = split_sentences(doc_content.text, per_line_references)
 
         chunks_with_ranges = generate_chunks_with_ranges(
-            sentences=sentences,
-            sentence_reference_ranges=sentence_reference_ranges,
-            ai=self.ai,
+            sentences_with_ranges=sentences_with_ranges,
+            chunk_callback=self.chunk_callback,
             chunk_lines_block=self.chunk_lines_block,
             file_path=self.file_path
         )

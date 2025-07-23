@@ -89,7 +89,7 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
     * [How files are processed](#how-files-are-processed)
     * [OCR strategies](#ocr-strategies)
     * [How smart chunking works](#how-smart-chunking-works)
-    * [How chunks are linked to page/line numbers](#how-chunks-are-linked-to-pageline-numbers)
+    * [How chunk references work](#how-chunk-references-work)
     * [How chunks are retrieved](#how-chunks-are-retrieved)
     * [How chunks are reranked and expanded](#how-chunks-are-reranked-and-expanded)
     * [How answers are generated](#how-answers-are-generated)
@@ -315,19 +315,14 @@ See [Archive Agent settings](#archive-agent-settings): `chunk_lines_block`
 
 💡 **Good to know:** This **smart chunking** improves the accuracy and effectiveness of the retrieval. 
 
-### How chunks are linked to page/line numbers
+### How chunk references work
 
-To ensure that every chunk can be traced back to its origin, **Archive Agent** maps chunks to the page or line numbers of the source file. This is especially useful for PDFs and long documents.
+To ensure that every chunk can be traced back to its origin, **Archive Agent** maps the text contents of each chunk to the corresponding line numbers or page numbers of the source file.
 
-**For line-based files (e.g., `.txt`):**
-- A direct line-to-sentence mapping is used. Each non-empty line is treated as a sentence, and its reference is the line number.
+- Line-based files (e.g., `.txt`) use the range of line numbers as reference.
+- Page-based files (e.g., `.pdf`) use the range of page numbers as reference.
 
-**For page-based files (e.g., `.pdf`):**
-- The document is converted to text, and each line is assigned a page number.
-- The text is split into sentences using `spaCy`. 
-- For each sentence, **Archive Agent** determines the range of pages it spans. This results in a `[min:max]` reference for each sentence.
-
-When sentences are grouped into chunks, the reference for the chunk becomes the combined range of all sentences within it. This provides a precise `[min:max]` page or line range for each chunk, which is displayed alongside search results. If no page or line data is available for a file, it will be indicated.
+📌 **Note:** References are only *approximate* due to paragraph/sentence splitting/joining in the chunking process.
 
 ### How chunks are retrieved
 
@@ -775,7 +770,7 @@ To run unit tests, check types, and check style, run this:
 - [ ] Binary document page numbers (e.g., `.docx`) are not supported yet.
 
 
-- [ ] Lines info in references is buggy (and only approximate due to SpaCy sentence splitting).
+- [ ] References are only *approximate* due to paragraph/sentence splitting/joining in the chunking process.
 
 
 - [ ] AI cache does not handle `AiResult` schema migration yet. (If you encounter errors, passing the `--nocache` flag or deleting all AI cache folders would certainly help in the meantime.)
