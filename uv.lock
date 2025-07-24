@@ -64,7 +64,7 @@ wheels = [
 
 [[package]]
 name = "archive-agent"
-version = "6.0.0"
+version = "6.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "charset-normalizer" },
