@@ -172,7 +172,7 @@ class AiVisionEntity:
     @staticmethod
     def format_vision_answer(vision_result: VisionSchema) -> str:
         """
-        Format vision result as single line (without linebreaks).
+        Format vision result as single line (without linebreaks — required for downstream logic).
         Each statement is explicit, self-contained, and optimized for RAG embedding.
         Relations are formatted first, followed by descriptions for entities not used in relations.
         """
@@ -201,5 +201,5 @@ class AiVisionEntity:
         if not statements:
             statements.append("No meaningful information was extracted from the image.")
 
-        # Join into a single paragraph
+        # Join into a single line
         return " ".join(statement.rstrip('.') + "." for statement in statements if statement.strip())

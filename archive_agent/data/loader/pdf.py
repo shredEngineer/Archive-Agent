@@ -15,6 +15,7 @@ from archive_agent.config.DecoderSettings import OcrStrategy, DecoderSettings
 from archive_agent.data.DocumentContent import DocumentContent
 from archive_agent.util.format import format_file
 from archive_agent.data.loader.image import ImageToTextCallback
+from archive_agent.util.text_util import PageTextBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -99,48 +100,26 @@ def build_document_text_from_pages(
     if image_texts_per_page is not None:
         assert len(page_contents) == len(image_texts_per_page)
 
-    all_lines: List[str] = []
-    pages_per_line: List[int] = []
+    builder = PageTextBuilder()
 
     for page_idx, content in enumerate(page_contents):
         page_number = page_idx + 1
 
-        # Image text lines (if any)
+        # Append image text
         if image_texts_per_page is not None:
             for img_text in image_texts_per_page[page_idx]:
-                img_lines = img_text.splitlines() if img_text else []
-                for line in img_lines:
-                    all_lines.append(line)
-                    pages_per_line.append(page_number)
-                # Optionally: Add a blank line after image block? (decide: if yes, then also pages_per_line)
-                if img_lines:
-                    all_lines.append("")
-                    pages_per_line.append(page_number)
+                builder.push("", page_number)
+                builder.push(img_text, page_number)
+                builder.push("", page_number)
 
-        # Main text lines
+        # Append text
         page_lines = content.text.splitlines()
         for line in page_lines:
-            all_lines.append(line)
-            pages_per_line.append(page_number)
+            builder.push(line, page_number)
 
-        # Blank line to separate pages (except after last page)
-        if page_idx < len(page_contents) - 1:
-            all_lines.append("")
-            pages_per_line.append(page_number)
+        builder.push()
 
-    if not all_lines:
-        return None
-
-    if all_lines and all_lines[-1] == "":
-        all_lines.pop()
-        pages_per_line.pop()
-
-    full_text = "\n".join(all_lines)
-
-    assert len(full_text.splitlines()) == len(pages_per_line), \
-        f"Mismatch: pages_per_line[{len(pages_per_line)}] pages VS full_text[{len(full_text.splitlines())}] lines"
-
-    return DocumentContent(text=full_text, pages_per_line=pages_per_line)
+    return builder.getDocumentContent()
 
 
 # ### Automatic OCR stuff ### #
@@ -160,42 +139,34 @@ def extract_text_from_images_per_page(
     """
     all_image_texts: List[List[str]] = []
 
-    for index, content in enumerate(page_contents):
+    for page_index, content in enumerate(page_contents):
         page_image_texts: List[str] = []
         logger.info(f"Processing {format_file(file_path)}")
 
-        for i, img_bytes in enumerate(content.layout_image_bytes):
+        for image_index, img_bytes in enumerate(content.layout_image_bytes):
+            log_header = f"Image ({image_index + 1}) on page ({page_index + 1}) / ({len(page_contents)})"
+
             try:
                 # noinspection PyTypeChecker
-                with Image.open(io.BytesIO(img_bytes)) as img:
-                    if img.width <= TINY_IMAGE_WIDTH_THRESHOLD or img.height <= TINY_IMAGE_HEIGHT_THRESHOLD:
-                        logger.warning(
-                            f"Image ({i + 1}) on page ({index + 1}) / ({len(page_contents)}): "
-                            f"Ignored because it's tiny ({img.width} × {img.height} px)"
-                        )
+                with Image.open(io.BytesIO(img_bytes)) as image:
+                    if image.width <= TINY_IMAGE_WIDTH_THRESHOLD or image.height <= TINY_IMAGE_HEIGHT_THRESHOLD:
+                        logger.warning(f"{log_header}: Ignored because it's tiny ({image.width} × {image.height} px)")
                         continue
 
-                    logger.info(
-                        f"Image ({i + 1}) on page ({index + 1}) / ({len(page_contents)}): "
-                        f"Converting to text"
-                    )
+                    logger.info(f"{log_header}: Converting to text")
 
-                    text = image_to_text_callback(img)
-
-                    if text:
-                        page_image_texts.append(f"[Image] {text}")
-                    else:
+                    image_text = image_to_text_callback(image)
+                    if image_text is None:
                         page_image_texts.append(f"[Unprocessable Image]")
-                        logger.warning(
-                            f"Image ({i + 1}) on page ({index + 1}) / ({len(page_contents)}): "
-                            f"Unprocessable image"
-                        )
+                        logger.warning(f"{log_header}: Unprocessable image")
+                        continue
+
+                    assert len(image_text.splitlines()) == 1, "Text from image must be single line."
+
+                    page_image_texts.append(f"[Image] {image_text}")
 
             except Exception as e:
-                logger.warning(
-                    f"Image ({i + 1}) on page ({index + 1}) / ({len(page_contents)}): "
-                    f"Failed to extract text: {e}"
-                )
+                logger.warning(f"{log_header}: Failed to extract text: {e}")
 
         all_image_texts.append(page_image_texts)
 

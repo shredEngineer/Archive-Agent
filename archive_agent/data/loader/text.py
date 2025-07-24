@@ -14,7 +14,7 @@ from charset_normalizer import from_path
 from archive_agent.util.format import format_file
 from archive_agent.data.loader.image import ImageToTextCallback
 from archive_agent.data.loader.image import is_image
-from archive_agent.util.text_util import utf8_tempfile
+from archive_agent.util.text_util import utf8_tempfile, LineTextBuilder
 
 from archive_agent.data.DocumentContent import DocumentContent
 
@@ -49,11 +49,8 @@ def load_plaintext(file_path: str) -> Optional[DocumentContent]:
         return None
 
     text = str(best_match)
-    lines = text.splitlines()
 
-    line_numbers = list(range(1, len(lines) + 1)) if lines else []
-
-    return DocumentContent(text=text, lines_per_line=line_numbers)
+    return LineTextBuilder(text=text).getDocumentContent()
 
 
 def is_ascii_document(file_path: str) -> bool:
@@ -90,10 +87,7 @@ def load_ascii_document(file_path: str) -> Optional[DocumentContent]:
         text = pypandoc.convert_file(tmp_path, to="plain", format=file_ext.lstrip("."), extra_args=["--wrap=preserve"])
         text = text.encode("utf-8", errors="replace").decode("utf-8").rstrip("\n")
 
-        lines = text.splitlines()
-        line_nums = list(range(1, len(lines) + 1)) if lines else []
-
-        return DocumentContent(text=text, lines_per_line=line_nums)
+        return LineTextBuilder(text=text).getDocumentContent()
 
     except Exception as e:
         logger.warning(f"Failed to convert {format_file(file_path)} via Pandoc: {e}")
@@ -136,37 +130,39 @@ def load_binary_document(
         logger.warning(f"Failed to convert {format_file(file_path)} via Pandoc: {e}")
         return None
 
+    builder = LineTextBuilder(text=text)
+
+    # Append image texts at the end of the document
     images = load_binary_document_images(file_path)
-
-    lines = text.splitlines()
-    line_numbers = list(range(1, len(lines) + 1)) if lines else []
-
     if images:
+
         if image_to_text_callback is None:
             logger.warning(f"Image vision is DISABLED in your current configuration")
             logger.warning(f"IGNORING ({len(images)}) document image(s)")
+
         else:
-            current_line_num = len(line_numbers) + 1
             for image_index, image in enumerate(images):
                 logger.info(f"Converting document image ({image_index + 1}) / ({len(images)})...")
+
                 image_text = image_to_text_callback(image)
-                if image_text:
-                    lines.append(f"[Image] {image_text}")
-                    line_numbers.append(current_line_num)
-                else:
-                    lines.append(f"[Unprocessable Image]")
-                    line_numbers.append(current_line_num)
+
+                if image_text is None:
+                    builder.push()
+                    builder.push(f"[Unprocessable Image]")
+                    builder.push()
                     logger.warning(
-                        f"Image ({image_index + 1}) on page ({image_index + 1}) / ({len(images)}): "
+                        f"Image ({image_index + 1}) / ({len(images)}): "
                         f"Unprocessable image"
                     )
+                    continue
 
-    text = "\n".join(lines)
+                assert len(text.splitlines()) == 1, "Text from image must be single line."
 
-    assert len(text.splitlines()) == len(line_numbers), \
-        f"lines_per_line length mismatch: {len(line_numbers)} for {len(text.splitlines())} lines"
+                builder.push()
+                builder.push(f"[Image] {image_text}")
+                builder.push()
 
-    return DocumentContent(text=text, lines_per_line=line_numbers)
+    return builder.getDocumentContent()
 
 
 def load_binary_document_images(file_path: str) -> List[Image.Image]:
@@ -186,6 +182,6 @@ def load_binary_document_images(file_path: str) -> List[Image.Image]:
                         image.load()  # Prevent lazy I/O; load into memory NOW.
                         images.append(image)
     except Exception as e:
-        logger.warning(f"Failed to extract images from {format_file(file_path)}: {e}")
+        logger.warning(f"Failed to extract image(s) from {format_file(file_path)}: {e}")
 
     return images

@@ -82,6 +82,6 @@ class AiVisionOCR:
     @staticmethod
     def format_vision_answer(vision_result: VisionSchema) -> str:
         """
-        Format vision result as single line (without linebreaks).
+        Format vision result as single line (without linebreaks — required for downstream logic).
         """
         return " ".join(vision_result.answer.splitlines())

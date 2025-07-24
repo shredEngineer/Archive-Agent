@@ -9,6 +9,7 @@ from PIL import Image, UnidentifiedImageError
 from archive_agent.data.DocumentContent import DocumentContent
 
 from archive_agent.util.format import format_file
+from archive_agent.util.text_util import PageTextBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -46,11 +47,10 @@ def load_image(
         logger.warning(f"Image vision is DISABLED in your current configuration")
         return None
 
-    text = image_to_text_callback(image)
-    if text is None:
+    image_text = image_to_text_callback(image)
+    if image_text is None:
         return None
 
-    lines = text.splitlines()
-    line_nums = list(range(1, len(lines) + 1)) if lines else []
+    assert len(image_text.splitlines()) == 1, "Text from image must be single line."
 
-    return DocumentContent(text=text, lines_per_line=line_nums)
+    return PageTextBuilder(text=image_text).getDocumentContent()
