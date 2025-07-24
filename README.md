@@ -18,7 +18,7 @@ A smart file indexer with AI search (RAG engine), automatic OCR, and MCP interfa
 
 **Features**:
 - Indexes [plaintext, documents, PDFs, images](#which-files-are-processed)
-- Uses [automatic OCR](#ocr-strategies) and entity extraction for image processing
+- Processes images using [automatic OCR](#ocr-strategies) and entity extraction
 - Search and query files using AI ([OpenAI](https://platform.openai.com/docs/overview), [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/))
 - [MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension included
 
@@ -116,8 +116,9 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
   * [Developer's guide](#developers-guide)
     * [Important modules](#important-modules)
     * [Code testing and analysis](#code-testing-and-analysis)
-  * [Known ISSUES](#known-issues)
+  * [Known issues](#known-issues)
   * [Licensed under GNU GPL v3.0](#licensed-under-gnu-gpl-v30)
+  * [GUI sneak peek](#gui-sneak-peek)
 <!-- TOC -->
 
 ---
@@ -236,9 +237,29 @@ At least 32 GiB RAM is recommended for smooth performance.
 ## How Archive Agent works
 
 💡 Overview of **Archive Agent** processing and control:
-[(enlarge)](archive_agent/assets/Archive-Agent-Overview-1200x1019.png)
 
-![Archive Agent Overview](archive_agent/assets/Archive-Agent-Overview-small.png)
+```mermaid
+graph LR
+
+  %% Ingestion Pipeline
+  subgraph Ingestion
+    A[Track and Commit Files] --> B[Parse & OCR]
+    B --> C[Semantic Chunking]
+    C --> D[Embed Chunks]
+    D --> E[Store Vectors in Qdrant]
+  end
+
+  %% Query Pipeline
+  subgraph Query
+    F[Ask Question] --> G[Embed Question]
+    G --> H[Retrieve Nearest Chunks]
+    E --> H
+    H --> I[Rerank by Relevance]
+    I --> J[Expand Context]
+    J --> K[Generate Answer]
+    K --> L[Show Reply]
+  end
+```
 
 ###  Which files are processed
 
@@ -246,9 +267,9 @@ At least 32 GiB RAM is recommended for smooth performance.
 - Text:
   - Plaintext: `.txt`, `.md`
   - Documents:
-    - ASCII documents: `.html`, `.htm`
+    - ASCII documents: `.html`, `.htm` (images **not** supported)
     - Binary documents: `.odt`, `.docx` (including images)
-  - PDF documents: `.pdf` (including images, see [OCR strategies](#ocr-strategies))
+  - PDF documents: `.pdf` (including images; also see [OCR strategies](#ocr-strategies))
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
 
 ### How files are processed
@@ -259,8 +280,13 @@ Ultimately, **Archive Agent** decodes everything to text like this:
 - PDF documents are decoded according to the OCR strategy.
 - Images are decoded to text using AI vision.
   - The vision model will reject unintelligible images.
+  - *Entity extraction* extracts structured information from images.
+  - Structured information is formatted as image description.
 
-Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
+
+⚠️ **Warning:** Entity extraction is still experimental; OCR can be used alternatively.  
+
+See [Archive Agent settings](#archive-agent-settings): `image_entity_extract`
 
 📌 **Note:** Unsupported files are tracked but not processed.
 
@@ -268,7 +294,8 @@ Using *Pandoc* for documents, *PyMuPDF4LLM* for PDFs, *Pillow* for images.
 
 For PDF documents, there are different OCR strategies supported by **Archive Agent**:
 
-- `strict` OCR strategy:
+
+- `strict` OCR strategy (**recommended**):
   - PDF OCR text layer is *ignored*.
   - PDF pages are treated as images.
   - **Expensive and slow, but more accurate.**
@@ -281,15 +308,15 @@ For PDF documents, there are different OCR strategies supported by **Archive Age
 
 
 - `auto` OCR strategy:
-  - Selects best OCR strategy for each page based on the number of characters extracted from the PDF OCR text layer, if any. 
+  - Attempts to select the best OCR strategy for each page, based on the number of characters extracted from the PDF OCR text layer, if any.
   - Decides based on `ocr_auto_threshold`, the minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict`.
   - **Trade-off between cost, speed, and accuracy.**
 
 
 See [Archive Agent settings](#archive-agent-settings): `ocr_strategy`, `ocr_auto_threshold`
 
-📌 **Note:** The `strict` OCR strategy is recommended for best results.
-PDF documents often contain small images related to page style/layout which cause overhead while contributing little information or even cluttering the result.
+⚠️ **Warning:** The `auto` OCR strategy is still experimental.
+PDF documents often contain small/scattered images related to page style/layout which cause overhead while contributing little information or even cluttering the result.
 
 💡 **Good to know:** You will be prompted to choose an OCR strategy at startup (see [Run Archive Agent](#run-archive-agent)).
 
@@ -653,6 +680,7 @@ The profile configuration is contained in the profile folder as `config.json`.
   | `mcp_server_port`      | MCP server port (default `8008`)                                                                 |
   | `ocr_strategy`         | OCR strategy in [`DecoderSettings.py`](archive_agent/config/DecoderSettings.py)                  |
   | `ocr_auto_threshold`   | Minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict` |
+  | `image_entity_extract` | Image handling: `true` uses entity extraction, `false` uses OCR.                                 |
   | `chunk_lines_block`    | Number of lines per block for chunking                                                           |
   | `qdrant_server_url`    | URL of the Qdrant server                                                                         |
   | `qdrant_collection`    | Name of the Qdrant collection                                                                    |
@@ -771,6 +799,12 @@ To run unit tests, check types, and check style, run this:
 
 
 - [ ] Rejected images (e.g., due to OpenAI content filter policy violation) from PDF pages in `strict` OCR mode are currently left empty instead of resorting to text extracted from PDF OCR layer (if any).
+
+
+- [ ] The SpaCy model `en_core_web_md` used for sentence splitting is only suitable for English source text. Multilingual support is missing at the moment.
+
+
+- [ ] HTML document images are not supported.
 
 ---
 

@@ -129,7 +129,7 @@ class AiVisionEntity:
             "- `rejection_reason`:",
             "    A short, factual reason for rejection.",
             "    Required ONLY if `is_rejected` is `true`. Leave this field blank if `is_rejected` is `false`.",
-            "    Examples: 'image is too blurred to read', 'image file is corrupted'",
+            "    Examples: 'image is blank', 'image is too blurred to read', 'image file is corrupted'",
             "",
             "ADDITIONAL REQUIRED BLANK FIELDS:"
             "",

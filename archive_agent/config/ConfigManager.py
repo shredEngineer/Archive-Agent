@@ -32,6 +32,7 @@ class ConfigManager(StorageManager, AiProviderKeys):
 
     OCR_STRATEGY = 'ocr_strategy'
     OCR_AUTO_THRESHOLD = 'ocr_auto_threshold'
+    IMAGE_ENTITY_EXTRACT = 'image_entity_extract'
 
     CHUNK_LINES_BLOCK = 'chunk_lines_block'
 
@@ -46,7 +47,7 @@ class ConfigManager(StorageManager, AiProviderKeys):
     EXPAND_CHUNKS_RADIUS = 'expand_chunks_radius'
 
     DEFAULT_CONFIG = {
-        CONFIG_VERSION: 7,  # TODO:  DON'T FORGET TO UPDATE BOTH  `CONFIG_VERSION`  AND  `upgrade()`
+        CONFIG_VERSION: 8,  # TODO:  DON'T FORGET TO UPDATE BOTH  `CONFIG_VERSION`  AND  `upgrade()`
 
         MCP_SERVER_PORT: 8008,
 
@@ -54,6 +55,8 @@ class ConfigManager(StorageManager, AiProviderKeys):
         OCR_STRATEGY: "",
 
         OCR_AUTO_THRESHOLD: 32,
+
+        IMAGE_ENTITY_EXTRACT: "true",
 
         CHUNK_LINES_BLOCK: 50,
 
@@ -229,6 +232,13 @@ class ConfigManager(StorageManager, AiProviderKeys):
             self._add_option(self.EXPAND_CHUNKS_RADIUS)
             self._rename_option('qdrant_score_min', self.RETRIEVE_SCORE_MIN)
             self._rename_option('qdrant_chunks_max', self.RETRIEVE_CHUNKS_MAX)
+            upgraded = True
+
+        # Option(s) added in v8:
+        # - `image_entity_extract`
+        if version < 8:
+            self._set_version(8)
+            self._add_option(self.IMAGE_ENTITY_EXTRACT)
             upgraded = True
 
         return upgraded

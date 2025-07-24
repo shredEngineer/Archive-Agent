@@ -4,6 +4,7 @@
 import logging
 
 from archive_agent.ai.vision.AiVisionSchema import VisionSchema
+from archive_agent.util.text_util import splitlines_exact
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class AiVisionOCR:
             "- `rejection_reason`:",
             "    A short, factual reason for rejection.",
             "    Required ONLY if `is_rejected` is `true`. Leave this field blank if `is_rejected` is `false`.",
-            "    Examples: 'image is too blurred to read', 'image file is corrupted',",
+            "    Examples: 'image is blank', 'image is too blurred to read', 'image file is corrupted',",
             "    'image contains unreadable or distorted text'",
             "",
             "ADDITIONAL REQUIRED BLANK FIELDS:"
@@ -84,4 +85,4 @@ class AiVisionOCR:
         """
         Format vision result as single line (without linebreaks — required for downstream logic).
         """
-        return " ".join(vision_result.answer.splitlines())
+        return " ".join(splitlines_exact(vision_result.answer)).strip()

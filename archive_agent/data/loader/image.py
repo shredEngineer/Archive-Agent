@@ -9,7 +9,8 @@ from PIL import Image, UnidentifiedImageError
 from archive_agent.data.DocumentContent import DocumentContent
 
 from archive_agent.util.format import format_file
-from archive_agent.util.text_util import PageTextBuilder
+from archive_agent.util.text_util import splitlines_exact
+from archive_agent.util.PageTextBuilder import PageTextBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,6 @@ def load_image(
     if image_text is None:
         return None
 
-    assert len(image_text.splitlines()) == 1, "Text from image must be single line."
+    assert len(splitlines_exact(image_text)) == 1, f"Text from image must be single line:\n'{image_text}'"
 
     return PageTextBuilder(text=image_text).getDocumentContent()

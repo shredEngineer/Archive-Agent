@@ -14,7 +14,8 @@ from charset_normalizer import from_path
 from archive_agent.util.format import format_file
 from archive_agent.data.loader.image import ImageToTextCallback
 from archive_agent.data.loader.image import is_image
-from archive_agent.util.text_util import utf8_tempfile, LineTextBuilder
+from archive_agent.util.text_util import utf8_tempfile, splitlines_exact
+from archive_agent.util.LineTextBuilder import LineTextBuilder
 
 from archive_agent.data.DocumentContent import DocumentContent
 
@@ -85,7 +86,7 @@ def load_ascii_document(file_path: str) -> Optional[DocumentContent]:
 
     try:
         text = pypandoc.convert_file(tmp_path, to="plain", format=file_ext.lstrip("."), extra_args=["--wrap=preserve"])
-        text = text.encode("utf-8", errors="replace").decode("utf-8").rstrip("\n")
+        text = text.encode("utf-8", errors="replace").decode("utf-8")
 
         return LineTextBuilder(text=text).getDocumentContent()
 
@@ -125,7 +126,7 @@ def load_binary_document(
 
     try:
         text = pypandoc.convert_file(file_path, to="plain", format=file_ext.lstrip("."), extra_args=["--wrap=preserve"])
-        text = text.encode("utf-8", errors="replace").decode("utf-8").rstrip("\n")
+        text = text.encode("utf-8", errors="replace").decode("utf-8")
     except Exception as e:
         logger.warning(f"Failed to convert {format_file(file_path)} via Pandoc: {e}")
         return None
@@ -147,6 +148,7 @@ def load_binary_document(
                 image_text = image_to_text_callback(image)
 
                 if image_text is None:
+                    # NOTE: The brackets indicate that the text maps to an image.
                     builder.push()
                     builder.push(f"[Unprocessable Image]")
                     builder.push()
@@ -156,10 +158,11 @@ def load_binary_document(
                     )
                     continue
 
-                assert len(text.splitlines()) == 1, "Text from image must be single line."
+                assert len(splitlines_exact(image_text)) == 1, f"Text from image must be single line:\n'{image_text}'"
 
+                # NOTE: The brackets indicate that the text maps to an image.
                 builder.push()
-                builder.push(f"[Image] {image_text}")
+                builder.push(f"[{image_text}]")
                 builder.push()
 
     return builder.getDocumentContent()

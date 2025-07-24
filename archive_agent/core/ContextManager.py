@@ -78,6 +78,7 @@ class ContextManager:
         self.decoder_settings = DecoderSettings(
             ocr_strategy=OcrStrategy(self.config.data[self.config.OCR_STRATEGY]),
             ocr_auto_threshold=self.config.data[self.config.OCR_AUTO_THRESHOLD],
+            image_entity_extract=str(self.config.data[self.config.IMAGE_ENTITY_EXTRACT]).lower().strip() == "true",
         )
 
         self.qdrant = QdrantManager(

@@ -15,7 +15,8 @@ from archive_agent.config.DecoderSettings import OcrStrategy, DecoderSettings
 from archive_agent.data.DocumentContent import DocumentContent
 from archive_agent.util.format import format_file
 from archive_agent.data.loader.image import ImageToTextCallback
-from archive_agent.util.text_util import PageTextBuilder
+from archive_agent.util.text_util import splitlines_exact
+from archive_agent.util.PageTextBuilder import PageTextBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ def load_pdf_document(
     if image_to_text_callback is None:
         logger.warning(f"Image vision is DISABLED in your current configuration")
     else:
-        image_texts_per_page = extract_text_from_images_per_page(
+        image_texts_per_page = extract_image_texts_per_page(
             file_path,
             page_contents,
             image_to_text_callback,
@@ -96,27 +97,35 @@ def build_document_text_from_pages(
     """
     Build PDF document text by combining layout text and image text, with per-line page mapping.
     This function *guarantees* that every line in `text` has a matching entry in `pages_per_line`.
+    :param page_contents: Page contents.
+    :param image_texts_per_page: Image texts per page.
+    :return: Document content if successful, None otherwise.
     """
     if image_texts_per_page is not None:
         assert len(page_contents) == len(image_texts_per_page)
 
     builder = PageTextBuilder()
 
-    for page_idx, content in enumerate(page_contents):
-        page_number = page_idx + 1
+    for page_index, page_content in enumerate(page_contents):
+        page_number = page_index + 1
 
         # Append image text
         if image_texts_per_page is not None:
-            for img_text in image_texts_per_page[page_idx]:
+
+            for image_text in image_texts_per_page[page_index]:
+
+                assert len(splitlines_exact(image_text)) == 1, f"Text from image must be single line:\n'{image_text}'"
+
                 builder.push("", page_number)
-                builder.push(img_text, page_number)
+                builder.push(image_text, page_number)
                 builder.push("", page_number)
 
         # Append text
-        page_lines = content.text.splitlines()
+        page_lines = splitlines_exact(page_content.text)
         for line in page_lines:
             builder.push(line, page_number)
 
+        # Append empty line at end of page
         builder.push()
 
     return builder.getDocumentContent()
@@ -125,7 +134,7 @@ def build_document_text_from_pages(
 # ### Automatic OCR stuff ### #
 
 
-def extract_text_from_images_per_page(
+def extract_image_texts_per_page(
         file_path: str,
         page_contents: List[PdfPageContent],
         image_to_text_callback: ImageToTextCallback,
@@ -137,18 +146,21 @@ def extract_text_from_images_per_page(
     :param image_to_text_callback: Image-to-text callback.
     :return: List of text results per page (one list of strings per page).
     """
-    all_image_texts: List[List[str]] = []
+    image_texts_per_page: List[List[str]] = []
 
     for page_index, content in enumerate(page_contents):
-        page_image_texts: List[str] = []
-        logger.info(f"Processing {format_file(file_path)}")
+        image_texts: List[str] = []
 
-        for image_index, img_bytes in enumerate(content.layout_image_bytes):
-            log_header = f"Image ({image_index + 1}) on page ({page_index + 1}) / ({len(page_contents)})"
+        for image_index, image_bytes in enumerate(content.layout_image_bytes):
+            log_header = (
+                f"Processing image ({image_index + 1}) "
+                f"on page ({page_index + 1}) / ({len(page_contents)}) "
+                f"of {format_file(file_path)}"
+            )
 
             try:
                 # noinspection PyTypeChecker
-                with Image.open(io.BytesIO(img_bytes)) as image:
+                with Image.open(io.BytesIO(image_bytes)) as image:
                     if image.width <= TINY_IMAGE_WIDTH_THRESHOLD or image.height <= TINY_IMAGE_HEIGHT_THRESHOLD:
                         logger.warning(f"{log_header}: Ignored because it's tiny ({image.width} × {image.height} px)")
                         continue
@@ -157,20 +169,23 @@ def extract_text_from_images_per_page(
 
                     image_text = image_to_text_callback(image)
                     if image_text is None:
-                        page_image_texts.append(f"[Unprocessable Image]")
+                        # NOTE: The brackets indicate that the text maps to an image.
+                        image_texts.append(f"[Unprocessable image]")
                         logger.warning(f"{log_header}: Unprocessable image")
                         continue
 
-                    assert len(image_text.splitlines()) == 1, "Text from image must be single line."
+                    assert len(splitlines_exact(image_text)) == 1, f"Text from image must be single line:\n'{image_text}'"
 
-                    page_image_texts.append(f"[Image] {image_text}")
+                    # NOTE: The brackets indicate that the text maps to an image.
+                    # TODO: Remove the brackets in `strict` OCR strategy.
+                    image_texts.append(f"[{image_text}]")
 
             except Exception as e:
                 logger.warning(f"{log_header}: Failed to extract text: {e}")
 
-        all_image_texts.append(page_image_texts)
+        image_texts_per_page.append(image_texts)
 
-    return all_image_texts
+    return image_texts_per_page
 
 
 def get_pdf_page_content(page: fitz.Page) -> PdfPageContent:
@@ -239,10 +254,10 @@ def get_pdf_page_contents(
         if decoder_settings.ocr_strategy == OcrStrategy.AUTO:
             if len(page_content.text) >= decoder_settings.ocr_auto_threshold:
                 ocr_strategy_to_apply = OcrStrategy.RELAXED
-                logger.info(f"- OCR strategy: 'auto' resolved to 'relaxed' (threshold: {decoder_settings.ocr_auto_threshold} characters)")
+                logger.info(f"- OCR strategy: 'auto' resolved to 'relaxed'")
             else:
                 ocr_strategy_to_apply = OcrStrategy.STRICT
-                logger.info(f"- OCR strategy: 'auto' resolved to 'strict' (threshold: {decoder_settings.ocr_auto_threshold} characters)")
+                logger.info(f"- OCR strategy: 'auto' resolved to 'strict'")
         else:
             ocr_strategy_to_apply = decoder_settings.ocr_strategy
             logger.info(f"- OCR strategy: '{ocr_strategy_to_apply.value}'")

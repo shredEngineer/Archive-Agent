@@ -76,7 +76,7 @@
 
     - **Edge Cases**: Short references default to 0.
       Monotonic references preserved in min-max.
-      `spaCy` model `xx_sent_ud_sm` for multi-language support.
+      `spaCy` model `en_core_web_md` for sentence splitting.
 
     - **Types**: `ReferenceList=List[int]`.
       `SentenceRange=Tuple[int, int]`.
@@ -93,10 +93,13 @@ from dataclasses import dataclass
 
 import spacy
 from spacy import Language  # type: ignore
+from spacy.language import Language
+from spacy.tokens import Doc
 import bisect
 
 from archive_agent.ai.chunk.AiChunk import ChunkSchema
 from archive_agent.util.format import format_file
+from archive_agent.util.text_util import splitlines_exact
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +167,7 @@ def _normalize_inline_whitespace(text: str) -> str:
     Normalize inline whitespace inside a string:
     - Replace tabs and non-breaking spaces with normal space
     - Collapse multiple spaces into one
+    - Strip leading and trailing whitespace
 
     :param text: Single paragraph string
     :return: Cleaned inline text
@@ -186,9 +190,6 @@ def _process_para_block(
     :param nlp: spaCy NLP pipeline.
     :return: List of SentenceWithRange for the block.
     """
-    if not para_lines:
-        return []  # Skip empty blocks
-
     normalized_lines = [_normalize_inline_whitespace(line) for line in para_lines]
     para_text = " ".join(normalized_lines)
 
@@ -202,14 +203,12 @@ def _process_para_block(
 
     block_sentences: List[SentenceWithRange] = []
 
-    for sent in doc.sents:
-        sent_text = sent.text.strip()
-        if not sent_text:
-            continue
+    for sentence in doc.sents:
+        sentence_text = sentence.text.strip()
 
-        if para_refs and line_starts:
-            start_char = sent.start_char
-            end_char = sent.end_char
+        if sentence_text and para_refs and line_starts:
+            start_char = sentence.start_char
+            end_char = sentence.end_char
 
             start_line_idx = bisect.bisect_right(line_starts, start_char) - 1
             start_line_idx = min(start_line_idx, len(para_lines) - 1)
@@ -217,15 +216,68 @@ def _process_para_block(
             end_line_idx = bisect.bisect_right(line_starts, end_char - 1) - 1
             end_line_idx = min(end_line_idx, len(para_lines) - 1)
 
-            sent_refs = para_refs[start_line_idx: end_line_idx + 1]
-            min_ref = min(sent_refs) if sent_refs else 0
-            max_ref = max(sent_refs) if sent_refs else 0
+            sentence_refs = para_refs[start_line_idx: end_line_idx + 1]
+            min_ref = min(sentence_refs) if sentence_refs else 0
+            max_ref = max(sentence_refs) if sentence_refs else 0
         else:
             min_ref = max_ref = 0
 
-        block_sentences.append(SentenceWithRange(sent_text, (min_ref, max_ref)))
+        block_sentences.append(SentenceWithRange(sentence_text, (min_ref, max_ref)))
 
     return block_sentences
+
+
+@Language.component("markdown_sentence_fixer")
+def markdown_sentence_fixer(doc: Doc) -> Doc:
+    """
+    Adjust sentence segmentation to better handle Markdown syntax.
+    Prevents sentence breaks after Markdown-specific tokens like headers, list items, and code blocks.
+    """
+    skip_next = False
+    for i, token in enumerate(doc[:-1]):
+        if skip_next:
+            doc[i + 1].is_sent_start = False
+            skip_next = False
+            continue
+
+        # Inline code or triple backticks
+        if token.text in {"`", "```"}:
+            doc[i + 1].is_sent_start = False
+            continue
+
+        # Markdown headers
+        if token.text.startswith("#"):
+            doc[i + 1].is_sent_start = False
+            continue
+
+        # Bullet list
+        if token.text in {"-", "*"} and (i == 0 or doc[i - 1].text == "\n"):
+            doc[i + 1].is_sent_start = False
+            continue
+
+        # Avoid break inside code block fences
+        if token.text == "```":
+            skip_next = True
+
+    return doc
+
+
+def _get_nlp() -> Language:
+    """
+    Get NLP model for sentence splitting.
+    :return: SpaCy language model.
+    """
+    nlp = spacy.load("en_core_web_md", disable=["parser"])
+
+    nlp.max_length = 100_000_000
+
+    if not nlp.has_pipe("sentencizer"):
+        nlp.add_pipe("sentencizer")
+
+    if not nlp.has_pipe("markdown_sentence_fixer"):
+        nlp.add_pipe("markdown_sentence_fixer", after="sentencizer")
+
+    return nlp
 
 
 # noinspection PyDefaultArgument
@@ -240,21 +292,20 @@ def split_sentences(text: str, per_line_references: ReferenceList = []) -> List[
     :param per_line_references: Per-line reference numbers (e.g., absolute line or page numbers).
     :return: List of SentenceWithRange (text and range pairs).
     """
-    lines = text.splitlines()
+    lines = splitlines_exact(text)
     stripped_lines = [line.strip() for line in lines]
 
-    nlp = spacy.load("xx_sent_ud_sm")
-    nlp.max_length = 100_000_000
-    if not nlp.has_pipe("sentencizer"):
-        nlp.add_pipe("sentencizer")
+    nlp = _get_nlp()
 
     para_blocks = _build_para_blocks(stripped_lines, per_line_references)
 
     sentences_with_ranges: List[SentenceWithRange] = []
 
     for i, (para_lines, para_refs) in enumerate(para_blocks):
-        # Paragraph handling: Insert empty string and zero range for breaks before subsequent paragraphs
+
         if i > 0:
+            # Insert empty sentence with zero range between paragraphs
+            # (Unit tests are sentitive to this logic)
             sentences_with_ranges.append(SentenceWithRange("", (0, 0)))
 
         block_sentences = _process_para_block(para_lines, para_refs, nlp)
@@ -385,9 +436,11 @@ def generate_chunks_with_ranges(
         logger.info(f"Chunking block ({block_index + 1}) / ({len(blocks_of_sentences)}) of {format_file(file_path)}")
 
         if carry:
-            current_block_line_count: int = len(carry.splitlines()) + len(block_of_sentences)
-            logger.info(f"Carrying over ({len(carry.splitlines())}) lines; current block has ({current_block_line_count}) lines")
-            block_of_sentences = carry.splitlines() + block_of_sentences
+            carry_lines = splitlines_exact(carry)
+
+            current_block_line_count: int = len(carry_lines) + len(block_of_sentences)
+            logger.info(f"Carrying over ({len(carry_lines)}) lines; current block has ({current_block_line_count}) lines")
+            block_of_sentences = carry_lines + block_of_sentences
             block_sentence_reference_ranges = [carry_range] + block_sentence_reference_ranges
 
         range_start = block_sentence_reference_ranges[0] if block_sentence_reference_ranges else (0, 0)
@@ -404,7 +457,8 @@ def generate_chunks_with_ranges(
             r_reference_ranges = block_sentence_reference_ranges[r_start - 1:r_end - 1]
             r_range = _aggregate_ranges(r_reference_ranges)
 
-            logger.info(f"Chunk {len(chunks_with_ranges) + 1}: sentences {r_start}:{r_end}, range {r_range}")
+            # DEBUG
+            # logger.info(f"Chunk {len(chunks_with_ranges) + 1}: sentences {r_start}:{r_end}, range {r_range}")
 
             body = "\n".join(block_of_sentences[r_start - 1:r_end - 1])
             chunk_text = _format_chunk(
@@ -423,7 +477,8 @@ def generate_chunks_with_ranges(
 
     if carry:
         assert last_carry_header is not None, "Internal error: carry exists but no header was recorded"
-        final_chunk_line_count: int = len(carry.splitlines())
+        carry_lines = splitlines_exact(carry)
+        final_chunk_line_count: int = len(carry_lines)
         logger.info(f"Appending final carry of ({final_chunk_line_count}) lines; final chunk has ({final_chunk_line_count}) lines")
         formatted_carry = _format_chunk(
             file_path=file_path,

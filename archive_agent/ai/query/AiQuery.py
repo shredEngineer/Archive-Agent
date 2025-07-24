@@ -171,12 +171,14 @@ class AiQuery:
         # Extracts 16-char hash from '<<< 0123456789ABCDEF >>>'
         def extract_hash(ref: str) -> str:
             ref = ref.strip()
+
             if ref.startswith("<<< ") and ref.endswith(" >>>"):
-                core = ref[4:-4].strip()
-                # Robustness: only accept exactly 16 hex chars (optional strict check)
-                if len(core) == 16 and all(c in "0123456789abcdefABCDEF" for c in core):
-                    return core
-            # Fallback: just return as-is (should not occur)
+                hash_str = ref[4:-4].strip()
+
+                if len(hash_str) == 16 and all(c in "0123456789abcdefABCDEF" for c in hash_str):
+                    return hash_str
+
+            logger.critical(f"Invalid reference format: '{ref}'")
             return ref
 
         for answer in query_result.answer_list:

@@ -28,7 +28,7 @@ echo ""
 echo ".---------------------."
 echo "| Install spaCy model |"
 echo "'---------------------'"
-uv run python -m spacy download xx_sent_ud_sm
+uv run python -m spacy download en_core_web_md
 
 echo ""
 echo ".-----------------------."

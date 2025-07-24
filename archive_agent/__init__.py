@@ -76,7 +76,8 @@ logging.basicConfig(
         RichHandler(
             markup=False,
             rich_tracebacks=True,
-            highlighter=CustomLogHighlighter()
+            highlighter=CustomLogHighlighter(),
+            show_path=False,  # Enable this for file:line traceback
         )
     ]
 )
