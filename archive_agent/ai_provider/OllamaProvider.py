@@ -1,6 +1,9 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
+import json
+from logging import Logger
+
 from ollama import Client as OllamaClient
 
 from archive_agent.ai_provider.AiProvider import AiProvider
@@ -15,8 +18,6 @@ from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 
 from archive_agent.core.CacheManager import CacheManager
 
-import json
-
 
 class OllamaProvider(AiProvider):
     """
@@ -25,6 +26,7 @@ class OllamaProvider(AiProvider):
 
     def __init__(
             self,
+            logger: Logger,
             cache: CacheManager,
             invalidate_cache: bool,
             params: AiProviderParams,
@@ -32,6 +34,7 @@ class OllamaProvider(AiProvider):
     ):
         """
         Initialize Ollama provider.
+        :param logger: Logger.
         :param cache: Cache manager.
         :param invalidate_cache: Invalidate cache if enabled, probe cache otherwise.
         :param params: AI provider parameters.
@@ -39,12 +42,14 @@ class OllamaProvider(AiProvider):
         """
         AiProvider.__init__(
             self,
+            logger=logger,
             cache=cache,
             invalidate_cache=invalidate_cache,
             params=params,
+            server_url=server_url,
         )
 
-        self.client = OllamaClient(host=server_url)
+        self.client = OllamaClient(host=self.server_url)
 
     def _perform_chunk_callback(self, prompt: str) -> AiResult:
         """

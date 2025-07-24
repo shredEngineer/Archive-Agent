@@ -3,8 +3,10 @@
 
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Type
 
+from archive_agent.ai.AiManagerFactory import AiManagerFactory
+from archive_agent.ai_provider.AiProviderParams import AiProviderParams
 from archive_agent.profile.ProfileManager import ProfileManager
 from archive_agent.config.ConfigManager import ConfigManager
 from archive_agent.core.CliManager import CliManager
@@ -17,7 +19,6 @@ from archive_agent.ai.AiManager import AiManager
 
 from archive_agent.ai_provider.ai_provider_registry import ai_provider_registry
 from archive_agent.ai_provider.AiProvider import AiProvider
-from archive_agent.ai_provider.AiProviderParams import AiProviderParams
 
 from archive_agent.core.CacheManager import CacheManager
 
@@ -69,21 +70,22 @@ class ContextManager:
             cache_path=settings_path / self.profile_manager.get_profile_name() / "ai_cache",
         )
 
-        self.ai = AiManager(
-            ai_provider=self._load_ai_provider(),
+        self.ai_factory = AiManagerFactory(
             cli=self.cli,
             chunk_lines_block=self.config.data[self.config.CHUNK_LINES_BLOCK],
+            ai_provider_class=self._get_ai_provider_class(),
+            ai_cache=self.ai_cache,
+            ai_provider_params=self._get_ai_provider_params(),
+            invalidate_cache=self.invalidate_cache,
+            server_url=self.config.data[self.config.AI_SERVER_URL],
         )
 
-        self.decoder_settings = DecoderSettings(
-            ocr_strategy=OcrStrategy(self.config.data[self.config.OCR_STRATEGY]),
-            ocr_auto_threshold=self.config.data[self.config.OCR_AUTO_THRESHOLD],
-            image_entity_extract=str(self.config.data[self.config.IMAGE_ENTITY_EXTRACT]).lower().strip() == "true",
-        )
+        # "Base" AI manager used by QdrantManager for search and query
+        self.ai_base: AiManager = self.ai_factory.get_ai()
 
         self.qdrant = QdrantManager(
             cli=self.cli,
-            ai=self.ai,
+            ai=self.ai_base,
             server_url=self.config.data[self.config.QDRANT_SERVER_URL],
             collection=self.config.data[self.config.QDRANT_COLLECTION],
             vector_size=self.config.data[self.config.AI_VECTOR_SIZE],
@@ -93,12 +95,23 @@ class ContextManager:
             expand_chunks_radius=self.config.data[self.config.EXPAND_CHUNKS_RADIUS],
         )
 
-        self.committer = CommitManager(self.watchlist, self.ai, self.decoder_settings, self.qdrant)
+        self.decoder_settings = DecoderSettings(
+            ocr_strategy=OcrStrategy(self.config.data[self.config.OCR_STRATEGY]),
+            ocr_auto_threshold=self.config.data[self.config.OCR_AUTO_THRESHOLD],
+            image_entity_extract=str(self.config.data[self.config.IMAGE_ENTITY_EXTRACT]).lower().strip() == "true",
+        )
 
-    def _load_ai_provider(self) -> AiProvider:
+        self.committer = CommitManager(
+            watchlist=self.watchlist,
+            ai_factory=self.ai_factory,
+            decoder_settings=self.decoder_settings,
+            qdrant=self.qdrant,
+        )
+
+    def _get_ai_provider_class(self) -> Type[AiProvider]:
         """
-        Load AI provider.
-        :return: AI provider.
+        Get AI provider class from config.
+        :return: AI provider class.
         """
         ai_provider_name = self.config.data[self.config.AI_PROVIDER]
 
@@ -107,22 +120,22 @@ class ContextManager:
                 f"Invalid AI provider: '{ai_provider_name}' (must be one of {ai_provider_registry.keys()})"
             )
 
-        ai_provider_class = ai_provider_registry[ai_provider_name]["class"]
-
-        ai_provider = ai_provider_class(
-            cache=self.ai_cache,
-            invalidate_cache=self.invalidate_cache,
-            params=AiProviderParams(
-                model_chunk=self.config.data[self.config.AI_MODEL_CHUNK],
-                model_embed=self.config.data[self.config.AI_MODEL_EMBED],
-                model_rerank=self.config.data[self.config.AI_MODEL_RERANK],
-                model_query=self.config.data[self.config.AI_MODEL_QUERY],
-                model_vision=self.config.data[self.config.AI_MODEL_VISION],
-                temperature_query=self.config.data[self.config.AI_TEMPERATURE_QUERY],
-            ),
-            server_url=self.config.data[self.config.AI_SERVER_URL],
-        )
-
         ai_server_url = self.config.data[self.config.AI_SERVER_URL]
         logger.info(f"Using AI provider: '{ai_provider_name}' @ {ai_server_url}")
-        return ai_provider
+
+        ai_provider_class = ai_provider_registry[ai_provider_name]["class"]
+        return ai_provider_class
+
+    def _get_ai_provider_params(self) -> AiProviderParams:
+        """
+        Get AI provider params.
+        :return: AI provider params.
+        """
+        return AiProviderParams(
+            model_chunk=self.config.data[self.config.AI_MODEL_CHUNK],
+            model_embed=self.config.data[self.config.AI_MODEL_EMBED],
+            model_rerank=self.config.data[self.config.AI_MODEL_RERANK],
+            model_query=self.config.data[self.config.AI_MODEL_QUERY],
+            model_vision=self.config.data[self.config.AI_MODEL_VISION],
+            temperature_query=self.config.data[self.config.AI_TEMPERATURE_QUERY],
+        )

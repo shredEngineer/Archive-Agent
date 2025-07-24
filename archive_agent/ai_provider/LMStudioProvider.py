@@ -2,6 +2,7 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import json
+from logging import Logger
 
 from openai import OpenAI
 
@@ -25,6 +26,7 @@ class LMStudioProvider(AiProvider):
 
     def __init__(
             self,
+            logger: Logger,
             cache: CacheManager,
             invalidate_cache: bool,
             params: AiProviderParams,
@@ -32,6 +34,7 @@ class LMStudioProvider(AiProvider):
     ):
         """
         Initialize LM Studio provider.
+        :param logger: Logger.
         :param cache: Cache manager.
         :param invalidate_cache: Invalidate cache if enabled, probe cache otherwise.
         :param params: AI provider parameters.
@@ -39,12 +42,14 @@ class LMStudioProvider(AiProvider):
         """
         AiProvider.__init__(
             self,
+            logger=logger,
             cache=cache,
             invalidate_cache=invalidate_cache,
             params=params,
+            server_url=server_url,
         )
 
-        self.client = OpenAI(base_url=server_url, api_key="lm-studio")
+        self.client = OpenAI(base_url=self.server_url, api_key="lm-studio")
 
     def _perform_chunk_callback(self, prompt: str) -> AiResult:
         """

@@ -1,7 +1,6 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import logging
 import json
 from typing import cast, Dict, List, Optional
 
@@ -20,8 +19,6 @@ from archive_agent.core.CliManager import CliManager
 from archive_agent.util.RetryManager import RetryManager
 from archive_agent.util.text_util import prepend_line_numbers
 
-logger = logging.getLogger(__name__)
-
 
 class AiManager(RetryManager):
     """
@@ -30,21 +27,21 @@ class AiManager(RetryManager):
 
     def __init__(
             self,
-            ai_provider: AiProvider,
             cli: CliManager,
             chunk_lines_block: int,
+            ai_provider: AiProvider,
     ):
         """
         Initialize AI manager.
-        :param ai_provider: AI provider.
         :param cli: CLI manager.
         :param chunk_lines_block: Number of lines per block for chunking.
+        :param ai_provider: AI provider.
         """
-        self.ai_provider = ai_provider
-
         self.cli = cli
 
         self.chunk_lines_block = chunk_lines_block
+
+        self.ai_provider = ai_provider
 
         self.total_tokens_chunk = 0
         self.total_tokens_embed = 0
@@ -66,7 +63,7 @@ class AiManager(RetryManager):
         )
 
         if not self.ai_provider.supports_vision:
-            logger.warning(f"Image vision is DISABLED in your current configuration")
+            self.cli.logger.warning(f"Image vision is DISABLED in your current configuration")
 
     def usage(self) -> None:
         """
@@ -75,7 +72,7 @@ class AiManager(RetryManager):
         if any([x > 0 for x in [
             self.total_tokens_chunk, self.total_tokens_embed, self.total_tokens_rerank, self.total_tokens_query, self.total_tokens_vision
         ]]):
-            logger.info(
+            self.cli.logger.info(
                 f"Used AI API token(s): "
                 f"({self.total_tokens_chunk}) chunking, "
                 f"({self.total_tokens_embed}) embedding, "
@@ -84,7 +81,7 @@ class AiManager(RetryManager):
                 f"({self.total_tokens_vision}) vision"
             )
         else:
-            logger.info(f"No AI API tokens used")
+            self.cli.logger.info(f"No AI API tokens used")
 
     def chunk(self, sentences: List[str], retries: int = 10) -> ChunkSchema:
         """
@@ -131,7 +128,7 @@ class AiManager(RetryManager):
                 return result.parsed_schema
 
             except Exception as e:
-                logger.exception(f"Chunking error: {e}")
+                self.cli.logger.exception(f"Chunking error: {e}")
                 continue  # Retry
 
         self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
@@ -176,7 +173,7 @@ class AiManager(RetryManager):
                 ai_is_stupid = rerank_result.reranked_indices == [0]  # Let's allow some slack from weaker or overloaded LLMs here...
                 if rerank_result.is_rejected or ai_is_stupid:
                     self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
-                    logger.critical(f"⚠️  Reranking context rejected: \"{rerank_result.rejection_reason}\"")
+                    self.cli.logger.critical(f"⚠️  Reranking context rejected: \"{rerank_result.rejection_reason}\"")
                     return rerank_result
 
                 reranked = rerank_result.reranked_indices
@@ -193,7 +190,7 @@ class AiManager(RetryManager):
                 return rerank_result
 
             except Exception as e:
-                logger.exception(f"Reranking error: {e}")
+                self.cli.logger.exception(f"Reranking error: {e}")
                 continue  # Retry
 
         self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
@@ -214,7 +211,7 @@ class AiManager(RetryManager):
         self.total_tokens_query += result.total_tokens
         assert result.parsed_schema is not None
         query_result = cast(QuerySchema, result.parsed_schema)
-        query_result = AiQuery.format_query_references(query_result=query_result, points=points)
+        query_result = AiQuery.format_query_references(logger=self.cli.logger, query_result=query_result, points=points)
 
         if query_result.is_rejected:
             self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
@@ -232,7 +229,7 @@ class AiManager(RetryManager):
         elif self.requested == 'ocr':
             prompt = AiVisionOCR.get_prompt_vision()
         else:
-            logger.critical("BUG DETECTED: Unrequested call to `AiManager.vision()` — falling back to OCR")
+            self.cli.logger.critical("BUG DETECTED: Unrequested call to `AiManager.vision()` — falling back to OCR")
             prompt = AiVisionOCR.get_prompt_vision()
 
         self.requested = None

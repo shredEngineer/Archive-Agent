@@ -2,9 +2,9 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import typer
-import logging
 import os
 import json
+from logging import Logger
 from typing import Any, cast
 
 from openai import OpenAI
@@ -21,8 +21,6 @@ from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 
 from archive_agent.core.CacheManager import CacheManager
 
-logger = logging.getLogger(__name__)
-
 
 class OpenAiProvider(AiProvider):
     """
@@ -31,6 +29,7 @@ class OpenAiProvider(AiProvider):
 
     def __init__(
             self,
+            logger: Logger,
             cache: CacheManager,
             invalidate_cache: bool,
             params: AiProviderParams,
@@ -38,6 +37,7 @@ class OpenAiProvider(AiProvider):
     ):
         """
         Initialize OpenAI provider.
+        :param logger: Logger.
         :param cache: Cache manager.
         :param invalidate_cache: Invalidate cache if enabled, probe cache otherwise.
         :param params: AI provider parameters.
@@ -45,20 +45,22 @@ class OpenAiProvider(AiProvider):
         """
         AiProvider.__init__(
             self,
+            logger=logger,
             cache=cache,
             invalidate_cache=invalidate_cache,
             params=params,
+            server_url=server_url,
         )
 
         openai_api_key = os.getenv("OPENAI_API_KEY")
         if not openai_api_key:
-            logger.error(
+            self.logger.error(
                 "Missing OPENAI_API_KEY.\n"
                 "Please complete AI Provider Setup."
             )
             raise typer.Exit(code=1)
 
-        self.client = OpenAI(base_url=server_url)
+        self.client = OpenAI(base_url=self.server_url)
 
     def _perform_chunk_callback(self, prompt: str) -> AiResult:
         """
@@ -278,7 +280,7 @@ class OpenAiProvider(AiProvider):
             if openai_incomplete_details is not None:
                 openai_incomplete_details_reason = getattr(openai_incomplete_details, 'reason', None)
                 if openai_incomplete_details_reason == 'content_filter':
-                    logger.critical(f"Vision content filter triggered by OpenAI\n{formatted_response}")
+                    self.logger.critical(f"Vision content filter triggered by OpenAI\n{formatted_response}")
                     return AiResult(
                         total_tokens=response.usage.total_tokens if response.usage else 0,
                         output_text="",
@@ -294,7 +296,7 @@ class OpenAiProvider(AiProvider):
 
         openai_refusal = getattr(response, 'refusal', None)
         if openai_refusal is not None:
-            logger.critical(f"Vision refusal triggered by OpenAI\n{formatted_response}")
+            self.logger.critical(f"Vision refusal triggered by OpenAI\n{formatted_response}")
             return AiResult(
                 total_tokens=response.usage.total_tokens if response.usage else 0,
                 output_text="",

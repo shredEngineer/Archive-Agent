@@ -372,7 +372,7 @@ def _aggregate_ranges(reference_ranges: List[SentenceRange]) -> SentenceRange:
     valid_maxs = [max_r for _, max_r in reference_ranges if max_r > 0]
     r_min = min(valid_mins) if valid_mins else 0
     r_max = max(valid_maxs) if valid_maxs else 0
-    return (r_min, r_max)
+    return r_min, r_max
 
 
 def _format_chunk(file_path: str, header: str, body: str) -> str:

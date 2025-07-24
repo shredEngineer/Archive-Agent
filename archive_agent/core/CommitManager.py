@@ -4,7 +4,7 @@
 import typer
 import logging
 
-from archive_agent.ai.AiManager import AiManager
+from archive_agent.ai.AiManagerFactory import AiManagerFactory
 
 from archive_agent.config.DecoderSettings import DecoderSettings
 
@@ -29,19 +29,19 @@ class CommitManager:
     def __init__(
             self,
             watchlist: WatchlistManager,
-            ai: AiManager,
+            ai_factory: AiManagerFactory,
             decoder_settings: DecoderSettings,
             qdrant: QdrantManager,
     ):
         """
         Initialize commit manager.
         :param watchlist: Watchlist manager.
-        :param ai: AI manager.
+        :param ai_factory: AI manager factory.
         :param decoder_settings: Decoder settings.
         :param qdrant: Qdrant manager.
         """
         self.watchlist = watchlist
-        self.ai = ai
+        self.ai_factory = ai_factory
         self.decoder_settings = decoder_settings
         self.qdrant = qdrant
 
@@ -94,10 +94,17 @@ class CommitManager:
         Commit tracked files.
         :param tracked_files: Tracked files.
         """
-        tracked_file_data = [
-            FileData(ai=self.ai, decoder_settings=self.decoder_settings, file_path=file_path, file_meta=file_meta)
-            for file_path, file_meta in tracked_files.items()
-        ]
+        tracked_file_data = []
+
+        # Populate list of file data objects, each with its own AI manager instance from the AI factory.
+        for file_path, file_meta in tracked_files.items():
+            file_data = FileData(
+                ai=self.ai_factory.get_ai(),
+                decoder_settings=self.decoder_settings,
+                file_path=file_path,
+                file_meta=file_meta,
+            )
+            tracked_file_data.append(file_data)
 
         tracked_unprocessable = [file_data for file_data in tracked_file_data if not file_data.is_processable()]
         tracked_processable = [file_data for file_data in tracked_file_data if file_data.is_processable()]

@@ -1,16 +1,14 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import logging
 import hashlib
+from logging import Logger
 from typing import List
 
 from pydantic import BaseModel, ConfigDict
 from qdrant_client.http.models import ScoredPoint
 
 from archive_agent.util.format import get_point_reference_info
-
-logger = logging.getLogger(__name__)
 
 
 class AnswerItem(BaseModel):
@@ -71,7 +69,8 @@ class AiQuery:
             "    - `chunk_ref_list`:",
             "        A list of reference designators indicating which chunks informed this specific answer.",
             "        These MUST follow the exact format as provided in the context: `<<< 0123456789ABCDEF >>>`,",
-            "        where `0123456789ABCDEF` is a 16-character hex string.",
+            "        where `0123456789ABCDEF` is a 16-character hexadecimal hash string."
+            "        The `<<< ` prefix and the ` >>>` suffix are required to delimit the hash in the reference designator.",
             "        DO NOT include any chunk references anywhere else except in this list.",
             "",
             "- `answer_conclusion`:",
@@ -154,9 +153,10 @@ class AiQuery:
         ])
 
     @staticmethod
-    def format_query_references(query_result: QuerySchema, points: List[ScoredPoint]) -> QuerySchema:
+    def format_query_references(logger: Logger, query_result: QuerySchema, points: List[ScoredPoint]) -> QuerySchema:
         """
         Format reference designators in query result as human-readable references infos.
+        :param logger: Logger.
         :param query_result: Query result.
         :param points: Points.
         :return: Query result with reference designators formatted as human-readable reference infos.
@@ -170,13 +170,12 @@ class AiQuery:
 
         # Extracts 16-char hash from '<<< 0123456789ABCDEF >>>'
         def extract_hash(ref: str) -> str:
-            ref = ref.strip()
 
-            if ref.startswith("<<< ") and ref.endswith(" >>>"):
-                hash_str = ref[4:-4].strip()
+            # Let's allow some slack from weaker or overloaded LLMs here...
+            hash_str = ref.replace("<<<", "").replace(">>>", "").strip()
 
-                if len(hash_str) == 16 and all(c in "0123456789abcdefABCDEF" for c in hash_str):
-                    return hash_str
+            if len(hash_str) == 16 and all(c in "0123456789abcdefABCDEF" for c in hash_str):
+                return hash_str
 
             logger.critical(f"Invalid reference format: '{ref}'")
             return ref

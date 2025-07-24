@@ -1,7 +1,6 @@
 # Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 # This file is part of Archive Agent. See LICENSE for details.
 
-import logging
 import uuid
 from typing import List, Optional, Dict, Any, Callable
 
@@ -26,9 +25,6 @@ from archive_agent.data.loader.text import is_binary_document, load_binary_docum
 from archive_agent.data.chunk import generate_chunks_with_ranges, split_sentences
 
 
-logger = logging.getLogger(__name__)
-
-
 DecoderCallable = Callable[[], Optional[DocumentContent]]
 
 
@@ -42,8 +38,7 @@ class FileData:
             file_meta: Dict[str, Any],
     ):
         """
-        Initialize FileData with AI manager, decoder settings, file path, and metadata.
-
+        Initialize file data.
         :param ai: AI manager instance.
         :param decoder_settings: Decoder settings.
         :param file_path: Path to the file.
@@ -123,22 +118,22 @@ class FileData:
         :return: VisionSchema result or None if failed.
         """
         if image.mode != "RGB":
-            logger.info(f"Converted image from '{image.mode}' to 'RGB'")
+            self.ai.cli.logger.info(f"Converted image from '{image.mode}' to 'RGB'")
             image = image.convert("RGB")
 
         image_possibly_resized = image_resize_safe(image)
         if image_possibly_resized is None:
-            logger.warning(f"Failed to resize {format_file(self.file_path)}")
+            self.ai.cli.logger.warning(f"Failed to resize {format_file(self.file_path)}")
             return None
 
-        logger.info(f"Image dimensions: ({image_possibly_resized.width} × {image_possibly_resized.height} px)")
+        self.ai.cli.logger.info(f"Image dimensions: ({image_possibly_resized.width} × {image_possibly_resized.height} px)")
 
         image_base64 = image_to_base64(image_possibly_resized)
 
         vision_result = self.ai.vision(image_base64)
 
         if vision_result.is_rejected:
-            logger.critical(f"⚠️  Image rejected: \"{vision_result.rejection_reason}\"")
+            self.ai.cli.logger.critical(f"⚠️  Image rejected: \"{vision_result.rejection_reason}\"")
             return None
 
         return vision_result
@@ -150,7 +145,7 @@ class FileData:
         :param image: PIL Image object.
         :return: OCR text or None if failed.
         """
-        logger.info("Requesting vision with OCR")
+        self.ai.cli.logger.info("Requesting vision with OCR")
         self.ai.request_ocr()
         vision_result = self.image_to_text(image)
         if vision_result is not None:
@@ -165,11 +160,11 @@ class FileData:
         :param image: PIL Image object.
         :return: Entity text or None if failed.
         """
-        logger.info("Requesting vision with entity extraction")
+        self.ai.cli.logger.info("Requesting vision with entity extraction")
         self.ai.request_entity()
         vision_result = self.image_to_text(image)
         if vision_result is not None:
-            return AiVisionEntity.format_vision_answer(vision_result)
+            return AiVisionEntity.format_vision_answer(logger=self.ai.cli.logger, vision_result=vision_result)
         else:
             return None
 
@@ -183,10 +178,10 @@ class FileData:
             try:
                 return self.decoder_func()
             except Exception as e:
-                logger.warning(f"Failed to process {format_file(self.file_path)}: {e}")
+                self.ai.cli.logger.warning(f"Failed to process {format_file(self.file_path)}: {e}")
                 return None
 
-        logger.warning(f"Cannot process {format_file(self.file_path)}")
+        self.ai.cli.logger.warning(f"Cannot process {format_file(self.file_path)}")
         return None
 
     def chunk_callback(self, block_of_sentences: List[str]) -> ChunkSchema:
@@ -206,7 +201,7 @@ class FileData:
         """
         doc_content = self.decode()
         if doc_content is None:
-            logger.warning(f"Failed to process {format_file(self.file_path)}")
+            self.ai.cli.logger.warning(f"Failed to process {format_file(self.file_path)}")
             return False
 
         per_line_references = doc_content.pages_per_line if doc_content.pages_per_line is not None else doc_content.lines_per_line or []
@@ -222,7 +217,7 @@ class FileData:
         is_page_based = doc_content.pages_per_line is not None
 
         for chunk_index, chunk_with_range in enumerate(chunks_with_ranges):
-            logger.info(f"Processing chunk ({chunk_index + 1}) / ({len(chunks_with_ranges)}) of {format_file(self.file_path)}")
+            self.ai.cli.logger.info(f"Processing chunk ({chunk_index + 1}) / ({len(chunks_with_ranges)}) of {format_file(self.file_path)}")
 
             vector = self.ai.embed(text=chunk_with_range.text)
 

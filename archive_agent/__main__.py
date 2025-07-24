@@ -192,7 +192,7 @@ def commit(
 
     context.committer.commit()
 
-    context.ai.usage()
+    context.ai_base.usage()
 
     if context.watchlist.isEmpty():
         logger.info("💡  Include your first files  ('archive-agent include')")
@@ -222,7 +222,7 @@ def update(
 
     context.committer.commit()
 
-    context.ai.usage()
+    context.ai_base.usage()
 
     if context.watchlist.isEmpty():
         logger.info("💡  Include your first files  ('archive-agent include')")
@@ -256,7 +256,7 @@ def search(
 
     _points = context.qdrant.search(question)
 
-    context.ai.usage()
+    context.ai_base.usage()
 
 
 @app.command()
@@ -285,7 +285,7 @@ def query(
 
     _query_result, _answer_text = context.qdrant.query(question)
 
-    context.ai.usage()
+    context.ai_base.usage()
 
     logger.info("⚡  Process finished")
 
@@ -314,7 +314,7 @@ def mcp() -> None:
     mcp_server = McpServer(context=context, port=context.config.data[context.config.MCP_SERVER_PORT])
     mcp_server.start()
 
-    context.ai.usage()
+    context.ai_base.usage()
 
 
 if __name__ == "__main__":

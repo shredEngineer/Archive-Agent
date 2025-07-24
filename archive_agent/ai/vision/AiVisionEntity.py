@@ -1,12 +1,10 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import logging
+from logging import Logger
 from typing import Callable, Dict, List, Tuple
 
 from archive_agent.ai.vision.AiVisionSchema import VisionSchema
-
-logger = logging.getLogger(__name__)
 
 
 class AiVisionRelation:
@@ -170,11 +168,14 @@ class AiVisionEntity:
         ])
 
     @staticmethod
-    def format_vision_answer(vision_result: VisionSchema) -> str:
+    def format_vision_answer(logger: Logger, vision_result: VisionSchema) -> str:
         """
         Format vision result as single line (without linebreaks — required for downstream logic).
         Each statement is explicit, self-contained, and optimized for RAG embedding.
         Relations are formatted first, followed by descriptions for entities not used in relations.
+        :param logger: Logger.
+        :param vision_result: Vision result.
+        :return: Formatted answer.
         """
         assert not vision_result.is_rejected
 

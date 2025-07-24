@@ -1,12 +1,8 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import logging
-
 from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 from archive_agent.util.text_util import splitlines_exact
-
-logger = logging.getLogger(__name__)
 
 
 class AiVisionOCR:

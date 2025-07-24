@@ -1,9 +1,9 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import logging
 import json
 import hashlib
+from logging import Logger
 from abc import ABC, abstractmethod
 from typing import Callable, cast
 
@@ -11,8 +11,6 @@ from archive_agent.ai.AiResult import AiResult
 from archive_agent.core.CacheManager import CacheManager
 
 from archive_agent.ai_provider.AiProviderParams import AiProviderParams
-
-logger = logging.getLogger(__name__)
 
 
 class AiProvider(ABC):
@@ -22,20 +20,29 @@ class AiProvider(ABC):
 
     def __init__(
             self,
+            logger: Logger,
             cache: CacheManager,
             invalidate_cache: bool,
             params: AiProviderParams,
+            server_url: str,
     ):
         """
         Initialize AI provider.
+        :param logger: Logger.
         :param cache: Cache manager.
         :param invalidate_cache: Invalidate cache if enabled, probe cache otherwise.
         :param params: AI provider parameters.
+        :param server_url: Server URL.
         """
+        self.logger = logger
+
         self.cache = cache
         self.invalidate_cache = invalidate_cache
 
         self.params = params
+
+        self.server_url = server_url
+
         self.supports_vision = self.params.model_vision != ""
 
     def _handle_cached_request(
@@ -57,17 +64,17 @@ class AiProvider(ABC):
         cache_key = hashlib.sha256(cache_str.encode('utf-8')).hexdigest()
 
         if self.invalidate_cache:
-            logger.info(f"Cache read bypassed (--nocache) for '{cache_key_prefix}'")
+            self.logger.info(f"Cache read bypassed (--nocache) for '{cache_key_prefix}'")
 
         elif cache_key in self.cache:
             # Cache read.
-            logger.info(f"Cache hit for '{cache_key_prefix}'")
+            self.logger.info(f"Cache hit for '{cache_key_prefix}'")
             ai_result: AiResult = cast(AiResult, self.cache[cache_key])
             ai_result.total_tokens = 0  # Cached result consumed no tokens
             return ai_result
 
         else:
-            logger.info(f"Cache miss for '{cache_key_prefix}'")
+            self.logger.info(f"Cache miss for '{cache_key_prefix}'")
 
         result: AiResult = callback(**callback_kwargs)
 

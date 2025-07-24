@@ -21,8 +21,6 @@ from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 
 from archive_agent.util.format import format_chunk_brief, get_point_reference_info
 
-logger = logging.getLogger(__name__)
-
 
 class CliManager:
     """
@@ -48,6 +46,8 @@ class CliManager:
         CliManager.VERBOSE_QUERY = verbose
         CliManager.VERBOSE_RETRIEVAL = verbose
 
+        self.logger = logging.getLogger(__name__)
+
         self.console = Console(markup=False)
 
     def format_json(self, text: str) -> None:
@@ -62,8 +62,7 @@ class CliManager:
         except json.JSONDecodeError:
             self.console.print(Panel(f"{text}", title="Raw output", style="red", border_style="red"))
 
-    @staticmethod
-    def prompt(message: str, is_cmd: bool, **kwargs) -> str:
+    def prompt(self, message: str, is_cmd: bool, **kwargs) -> str:
         """
         Prompt user with message.
         :param message: Message.
@@ -72,10 +71,10 @@ class CliManager:
         :return: User input.
         """
         if is_cmd:
-            logger.info(f"⚡ Archive Agent: {message}")
+            self.logger.info(f"⚡ Archive Agent: {message}")
             return typer.prompt("", prompt_suffix="> ", **kwargs)
         else:
-            logger.info(f"⚡ Archive Agent")
+            self.logger.info(f"⚡ Archive Agent")
             return typer.prompt(message, prompt_suffix="", **kwargs)
 
     def format_ai_chunk(
@@ -89,17 +88,17 @@ class CliManager:
         :param line_numbered_text: Text with line numbers.
         :return: AI result.
         """
-        logger.info(f"Chunking...")
+        self.logger.info(f"Chunking...")
 
         if CliManager.VERBOSE_CHUNK:
             self.console.print(Panel(f"{line_numbered_text}", title="Text", style="blue", border_style="blue"))
 
-        logger.info("⌛  Awaiting AI chunking …")
+        self.logger.info("⌛  Awaiting AI chunking …")
 
         result: AiResult = callback()
 
         if CliManager.VERBOSE_USAGE:
-            logger.info(f"Used ({result.total_tokens}) AI API token(s) for chunking")
+            self.logger.info(f"Used ({result.total_tokens}) AI API token(s) for chunking")
 
         if CliManager.VERBOSE_CHUNK:
             self.format_json(result.output_text)
@@ -117,7 +116,7 @@ class CliManager:
         :param indexed_chunks: Indexed chunks.
         :return: AI result.
         """
-        logger.info(f"Reranking...")
+        self.logger.info(f"Reranking...")
 
         if CliManager.VERBOSE_RERANK:
             indexed_chunks_str = "\n".join([
@@ -126,12 +125,12 @@ class CliManager:
             ])
             self.console.print(Panel(f"{indexed_chunks_str}", title="Indexed Chunks", style="blue", border_style="blue"))
 
-        logger.info("⌛  Awaiting AI reranking …")
+        self.logger.info("⌛  Awaiting AI reranking …")
 
         result: AiResult = callback()
 
         if CliManager.VERBOSE_USAGE:
-            logger.info(f"Used ({result.total_tokens}) AI API token(s) for reranking")
+            self.logger.info(f"Used ({result.total_tokens}) AI API token(s) for reranking")
 
         if CliManager.VERBOSE_RERANK:
             self.format_json(result.output_text)
@@ -149,17 +148,17 @@ class CliManager:
         :param text: Text.
         :return: AI result.
         """
-        logger.info(f"Embedding...")
+        self.logger.info(f"Embedding...")
 
         if CliManager.VERBOSE_EMBED:
             self.format_chunk(text)
 
-        logger.info("⌛  Awaiting AI embedding …")
+        self.logger.info("⌛  Awaiting AI embedding …")
 
         result: AiResult = callback()
 
         if CliManager.VERBOSE_USAGE:
-            logger.info(f"Used ({result.total_tokens}) AI API token(s) for embedding")
+            self.logger.info(f"Used ({result.total_tokens}) AI API token(s) for embedding")
 
         return result
 
@@ -174,17 +173,17 @@ class CliManager:
         :param prompt: Prompt.
         :return: AI result.
         """
-        logger.info(f"Querying...")
+        self.logger.info(f"Querying...")
 
         if CliManager.VERBOSE_QUERY:
             self.console.print(Panel(f"{prompt}", title="Query", style="magenta", border_style="magenta"))
 
-        logger.info("⌛  Awaiting AI response …")
+        self.logger.info("⌛  Awaiting AI response …")
 
         result: AiResult = callback()
 
         if CliManager.VERBOSE_USAGE:
-            logger.info(f"Used ({result.total_tokens}) AI API token(s) for query")
+            self.logger.info(f"Used ({result.total_tokens}) AI API token(s) for query")
 
         if CliManager.VERBOSE_QUERY:
             self.format_json(result.output_text)
@@ -200,7 +199,7 @@ class CliManager:
         :param callback: Vision callback returning AI result.
         :return: AI result.
         """
-        logger.info("⌛  Awaiting AI vision …")
+        self.logger.info("⌛  Awaiting AI vision …")
 
         result: AiResult = callback()
 
@@ -219,17 +218,16 @@ class CliManager:
                 self.format_json(result.output_text)
 
         if CliManager.VERBOSE_USAGE:
-            logger.info(f"Used ({result.total_tokens}) AI API token(s) for vision")
+            self.logger.info(f"Used ({result.total_tokens}) AI API token(s) for vision")
 
         return result
 
-    @staticmethod
-    def format_point(point: ScoredPoint) -> None:
+    def format_point(self, point: ScoredPoint) -> None:
         """
         Format point.
         :param point: Point.
         """
-        logger.info(f"({point.score * 100:>6.2f} %) match: {get_point_reference_info(point)}")
+        self.logger.info(f"({point.score * 100:>6.2f} %) match: {get_point_reference_info(point)}")
 
     def format_retrieved_points(self, points: List[ScoredPoint]) -> None:
         """
@@ -237,10 +235,10 @@ class CliManager:
         :param points: Retrieved points.
         """
         if len(points) == 0:
-            logger.info(f"⚠️  No results")
+            self.logger.info(f"⚠️  No results")
             return
 
-        logger.info(f"✅  Retrieved ({len(points)}) chunk(s):")
+        self.logger.info(f"✅  Retrieved ({len(points)}) chunk(s):")
 
         for point in points:
 
@@ -257,10 +255,10 @@ class CliManager:
         :param points: Reranked points.
         """
         if len(points) == 0:
-            logger.info(f"⚠️  No results")
+            self.logger.info(f"⚠️  No results")
             return
 
-        logger.info(f"✅  Reranked and limited down to ({len(points)}) chunk(s):")
+        self.logger.info(f"✅  Reranked and limited down to ({len(points)}) chunk(s):")
 
         for point in points:
 
@@ -277,10 +275,10 @@ class CliManager:
         :param points: Expanded and deduplicated points.
         """
         if len(points) == 0:
-            logger.info(f"⚠️  No results")
+            self.logger.info(f"⚠️  No results")
             return
 
-        logger.info(f"✅  Expanded and deduplicated down to ({len(points)}) chunk(s):")
+        self.logger.info(f"✅  Expanded and deduplicated down to ({len(points)}) chunk(s):")
 
         for point in points:
 
