@@ -2,10 +2,6 @@
 
 ---
 
-
-https://github.com/user-attachments/assets/1cd8211e-6e5b-4e61-8ccc-74c140697abc
-
-
 # ⚡ Archive Agent
 
 **Find your files with natural language and ask questions.**
@@ -748,7 +744,7 @@ To run unit tests, check types, and check style, run this:
 ./audit.sh
 ```
 
-## Known ISSUES
+## Known issues
 
 - [ ] While `track` initially reports a file as *added*, subsequent `track` calls report it as *changed*. 
 
@@ -790,3 +786,9 @@ the Free Software Foundation, either version 3 of the License, or
 ```
 
 See [LICENSE](LICENSE) for details.
+
+---
+
+## GUI sneak peek
+
+https://github.com/user-attachments/assets/1cd8211e-6e5b-4e61-8ccc-74c140697abc
