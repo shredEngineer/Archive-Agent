@@ -72,3 +72,10 @@ class ProfileManager(StorageManager):
         :return: True if data is valid, False otherwise.
         """
         return True
+
+    def get_profile_name(self) -> str:
+        """
+        Get profile name.
+        :return: Profile name:
+        """
+        return self.data[self.PROFILE_NAME]

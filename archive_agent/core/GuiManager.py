@@ -69,10 +69,20 @@ class GuiManager:
         image_path = Path(__file__).parent.parent / "assets" / "Archive-Agent-800x300.png"
 
         cols = st.columns(3)
+
         with cols[0]:
+            file_s = "" if files_count == 1 else "s"
+            chunk_s = "" if chunks_count == 1 else "s"
             st.markdown(
-                f"**Archive Agent v{__version__}**  \n"
-                f"<small>({chunks_count}) chunks, ({files_count}) files</small>  \n"
+                f"<small><b>{self.context.profile_manager.get_profile_name()}</b></small>  \n"
+                f"<small>({files_count}) file{file_s}</small>  \n"
+                f"<small>({chunks_count}) chunk{chunk_s}</small>  \n",
+                unsafe_allow_html=True,
+            )
+
+        with cols[1]:
+            st.markdown(
+                f"<small><i>Archive Agent v{__version__}</i></small>  \n"
                 f"<small>[Qdrant dashboard]({self.context.config.data[self.context.config.QDRANT_SERVER_URL]}/dashboard)</small>",
                 unsafe_allow_html=True,
             )
@@ -87,7 +97,7 @@ class GuiManager:
                 query = st.text_input(
                     "Ask a question",
                     label_visibility="collapsed",
-                    placeholder="Ask something..."
+                    placeholder="Ask something…"
                 )
             with button_col:
                 submitted = st.form_submit_button("⚡", use_container_width=True)

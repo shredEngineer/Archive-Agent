@@ -57,16 +57,16 @@ class ContextManager:
         self.config = ConfigManager(
             cli=self.cli,
             settings_path=settings_path,
-            profile_name=self.profile_manager.data[self.profile_manager.PROFILE_NAME],
+            profile_name=self.profile_manager.get_profile_name(),
         )
 
         self.watchlist = WatchlistManager(
             settings_path=settings_path,
-            profile_name=self.profile_manager.data[self.profile_manager.PROFILE_NAME],
+            profile_name=self.profile_manager.get_profile_name(),
         )
 
         self.ai_cache = CacheManager(
-            cache_path=settings_path / self.profile_manager.data[self.profile_manager.PROFILE_NAME] / "ai_cache",
+            cache_path=settings_path / self.profile_manager.get_profile_name() / "ai_cache",
         )
 
         self.ai = AiManager(

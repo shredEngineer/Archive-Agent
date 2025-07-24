@@ -252,7 +252,7 @@ def search(
     logger.info("💡  Ask your question — be as specific as possible")
 
     if question is None:
-        question = context.cli.prompt("😎  Hit me", is_cmd=True)
+        question = context.cli.prompt("😎  Ask something…", is_cmd=True)
 
     _points = context.qdrant.search(question)
 
@@ -281,7 +281,7 @@ def query(
     logger.info("💡  Ask your question — be as specific as possible")
 
     if question is None:
-        question = context.cli.prompt("😎  Hit me", is_cmd=True)
+        question = context.cli.prompt("😎  Ask something…", is_cmd=True)
 
     _query_result, _answer_text = context.qdrant.query(question)
 
