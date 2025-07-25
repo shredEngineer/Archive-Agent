@@ -39,6 +39,6 @@ class DecoderSettings:
         logger.info(f"Using OCR strategy: '{self.ocr_strategy.value}'")
 
         if self.image_entity_extract:
-            logger.info(f"Vision uses entity extraction for image files")
+            logger.info(f"Vision uses combined OCR and entity extraction for image files")
         else:
             logger.info(f"Vision uses OCR for image files")
