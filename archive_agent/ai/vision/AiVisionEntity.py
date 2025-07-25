@@ -51,6 +51,8 @@ class AiVisionRelation:
 
 
 # Initialize canonical relations
+
+# Spatial relations
 AiVisionRelation.register("left_of",
                           "X is visually to the left of Y.",
                           lambda s, o: f"The {s} is positioned to the left of the {o}.")
@@ -69,9 +71,37 @@ AiVisionRelation.register("inside",
 AiVisionRelation.register("contains",
                           "X contains Y.",
                           lambda s, o: f"The {s} contains the {o}.")
+AiVisionRelation.register("on",
+                          "X is on top of Y (e.g., resting or placed).",
+                          lambda s, o: f"The {s} is on the {o}.")
+AiVisionRelation.register("under",
+                          "X is under Y.",
+                          lambda s, o: f"The {s} is under the {o}.")
+AiVisionRelation.register("behind",
+                          "X is behind Y.",
+                          lambda s, o: f"The {s} is behind the {o}.")
+AiVisionRelation.register("in_front_of",
+                          "X is in front of Y.",
+                          lambda s, o: f"The {s} is in front of the {o}.")
+AiVisionRelation.register("next_to",
+                          "X is next to Y (adjacent).",
+                          lambda s, o: f"The {s} is next to the {o}.")
+AiVisionRelation.register("adjacent_to",
+                          "X is adjacent to Y.",
+                          lambda s, o: f"The {s} is adjacent to the {o}.")
+
+# Structural relations
 AiVisionRelation.register("part_of",
                           "X is a part of Y.",
                           lambda s, o: f"The {s} is a component of the {o}.")
+AiVisionRelation.register("has_part",
+                          "X has Y as a part.",
+                          lambda s, o: f"The {s} has the {o} as a part.")
+AiVisionRelation.register("composed_of",
+                          "X is composed of Y.",
+                          lambda s, o: f"The {s} is composed of the {o}.")
+
+# Semantic relations
 AiVisionRelation.register("describes",
                           "X describes Y (e.g., text describes a figure or object).",
                           lambda s, o: f"The {s} describes the entity {o}.")
@@ -87,6 +117,24 @@ AiVisionRelation.register("has_attribute",
 AiVisionRelation.register("defines",
                           "X defines Y (e.g., term defines a concept).",
                           lambda s, o: f"The {s} defines the concept of {o}.")
+AiVisionRelation.register("is_a",
+                          "X is a type of Y (hierarchical classification).",
+                          lambda s, o: f"The {s} is a {o}.")
+AiVisionRelation.register("used_for",
+                          "X is used for Y (functional relation).",
+                          lambda s, o: f"The {s} is used for {o}.")
+AiVisionRelation.register("similar_to",
+                          "X is similar to Y.",
+                          lambda s, o: f"The {s} is similar to the {o}.")
+AiVisionRelation.register("holding",
+                          "X is holding Y (interaction).",
+                          lambda s, o: f"The {s} is holding the {o}.")
+AiVisionRelation.register("wearing",
+                          "X is wearing Y.",
+                          lambda s, o: f"The {s} is wearing the {o}.")
+AiVisionRelation.register("riding",
+                          "X is riding Y.",
+                          lambda s, o: f"The {s} is riding the {o}.")
 
 
 class AiVisionEntity:
@@ -129,24 +177,37 @@ class AiVisionEntity:
             "    Required ONLY if `is_rejected` is `true`. Leave this field blank if `is_rejected` is `false`.",
             "    Examples: 'image is blank', 'image is too blurred to read', 'image file is corrupted'",
             "",
-            "ADDITIONAL REQUIRED BLANK FIELDS:"
+            "ADDITIONAL REQUIRED BLANK FIELDS:",
             "",
-            "- `answer`: Empty string."
+            "- `answer`: Empty string.",
             "",
             "EXTRACTION RULES:",
             "",
             "- ENTITY EXTRACTION:",
             "    - Identify all distinct, meaningful entities such as objects, people, concepts, key terms, text snippets, dates,",
             "      numbers, or visual elements like shapes, labels, or symbols.",
+            "    - Decompose complex visuals into sub-entities where appropriate",
+            "      (e.g., for a diagram, extract the overall shape, internal patterns, "
+            "       labels as separate entities if they add unique value).",
+            "      Break down compound text phrases into granular parts",
+            "      (e.g., main term and parentheticals) if they represent distinct ideas.",
             "    - Extract the maximum number of unique entities without fabrication, staying faithful to the image content.",
             "    - Use concise, unique names (e.g., 'Invoice #123' instead of 'Invoice', 'John Doe' for a person).",
             "    - For textual elements like labels or captions, explicitly mark them as such to distinguish them from actual objects",
             "      (e.g., 'label \"apple\"' instead of 'apple').",
             "    - Descriptions must be short, factual, and context-specific (e.g., 'date of invoice issuance' for '2023-10-15').",
+            "    - Examples:",
+            "        - For a dotted circle diagram, entities could include 'circle: enclosing boundary shape',",
+            "         'dots: symmetrical point pattern inside circle'.",
+            "        - For text '2D closed surface (sphere)', entities could include '2D closed surface: main phrase',",
+            "          'sphere: parenthetical example'.",
             "",
             "- RELATION EXTRACTION:",
             "    - Identify all possible connections between entities, capturing their spatial, semantic, structural,",
             "      or contextual relationships.",
+            "    - Prioritize spatial relations (e.g., 'above', 'below', 'inside') for visual layouts,"
+            "      and use them exhaustively where evident (e.g., text below a diagram, elements inside a shape)."
+            "      Infer hierarchies from groupings or flows.",
             "    - Extract the maximum number of meaningful relations without fabrication, staying faithful to the image content.",
             "    - From text: Parse sentences for subject-predicate-object structures, implied hierarchies, or references.",
             "    - From visuals: Use arrows, proximity, groupings, flows, or hierarchies to infer relations.",
@@ -170,8 +231,8 @@ class AiVisionEntity:
     @staticmethod
     def format_vision_answer(logger: Logger, vision_result: VisionSchema) -> str:
         """
-        Format vision result as single line (without linebreaks — required for downstream logic).
-        Each statement is explicit, self-contained, and optimized for RAG embedding.
+        Format vision result as a single line compound sentence with ', and ' connectors for NLP compatibility.
+        Each statement is explicit, self-contained, and joined into one flowing sentence.
         Relations are formatted first, followed by descriptions for entities not used in relations.
         :param logger: Logger.
         :param vision_result: Vision result.
@@ -186,7 +247,7 @@ class AiVisionEntity:
         # Format relations as explicit, atomic sentences
         for r in vision_result.relations:
             statement = AiVisionRelation.format(r.predicate, r.subject, r.object)
-            statements.append(statement)
+            statements.append(statement.rstrip('.'))
             used_in_relation.add(r.subject)
             used_in_relation.add(r.object)
 
@@ -196,11 +257,14 @@ class AiVisionEntity:
                 logger.warning(f"Entity '{e.name}' not included in any relation.")
                 desc = e.description.strip().rstrip('.')
                 if desc:
-                    statements.append(f"The {e.name} is described as {desc.lower()}.")
+                    statements.append(f"The {e.name} is described as {desc.lower()}")
 
         # Fallback for no relations
         if not statements:
-            statements.append("No meaningful information was extracted from the image.")
+            return "No meaningful information was extracted from the image."
 
-        # Join into a single line
-        return " ".join(statement.rstrip('.') + "." for statement in statements if statement.strip())
+        # Join into a single compound sentence: Capitalize first, lowercase others, connect with ', and '
+        first_statement = statements[0].capitalize()
+        remaining_statements = [s.lower() for s in statements[1:]]
+        joined = ", and ".join([first_statement] + remaining_statements) + "."
+        return joined
