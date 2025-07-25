@@ -264,7 +264,7 @@ graph LR
 ```
 ([view diagram in Mermaid.live](https://mermaid.live/edit#pako:eNptkU1P4zAQhv_KyBKcSrWhTT9yQCppKQXEQov2gMPBTYbGamJHtgPtVv3v69ihaCVO8czzzjsfOZBUZkgislGsyuFhmYhEAJydwUJsUBsuBTzxCgsusAG6XnvlCTdZgAl9USzdAhMZxLIsuYEbXqB-g4uLK7imT0xphHP4HS_ffMW1IzFdYcmE4SnEeS22XGxaHjs-pbNyjZmHukVTh2Z0ZaRC-IOp_WrgAp4zZb2cCkV2WuW5RrX_eQ2HvOsNnehtk3Br-cHnbftT1kvnDt7SJRrF8QPhEZmyiv_HnHmVD25dsLAldsQtrPewxAI_mEixlS-c4o7OdpW_ojC4My28c_CezlFYA4MwEfoTVUvvHX2gq1x-Wt-q2H_dgHTsn-UZiYyqsUNKVCVrQnJoBAkxOZaYkMg-M3xndWESkoijLbNDvEpZflUqWW9yEr2zQtuorjI7xJQze8Vvie2HKpa1MCQaOwcSHciOREFv2A2DXjgaBWF42e_3wg7ZN-mg2wsu--FwPBgOBuPw2CF_Xc9f3dEwPP4DQ93QoQ))
 
-###  Which files are processed
+### Which files are processed
 
 **Archive Agent** currently supports these file types:
 - Text:
@@ -273,7 +273,7 @@ graph LR
     - ASCII documents: `.html`, `.htm` (images **not** supported)
     - Binary documents: `.odt`, `.docx` (including images)
   - PDF documents: `.pdf` (including images; also see [OCR strategies](#ocr-strategies))
-- Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
+- Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp` (supports combined OCR and entity extraction when `image_entity_extract` is enabled)
 
 ### How files are processed
 
@@ -282,12 +282,13 @@ Ultimately, **Archive Agent** decodes everything to text like this:
 - Documents are converted to plaintext, images are extracted.
 - PDF documents are decoded according to the OCR strategy.
 - Images are decoded to text using AI vision.
+  - When `image_entity_extract` is `true`, combines OCR text and entity extraction, joined with a space, for improved embedding.
+  - When `image_entity_extract` is `false`, uses OCR only.
   - The vision model will reject unintelligible images.
   - *Entity extraction* extracts structured information from images.
   - Structured information is formatted as image description.
 
-
-⚠️ **Warning:** Entity extraction is still experimental; OCR can be used alternatively.  
+⚠️ **Warning:** Entity extraction is still experimental; OCR can be used alternatively.
 
 See [Archive Agent settings](#archive-agent-settings): `image_entity_extract`
 
@@ -297,32 +298,27 @@ See [Archive Agent settings](#archive-agent-settings): `image_entity_extract`
 
 For PDF documents, there are different OCR strategies supported by **Archive Agent**:
 
-
 - `strict` OCR strategy (**recommended**):
   - PDF OCR text layer is *ignored*.
-  - PDF pages are treated as images.
+  - PDF pages are treated as images and processed with OCR only.
   - **Expensive and slow, but more accurate.**
-
 
 - `relaxed` OCR strategy:
   - PDF OCR text layer is extracted.
-  - PDF foreground images are decoded, but background images are *ignored*.
+  - PDF foreground images are decoded with OCR, but background images are *ignored*.
   - **Cheap and fast, but less accurate.**
-
 
 - `auto` OCR strategy:
   - Attempts to select the best OCR strategy for each page, based on the number of characters extracted from the PDF OCR text layer, if any.
   - Decides based on `ocr_auto_threshold`, the minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict`.
   - **Trade-off between cost, speed, and accuracy.**
 
-
-See [Archive Agent settings](#archive-agent-settings): `ocr_strategy`, `ocr_auto_threshold`
+📌 **Note:** Images use a combined OCR and entity extraction mode when `image_entity_extract` is `true`, or OCR only when `false`. PDFs always use OCR based on the selected strategy.
 
 ⚠️ **Warning:** The `auto` OCR strategy is still experimental.
 PDF documents often contain small/scattered images related to page style/layout which cause overhead while contributing little information or even cluttering the result.
 
 💡 **Good to know:** You will be prompted to choose an OCR strategy at startup (see [Run Archive Agent](#run-archive-agent)).
-
 ### How smart chunking works
 
 **Archive Agent** processes decoded text like this:
@@ -658,7 +654,7 @@ sudo ./manage-qdrant.sh update
 
 ---
 
-## Archive Agent settings
+### Archive Agent settings
 
 **Archive Agent** settings are organized as profile folders in `~/.archive-agent-settings/`.
 
@@ -669,37 +665,37 @@ The currently used profile is stored in `~/.archive-agent-settings/profile.json`
 📌 **Note:** To delete a profile, simply delete the profile folder.
 This will not delete the Qdrant collection (see [Qdrant database](#qdrant-database)).
 
-### Profile configuration
+#### Profile configuration
 
-The profile configuration is contained in the profile folder as `config.json`.  
+The profile configuration is contained in the profile folder as `config.json`.
 
 💡 **Good to know:** Use the `config` CLI command to open the current profile's config (JSON) in the `nano` editor (see [Open current profile config in nano](#open-current-profile-config-in-nano)).
 
 💡 **Good to know:** Use the `switch` CLI command to switch to a new or existing profile (see [Create or switch profile](#create-or-switch-profile)).
 
-  | Key                    | Description                                                                                      |
-  |------------------------|--------------------------------------------------------------------------------------------------|
-  | `config_version`       | Config version                                                                                   |
-  | `mcp_server_port`      | MCP server port (default `8008`)                                                                 |
-  | `ocr_strategy`         | OCR strategy in [`DecoderSettings.py`](archive_agent/config/DecoderSettings.py)                  |
-  | `ocr_auto_threshold`   | Minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict` |
-  | `image_entity_extract` | Image handling: `true` uses entity extraction, `false` uses OCR.                                 |
-  | `chunk_lines_block`    | Number of lines per block for chunking                                                           |
-  | `qdrant_server_url`    | URL of the Qdrant server                                                                         |
-  | `qdrant_collection`    | Name of the Qdrant collection                                                                    |
-  | `retrieve_score_min`   | Minimum similarity score of retrieved chunks (`0`...`1`)                                         |
-  | `retrieve_chunks_max`  | Maximum number of retrieved chunks                                                               |
-  | `rerank_chunks_max`    | Number of top chunks to keep after reranking                                                     |
-  | `expand_chunks_radius` | Number of preceding and following chunks to prepend and append to each reranked chunk            |
-  | `ai_provider`          | AI provider in [`ai_provider_registry.py`](archive_agent/ai_provider/ai_provider_registry.py)    |
-  | `ai_server_url`        | AI server URL                                                                                    |
-  | `ai_model_chunk`       | AI model used for chunking                                                                       |
-  | `ai_model_embed`       | AI model used for embedding                                                                      |
-  | `ai_model_rerank`      | AI model used for reranking                                                                      |
-  | `ai_model_query`       | AI model used for queries                                                                        |
-  | `ai_model_vision`      | AI model used for vision (`""` disables vision)                                                  |
-  | `ai_vector_size`       | Vector size of embeddings (used for Qdrant collection)                                           |
-  | `ai_temperature_query` | Temperature of the query model                                                                   |
+| Key                    | Description                                                                                      |
+|------------------------|--------------------------------------------------------------------------------------------------|
+| `config_version`       | Config version                                                                                   |
+| `mcp_server_port`      | MCP server port (default `8008`)                                                                 |
+| `ocr_strategy`         | OCR strategy in [`DecoderSettings.py`](archive_agent/config/DecoderSettings.py)                  |
+| `ocr_auto_threshold`   | Minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict` |
+| `image_entity_extract` | Image handling: `true` uses combined OCR and entity extraction, `false` uses OCR only.           |
+| `chunk_lines_block`    | Number of lines per block for chunking                                                           |
+| `qdrant_server_url`    | URL of the Qdrant server                                                                         |
+| `qdrant_collection`    | Name of the Qdrant collection                                                                    |
+| `retrieve_score_min`   | Minimum similarity score of retrieved chunks (`0`...`1`)                                         |
+| `retrieve_chunks_max`  | Maximum number of retrieved chunks                                                               |
+| `rerank_chunks_max`    | Number of top chunks to keep after reranking                                                     |
+| `expand_chunks_radius` | Number of preceding and following chunks to prepend and append to each reranked chunk            |
+| `ai_provider`          | AI provider in [`ai_provider_registry.py`](archive_agent/ai_provider/ai_provider_registry.py)    |
+| `ai_server_url`        | AI server URL                                                                                    |
+| `ai_model_chunk`       | AI model used for chunking                                                                       |
+| `ai_model_embed`       | AI model used for embedding                                                                      |
+| `ai_model_rerank`      | AI model used for reranking                                                                      |
+| `ai_model_query`       | AI model used for queries                                                                        |
+| `ai_model_vision`      | AI model used for vision (`""` disables vision)                                                  |
+| `ai_vector_size`       | Vector size of embeddings (used for Qdrant collection)                                           |
+| `ai_temperature_query` | Temperature of the query model                                                                   |
 
 ### Watchlist
 

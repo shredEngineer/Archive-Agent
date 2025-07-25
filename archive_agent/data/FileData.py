@@ -18,10 +18,10 @@ from archive_agent.data.DocumentContent import DocumentContent
 from archive_agent.util.format import format_file
 from archive_agent.data.loader.pdf import is_pdf_document, load_pdf_document
 from archive_agent.data.loader.image import is_image, load_image
-from archive_agent.util.image_util import image_resize_safe, image_to_base64
 from archive_agent.data.loader.text import is_plaintext, load_plaintext
 from archive_agent.data.loader.text import is_ascii_document, load_ascii_document
 from archive_agent.data.loader.text import is_binary_document, load_binary_document
+from archive_agent.util.image_util import image_resize_safe, image_to_base64
 from archive_agent.data.chunk import get_chunks_with_reference_ranges, get_sentences_with_reference_ranges
 
 
@@ -56,10 +56,7 @@ class FileData:
 
         self.image_to_text_callback_entity = self.image_to_text_entity if self.ai.ai_provider.supports_vision else None
         self.image_to_text_callback_ocr = self.image_to_text_ocr if self.ai.ai_provider.supports_vision else None
-
-        if not self.decoder_settings.image_entity_extract:
-            # Fallback to OCR when entity extraction is disabled
-            self.image_to_text_callback_entity = self.image_to_text_callback_ocr
+        self.image_to_text_callback_combined = self.image_to_text_combined if self.ai.ai_provider.supports_vision else None
 
         self.decoder_func: Optional[DecoderCallable] = self.get_decoder_func()
 
@@ -70,10 +67,12 @@ class FileData:
         :return: Decoder function or None if unsupported.
         """
         if is_image(self.file_path):
-            # Use entity extraction for image
+            # Use combined for image when entity extraction enabled, else OCR
+            callback = self.image_to_text_callback_combined if self.decoder_settings.image_entity_extract \
+                else self.image_to_text_callback_ocr
             return lambda: load_image(
                 file_path=self.file_path,
-                image_to_text_callback=self.image_to_text_callback_entity,
+                image_to_text_callback=callback,
             )
 
         elif is_plaintext(self.file_path):
@@ -87,10 +86,12 @@ class FileData:
             )
 
         elif is_binary_document(self.file_path):
-            # Use entity extraction for image in binary document
+            # Use entity extraction for binary document when enabled, else OCR
+            callback = self.image_to_text_callback_entity if self.decoder_settings.image_entity_extract \
+                else self.image_to_text_callback_ocr
             return lambda: load_binary_document(
                 file_path=self.file_path,
-                image_to_text_callback=self.image_to_text_callback_entity,
+                image_to_text_callback=callback,
             )
 
         elif is_pdf_document(self.file_path):
@@ -168,6 +169,32 @@ class FileData:
             return AiVisionEntity.format_vision_answer(logger=self.ai.cli.logger, vision_result=vision_result)
         else:
             return None
+
+    def image_to_text_combined(self, image: Image.Image) -> Optional[str]:
+        """
+        Request vision with OCR followed by entity extraction on the image, format and join the results.
+
+        :param image: PIL Image object.
+        :return: Combined text or None if any part failed.
+        """
+        self.ai.cli.logger.info("Requesting vision with OCR and entity extraction combined")
+
+        # OCR first
+        self.ai.request_ocr()
+        vision_result_ocr = self.image_to_text(image)
+        if vision_result_ocr is None:
+            return None
+        text_ocr = AiVisionOCR.format_vision_answer(vision_result_ocr)
+
+        # Then entity extraction
+        self.ai.request_entity()
+        vision_result_entity = self.image_to_text(image)
+        if vision_result_entity is None:
+            return None
+        text_entity = AiVisionEntity.format_vision_answer(logger=self.ai.cli.logger, vision_result=vision_result_entity)
+
+        # Join with a single space
+        return text_ocr + " " + text_entity
 
     def decode(self) -> Optional[DocumentContent]:
         """
