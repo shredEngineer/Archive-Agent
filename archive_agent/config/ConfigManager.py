@@ -58,17 +58,17 @@ class ConfigManager(StorageManager, AiProviderKeys):
 
         IMAGE_ENTITY_EXTRACT: "true",
 
-        CHUNK_LINES_BLOCK: 50,
+        CHUNK_LINES_BLOCK: 100,
 
         QDRANT_SERVER_URL: "http://localhost:6333",
         QDRANT_COLLECTION: "archive-agent",
 
-        RETRIEVE_SCORE_MIN: .2,
-        RETRIEVE_CHUNKS_MAX: 50,
+        RETRIEVE_SCORE_MIN: .1,
+        RETRIEVE_CHUNKS_MAX: 40,
 
-        RERANK_CHUNKS_MAX: 15,
+        RERANK_CHUNKS_MAX: 30,
 
-        EXPAND_CHUNKS_RADIUS: 1,
+        EXPAND_CHUNKS_RADIUS: 2,
 
         # deferred to `_prompt_ai_provider`
         AiProviderKeys.AI_PROVIDER: "",

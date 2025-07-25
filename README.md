@@ -4,9 +4,7 @@
 
 # ⚡ Archive Agent
 
-**Find your files with natural language and ask questions.**
-
-A smart file indexer with AI search (RAG engine), automatic OCR, and MCP interface.  
+*A smart file indexer with AI search (RAG engine), automatic OCR, and MCP interface.*  
 
 ![GitHub Release](https://img.shields.io/github/v/release/shredEngineer/Archive-Agent)
 ![GitHub License](https://img.shields.io/github/license/shredEngineer/Archive-Agent)
@@ -16,62 +14,85 @@ A smart file indexer with AI search (RAG engine), automatic OCR, and MCP interfa
 [![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/499d8d83-02c8-4c9b-9e4f-8e8391395482)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/shredEngineer/Archive-Agent)
 
-**Features**:
-- Indexes [plaintext, documents, PDFs, images](#which-files-are-processed)
-- Processes images using [automatic OCR](#ocr-strategies) and entity extraction
-- Search and query files using AI ([OpenAI](https://platform.openai.com/docs/overview) / compatible **¹**, [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/))
-- [MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension included
+---
+
+## Find your files with natural language and ask questions
+
+- **Includes semantic AI File search & query.**
+- Files are split using [semantic chunking with context headers](#how-smart-chunking-works) and committed to local database.
+- [RAG engine](#how-chunks-are-retrieved)**¹** uses [reranking and expanding](#how-chunks-are-reranked-and-expanded) of retrieved chunks
+ 
+**¹** *[Retrieval Augmented Generation](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) is the method of matching pre-made snippets of information to a query.*
+
+---
+
+## Natively index and ingest your documents 
+
+- **Includes local AI File System Indexer**
+- Natively ingests [PDFs, images, Markdown, plaintext, Microsoft Word documents (experimental)](#which-files-are-processed)
+- [Selects and tracks files using patterns](#how-files-are-selected-for-tracking) like `~/Documents/*.pdf` 
+- Transcibes images using [automatic OCR](#ocr-strategies) and entity extraction
+- Changes across files are tracked and committed to local database  
+
+---
+
+## Cutting Edge AI Support
+
+- **Supports [OpenAI](https://platform.openai.com/docs/overview) or compatible **¹**, [Ollama](https://ollama.com/), and [LM Studio](https://lmstudio.ai/)**
+- Includes [MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension included
 
 <small>**¹** Includes [xAI / Grok](https://x.ai/api) and [Claude](https://docs.anthropic.com/en/api/openai-sdk) OpenAI compatible APIs.  
 Simply adjust the URL [settings](#archive-agent-settings) and overwrite `OPENAI_API_KEY`.</small>
 
-**Usage**:
-- [Selects and tracks files using patterns](#how-files-are-selected-for-tracking) like `~/Documents/*.pdf` 
-- Changes across files are tracked and commited to local database  
+---
 
+## Architecture
 
-**Search and Query (RAG ¹) quality features**:  
-- Files are split using [semantic chunking with context headers](#how-smart-chunking-works)
-- [RAG engine](#how-chunks-are-retrieved) uses [reranking and expanding](#how-chunks-are-reranked-and-expanded) of retrieved chunks
- 
-¹ *[Retrieval Augmented Generation](https://en.wikipedia.org/wiki/Retrieval-augmented_generation)*
+([If you can't see the diagram below, view it on Mermaid.live](https://mermaid.live/edit#pako:eNqNk21v2jAQx7_KyVL3itA8UEisqRKltGWlG4VuLxaqySQHiUhs5DgUWvW7z3agq6Zp2zv7Hn7nu__5hSQiRULJSrJNBuPpnM85wMkJjPgKK5ULDpN8g0XO0TiqetFEvrmNFaAfP0iWrIHxFAaiLHMFV3mB1ceFPJ9IsdRnCkpn_EiZYsY6EEWBiSFQYDLJ8i06bIVcOW9hTmfpu0m3Ez2C45zDRTxhskL4AF8GU4OYKckUrvYUKiXzRBlbv1YCHjKJVSaKlELgG-uo1GgYcpWrPQx3Oi9R-j2yxsfm_Re2wiCeYcl0VAKDrObrnK9M9lg3X8FFIZI1Bc91je1Oj62gsNoop9P2HN_1zxy343idA3BggZfxsFxg2tCqd3kKd8pB40t1ESdwCiZXaAK-6aEICbP8WU8scHv-AXhpgcN4pr0ITVQFOYf7VOon23mg3KKEr9MxhUypDT091W9mRSYqRbtBEFgU8vRN5Psa5f7PAltXU_oq7ldrY7CCN2JcHzo7Wv_Z26GNa5t9E09RS4ZbhM_ItFjq3YhmienwLteL4bY9uyvWB3dsR6HjHkjDhtRcbuxlpLF6GGtY7GGKBW4ZT_B3QPBf-o0s8FM83G2aneamrXesKUvzuqJw1OeTTbiNr5GjWUvo8-oJ5V9rGecDlhuTUEutt9f2DrhbixvHs0w86V42xd6SBhM4qDwRUq9w6LrhUVXS0r84Twk1e90iJcqSmSt5MQFzojIscU6oPqa4ZHWh5mTOX3WabvG7EOUxU4p6lRG6ZEWlb_VG_0W8zJnei18huh7Kgai5IlR_Ccsg9IXsCHXbYdQJ_KgXhl037Pmh3yJ7Qnt-u3vmBoEXRUHH9cPotUWebVXdte-73cDrRZ7rRV7Qff0JXFR03w))
+
+```mermaid
+graph LR
+
+  %% Ingestion Pipeline
+  subgraph Ingestion
+    A[Track and Commit Files<br>Profile: test_data<br>Collection: archive-agent-test_data-4f20c649] --> B[Parse & OCR<br>Strategy: strict<br>Auto Threshold: 32<br>Image Entity Extract: true]
+    B --> C[Semantic Chunking<br>Lines Block: 100<br>Model: gpt-4.1-2025-04-14]
+    C --> D[Embed Chunks<br>Model: text-embedding-3-large<br>Vector Size: 3072]
+    D --> E[Store Vectors in Qdrant<br>Server URL: http://localhost:6333]
+  end
+
+  %% Query Pipeline
+  subgraph Query
+    F[Ask Question] --> G[Embed Question<br>Model: text-embedding-3-large]
+    G --> H[Retrieve Nearest Chunks<br>Score Min: 0.1<br>Chunks Max: 40]
+    E --> H
+    H --> I[Rerank by Relevance<br>Chunks Max: 30<br>Model: gpt-4.1-2025-04-14]
+    I --> J[Expand Context<br>Chunks Radius: 2]
+    J --> K[Generate Answer<br>Model: gpt-4.1-2025-04-14<br>Temperature: 1.1]
+    K --> L[Show Reply<br>MCP Server Port: 8008]
+  end
+```
 
 ---
 
-🍀 **Collaborators welcome**  
-You are invited to contribute to this open source project!  
-Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues) and [submit pull requests](https://github.com/shredEngineer/Archive-Agent/pulls) anytime.
+## Just getting started?
 
-▶️ **[Learn about Archive Agent](https://youtube.com/playlist?list=PLK0uOAnKcdRQSYnV32GHqV8ZAnKstJ-GU&si=QH4MfEmreVEXoa-q)**: (external link to YouTube playlist)  
-[![YouTube: Archive Agent (Playlist)](archive_agent/assets/Thumbnail-GOCCWwI25EI.jpg)](https://youtube.com/playlist?list=PLK0uOAnKcdRQSYnV32GHqV8ZAnKstJ-GU&si=QH4MfEmreVEXoa-q)  
-
----
-
-**Just getting started?**  
-🟢 [Install Archive Agent on Linux](#install-archive-agent)
-
-**Want to know the nitty-gritty details?**  
-🔬 [How Archive Agent works](#how-archive-agent-works)
-
-**Looking for the CLI command reference?**  
-💻 [Run Archive Agent](#run-archive-agent)
-
-**Looking for the MCP tool reference?**  
-🧰 [MCP Tools](#mcp-tools)
-
-**Want to upgrade for the latest features?**  
-⬆️ [Update Archive Agent](#update-archive-agent)
+- 🟢 [Install Archive Agent on Linux](#install-archive-agent)
+- 💻 [Run Archive Agent](#run-archive-agent) (CLI command reference)
+- 🧰 [MCP Tools](#mcp-tools) (MCP tool reference)
+- ⬆️ [Update Archive Agent](#update-archive-agent) (get latest features)
 
 ---
-
-📷 Screenshot of **command-line** interface (CLI):
-
-![](archive_agent/assets/Screenshot-CLI.png)
 
 ## Structure
 
 <!-- TOC -->
 * [⚡ Archive Agent](#-archive-agent)
+  * [Find your files with natural language and ask questions](#find-your-files-with-natural-language-and-ask-questions)
+  * [Natively index and ingest your documents](#natively-index-and-ingest-your-documents-)
+  * [Cutting Edge AI Support](#cutting-edge-ai-support)
+  * [Architecture](#architecture)
+  * [Just getting started?](#just-getting-started)
   * [Structure](#structure)
   * [Supported OS](#supported-os)
   * [Install Archive Agent](#install-archive-agent)
@@ -80,18 +101,18 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
     * [OpenAI provider setup](#openai-provider-setup)
     * [Ollama provider setup](#ollama-provider-setup)
     * [LM Studio provider setup](#lm-studio-provider-setup)
-  * [How Archive Agent works](#how-archive-agent-works)
-    * [Which files are processed](#which-files-are-processed)
-    * [How files are processed](#how-files-are-processed)
-    * [OCR strategies](#ocr-strategies)
-    * [How smart chunking works](#how-smart-chunking-works)
-    * [How chunk references work](#how-chunk-references-work)
-    * [How chunks are retrieved](#how-chunks-are-retrieved)
-    * [How chunks are reranked and expanded](#how-chunks-are-reranked-and-expanded)
-    * [How answers are generated](#how-answers-are-generated)
-    * [How files are selected for tracking](#how-files-are-selected-for-tracking)
+  * [Which files are processed](#which-files-are-processed)
+  * [How files are processed](#how-files-are-processed)
+  * [OCR strategies](#ocr-strategies)
+  * [How smart chunking works](#how-smart-chunking-works)
+  * [How chunk references work](#how-chunk-references-work)
+  * [How chunks are retrieved](#how-chunks-are-retrieved)
+  * [How chunks are reranked and expanded](#how-chunks-are-reranked-and-expanded)
+  * [How answers are generated](#how-answers-are-generated)
+  * [How files are selected for tracking](#how-files-are-selected-for-tracking)
   * [Run Archive Agent](#run-archive-agent)
-    * [Quickstart](#quickstart)
+  * [Quickstart on the command line (CLI)](#quickstart-on-the-command-line-cli)
+  * [CLI command reference](#cli-command-reference)
     * [Show list of commands](#show-list-of-commands)
     * [Create or switch profile](#create-or-switch-profile)
     * [Open current profile config in nano](#open-current-profile-config-in-nano)
@@ -110,8 +131,8 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
     * [Start MCP Server](#start-mcp-server)
   * [MCP Tools](#mcp-tools)
   * [Update Archive Agent](#update-archive-agent)
-  * [Archive Agent settings](#archive-agent-settings)
-    * [Profile configuration](#profile-configuration)
+    * [Archive Agent settings](#archive-agent-settings)
+      * [Profile configuration](#profile-configuration)
     * [Watchlist](#watchlist)
     * [AI cache](#ai-cache)
   * [Qdrant database](#qdrant-database)
@@ -120,7 +141,8 @@ Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues
     * [Code testing and analysis](#code-testing-and-analysis)
   * [Known issues](#known-issues)
   * [Licensed under GNU GPL v3.0](#licensed-under-gnu-gpl-v30)
-  * [GUI sneak peek](#gui-sneak-peek)
+  * [Collaborators welcome](#collaborators-welcome-)
+  * [Learn about Archive Agent](#learn-about-archive-agent)
 <!-- TOC -->
 
 ---
@@ -236,35 +258,7 @@ At least 32 GiB RAM is recommended for smooth performance.
 
 ---
 
-## How Archive Agent works
-
-💡 Overview of **Archive Agent** processing and control:
-
-```mermaid
-graph LR
-
-  %% Ingestion Pipeline
-  subgraph Ingestion
-    A[Track and Commit Files] --> B[Parse & OCR]
-    B --> C[Semantic Chunking]
-    C --> D[Embed Chunks]
-    D --> E[Store Vectors in Qdrant]
-  end
-
-  %% Query Pipeline
-  subgraph Query
-    F[Ask Question] --> G[Embed Question]
-    G --> H[Retrieve Nearest Chunks]
-    E --> H
-    H --> I[Rerank by Relevance]
-    I --> J[Expand Context]
-    J --> K[Generate Answer]
-    K --> L[Show Reply]
-  end
-```
-([view diagram in Mermaid.live](https://mermaid.live/edit#pako:eNptkU1P4zAQhv_KyBKcSrWhTT9yQCppKQXEQov2gMPBTYbGamJHtgPtVv3v69ihaCVO8czzzjsfOZBUZkgislGsyuFhmYhEAJydwUJsUBsuBTzxCgsusAG6XnvlCTdZgAl9USzdAhMZxLIsuYEbXqB-g4uLK7imT0xphHP4HS_ffMW1IzFdYcmE4SnEeS22XGxaHjs-pbNyjZmHukVTh2Z0ZaRC-IOp_WrgAp4zZb2cCkV2WuW5RrX_eQ2HvOsNnehtk3Br-cHnbftT1kvnDt7SJRrF8QPhEZmyiv_HnHmVD25dsLAldsQtrPewxAI_mEixlS-c4o7OdpW_ojC4My28c_CezlFYA4MwEfoTVUvvHX2gq1x-Wt-q2H_dgHTsn-UZiYyqsUNKVCVrQnJoBAkxOZaYkMg-M3xndWESkoijLbNDvEpZflUqWW9yEr2zQtuorjI7xJQze8Vvie2HKpa1MCQaOwcSHciOREFv2A2DXjgaBWF42e_3wg7ZN-mg2wsu--FwPBgOBuPw2CF_Xc9f3dEwPP4DQ93QoQ))
-
-### Which files are processed
+## Which files are processed
 
 **Archive Agent** currently supports these file types:
 - Text:
@@ -275,7 +269,9 @@ graph LR
   - PDF documents: `.pdf` (including images; also see [OCR strategies](#ocr-strategies))
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp` (supports combined OCR and entity extraction when `image_entity_extract` is enabled)
 
-### How files are processed
+---
+
+## How files are processed
 
 Ultimately, **Archive Agent** decodes everything to text like this:
 - Plaintext files are decoded to UTF-8.
@@ -294,7 +290,9 @@ See [Archive Agent settings](#archive-agent-settings): `image_entity_extract`
 
 📌 **Note:** Unsupported files are tracked but not processed.
 
-### OCR strategies
+---
+
+## OCR strategies
 
 For PDF documents, there are different OCR strategies supported by **Archive Agent**:
 
@@ -319,7 +317,10 @@ For PDF documents, there are different OCR strategies supported by **Archive Age
 PDF documents often contain small/scattered images related to page style/layout which cause overhead while contributing little information or even cluttering the result.
 
 💡 **Good to know:** You will be prompted to choose an OCR strategy at startup (see [Run Archive Agent](#run-archive-agent)).
-### How smart chunking works
+
+---
+
+## How smart chunking works
 
 **Archive Agent** processes decoded text like this:
 - Decoded text is sanitized and split into sentences.
@@ -335,7 +336,9 @@ See [Archive Agent settings](#archive-agent-settings): `chunk_lines_block`
 
 💡 **Good to know:** This **smart chunking** improves the accuracy and effectiveness of the retrieval. 
 
-### How chunk references work
+---
+
+## How chunk references work
 
 To ensure that every chunk can be traced back to its origin, **Archive Agent** maps the text contents of each chunk to the corresponding line numbers or page numbers of the source file.
 
@@ -344,7 +347,9 @@ To ensure that every chunk can be traced back to its origin, **Archive Agent** m
 
 📌 **Note:** References are only *approximate* due to paragraph/sentence splitting/joining in the chunking process.
 
-### How chunks are retrieved
+---
+
+## How chunks are retrieved
 
 **Archive Agent** retrieves chunks related to your question like this:
 - The question is turned into a vector using AI embeddings.
@@ -353,7 +358,9 @@ To ensure that every chunk can be traced back to its origin, **Archive Agent** m
 
 See [Archive Agent settings](#archive-agent-settings): `retrieve_score_min`, `retrieve_chunks_max`
 
-### How chunks are reranked and expanded
+---
+
+## How chunks are reranked and expanded
 
 **Archive Agent** filters the retrieved chunks .
 
@@ -363,7 +370,9 @@ See [Archive Agent settings](#archive-agent-settings): `retrieve_score_min`, `re
 
 See [Archive Agent settings](#archive-agent-settings): `rerank_chunks_max`, `expand_chunks_radius`
 
-### How answers are generated
+---
+
+## How answers are generated
 
 **Archive Agent** answers your question using the reranked and expanded chunks like this:
 - The LLM receives the chunks as context to the question.
@@ -371,7 +380,9 @@ See [Archive Agent settings](#archive-agent-settings): `rerank_chunks_max`, `exp
 
 💡 **Good to know:** **Archive Agent** uses an answer template that aims to be universally helpful.
 
-### How files are selected for tracking
+---
+
+## How files are selected for tracking
 
 **Archive Agent** uses *patterns* to select your files:
 
@@ -404,7 +415,13 @@ This approach gives you the best control over the specific files or file types t
 - **AI provider** (see [AI Provider Setup](#ai-provider-setup))
 - **OCR strategy** (see [OCR strategies](#ocr-strategies))
 
-### Quickstart
+📷 Screenshot of **command-line** interface (CLI):
+
+![](archive_agent/assets/Screenshot-CLI.png)
+
+---
+
+## Quickstart on the command line (CLI)
 
 For example, to [track](#how-files-are-selected-for-tracking) your documents and images, run this:
 
@@ -424,6 +441,10 @@ Or, to ask questions from the command line:
 ```bash
 archive-agent query "Which files mention donuts?"
 ```
+
+---
+
+## CLI command reference
 
 ### Show list of commands
 
@@ -788,7 +809,7 @@ To run unit tests, check types, and check style, run this:
 - [ ] PDF vector images may not convert as expected, due to missing tests. (Using `strict` OCR strategy would certainly help in the meantime.) 
 
 
-- [ ] Binary document page numbers (e.g., `.docx`) are not supported yet.
+- [ ] Binary document page numbers (e.g., `.docx`) are not supported yet. **Microsoft Word document support is experimental!**
 
 
 - [ ] References are only *approximate* due to paragraph/sentence splitting/joining in the chunking process.
@@ -804,6 +825,9 @@ To run unit tests, check types, and check style, run this:
 
 
 - [ ] HTML document images are not supported.
+
+
+- [ ] The behaviour of handling unprocessable files is not customizable yet. Should the user be prompted? Should the entire file be rejected? **Unprocessable images are currently tolerated and replaced by `[Unprocessable image]`.** 
 
 ---
 
@@ -822,6 +846,13 @@ See [LICENSE](LICENSE) for details.
 
 ---
 
-## GUI sneak peek
+## Collaborators welcome  
+You are invited to contribute to this open source project!  
+Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues) and [submit pull requests](https://github.com/shredEngineer/Archive-Agent/pulls) anytime.
 
-https://github.com/user-attachments/assets/1cd8211e-6e5b-4e61-8ccc-74c140697abc
+---
+
+## Learn about Archive Agent
+
+([Tap to open external link to YouTube playlist](https://youtube.com/playlist?list=PLK0uOAnKcdRQSYnV32GHqV8ZAnKstJ-GU&si=QH4MfEmreVEXoa-q))  
+[![YouTube: Archive Agent (Playlist)](archive_agent/assets/Thumbnail-GOCCWwI25EI.jpg)](https://youtube.com/playlist?list=PLK0uOAnKcdRQSYnV32GHqV8ZAnKstJ-GU&si=QH4MfEmreVEXoa-q)  
