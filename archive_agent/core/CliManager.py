@@ -31,7 +31,7 @@ class CliManager:
     VERBOSE_RERANK: bool = False  # enabled by --verbose flag
     VERBOSE_EMBED: bool = False  # enabled by --verbose flag
     VERBOSE_QUERY: bool = False  # enabled by --verbose flag
-    VERBOSE_VISION: bool = True
+    VERBOSE_VISION: bool = False  # enabled by --verbose flag
     VERBOSE_RETRIEVAL: bool = False  # enabled by --verbose flag
     VERBOSE_USAGE: bool = True
 
@@ -44,6 +44,7 @@ class CliManager:
         CliManager.VERBOSE_RERANK = verbose
         CliManager.VERBOSE_EMBED = verbose
         CliManager.VERBOSE_QUERY = verbose
+	CliManager.VERBOSE_VISION = verbose
         CliManager.VERBOSE_RETRIEVAL = verbose
 
         self.logger = logging.getLogger(__name__)
