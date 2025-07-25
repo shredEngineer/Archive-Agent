@@ -4,7 +4,7 @@
 
 from typing import List
 
-from archive_agent.data.chunk import split_sentences, generate_chunks_with_ranges, SentenceWithRange
+from archive_agent.data.chunk import get_sentences_with_reference_ranges, generate_chunks_with_reference_ranges, SentenceWithRange
 from archive_agent.ai.chunk.AiChunk import ChunkSchema
 
 
@@ -20,7 +20,7 @@ def test_split_sentences_output():
     with open("./tests/data/test_data/test_sanitized.txt", "r", encoding="utf-8") as f:
         expect_text = f.read().strip()
 
-    result = split_sentences(raw_text)
+    result = get_sentences_with_reference_ranges(raw_text)
 
     joined_text = "\n".join([s.text for s in result]).strip()
 
@@ -39,7 +39,7 @@ def test_split_sentences_no_references_simple():
     """
     raw_text = "A.\nB.\n\nC."
 
-    result = split_sentences(raw_text)
+    result = get_sentences_with_reference_ranges(raw_text)
 
     expected = [
         SentenceWithRange("A. B.", (0, 0)),
@@ -60,7 +60,7 @@ def test_split_sentences_with_references_spanned():
     raw_text = "First. Second spans\nlines.\n\nThird."
     per_line_references = [1, 2, 3, 4]
 
-    result = split_sentences(raw_text, per_line_references)
+    result = get_sentences_with_reference_ranges(raw_text, per_line_references)
 
     expected = [
         SentenceWithRange("First.", (1, 1)),
@@ -82,7 +82,7 @@ def test_split_sentences_markdown_lists():
     raw_text = "Para.\n\n- Item1.\n- Item2."
     per_line_references = [1, 2, 3, 4]
 
-    result = split_sentences(raw_text, per_line_references)
+    result = get_sentences_with_reference_ranges(raw_text, per_line_references)
 
     expected = [
         SentenceWithRange("Para.", (1, 1)),
@@ -95,26 +95,6 @@ def test_split_sentences_markdown_lists():
     assert result == expected
 
 
-def test_split_sentences_short_references():
-    """
-    Test `split_sentences` with fewer references than lines.
-    Input: Text with two sentences; reference only for first line [1].
-    Expected: First sentence gets (1,1), second gets (0,0) due to missing reference.
-    Tests: Short reference handling, default to (0,0), robustness.
-    """
-    raw_text = "One.\nTwo."
-    per_line_references = [1]
-
-    result = split_sentences(raw_text, per_line_references)
-
-    expected = [
-        SentenceWithRange("One.", (1, 1)),
-        SentenceWithRange("Two.", (0, 0)),
-    ]
-
-    assert result == expected
-
-
 def test_split_sentences_empty_or_blanks():
     """
     Test `split_sentences` with empty or blank-only input.
@@ -122,10 +102,10 @@ def test_split_sentences_empty_or_blanks():
     Expected: Empty list for both cases.
     Tests: Edge cases for empty input, blank line handling.
     """
-    result_empty = split_sentences("")
+    result_empty = get_sentences_with_reference_ranges("")
     assert result_empty == []
 
-    result_blanks = split_sentences("\n\n")
+    result_blanks = get_sentences_with_reference_ranges("\n\n")
     assert result_blanks == []
 
 
@@ -155,7 +135,7 @@ def test_generate_chunks_with_ranges_basic_no_carry():
     chunk_lines_block = 2
     file_path = "test.txt"
 
-    result = generate_chunks_with_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
+    result = generate_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
 
     assert len(result) == 1
     assert result[0].reference_range == (1, 2)
@@ -178,7 +158,7 @@ def test_generate_chunks_with_ranges_with_carry():
     chunk_lines_block = 2
     file_path = "test.txt"
 
-    result = generate_chunks_with_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
+    result = generate_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
 
     assert len(result) == 1
     assert result[0].reference_range == (1, 3)
@@ -201,7 +181,7 @@ def test_generate_chunks_with_ranges_ignores_zeros_in_agg():
     chunk_lines_block = 3
     file_path = "test.txt"
 
-    result = generate_chunks_with_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
+    result = generate_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
 
     assert len(result) == 1
     assert result[0].reference_range == (1, 2)
@@ -220,6 +200,6 @@ def test_generate_chunks_with_ranges_empty():
     chunk_lines_block = 1
     file_path = "test.txt"
 
-    result = generate_chunks_with_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
+    result = generate_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
 
     assert result == []

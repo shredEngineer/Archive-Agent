@@ -235,7 +235,7 @@ class CliManager:
         :param points: Retrieved points.
         """
         if len(points) == 0:
-            self.logger.info(f"⚠️  No results")
+            self.logger.info(f"⚠️  No retrieved results")
             return
 
         self.logger.info(f"✅  Retrieved ({len(points)}) chunk(s):")
@@ -255,7 +255,7 @@ class CliManager:
         :param points: Reranked points.
         """
         if len(points) == 0:
-            self.logger.info(f"⚠️  No results")
+            self.logger.info(f"⚠️  No reranked results")
             return
 
         self.logger.info(f"✅  Reranked and limited down to ({len(points)}) chunk(s):")
@@ -275,7 +275,7 @@ class CliManager:
         :param points: Expanded and deduplicated points.
         """
         if len(points) == 0:
-            self.logger.info(f"⚠️  No results")
+            self.logger.info(f"⚠️  No expanded and deduplicated results")
             return
 
         self.logger.info(f"✅  Expanded and deduplicated down to ({len(points)}) chunk(s):")

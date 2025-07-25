@@ -119,49 +119,6 @@ class ChunkWithRange:
     reference_range: SentenceRange
 
 
-def _build_para_blocks(stripped_lines: List[str], per_line_references: ReferenceList) -> List[Tuple[List[str], ReferenceList]]:
-    """
-    Build paragraph blocks from stripped lines, respecting empty lines and Markdown list items.
-
-    :param stripped_lines: List of stripped input lines.
-    :param per_line_references: Per-line reference numbers (lines or pages).
-    :return: List of (paragraph lines, associated refs) tuples.
-    """
-    para_blocks: List[Tuple[List[str], ReferenceList]] = []
-    current_para: List[str] = []
-    current_refs: ReferenceList = []
-    has_references = bool(per_line_references)
-    for i, line in enumerate(stripped_lines):
-        if not line:
-            # Paragraph handling: Close current block on empty line
-            if current_para:
-                para_blocks.append((current_para, current_refs))
-                current_para = []
-                current_refs = []
-            continue
-
-        if line.startswith("- "):
-            # Markdown item handling: Treat list item as new paragraph block
-            if current_para:
-                para_blocks.append((current_para, current_refs))
-                current_para = []
-                current_refs = []
-            current_para.append(line)
-            if has_references:
-                ref = per_line_references[i] if i < len(per_line_references) else 0
-                current_refs.append(ref)
-        else:
-            current_para.append(line)
-            if has_references:
-                ref = per_line_references[i] if i < len(per_line_references) else 0
-                current_refs.append(ref)
-
-    if current_para:
-        para_blocks.append((current_para, current_refs))
-
-    return para_blocks
-
-
 def _normalize_inline_whitespace(text: str) -> str:
     """
     Normalize inline whitespace inside a string:
@@ -177,24 +134,24 @@ def _normalize_inline_whitespace(text: str) -> str:
     return text.strip()
 
 
-def _process_para_block(
-    para_lines: List[str],
-    para_refs: ReferenceList,
+def _extract_paragraph_sentences_with_reference_ranges(
+    paragraph_lines: List[str],
+    paragraph_reference_ranges: ReferenceList,
     nlp: Language
 ) -> List[SentenceWithRange]:
     """
     Process a single paragraph block: Normalize, sentencize, and compute ranges.
 
-    :param para_lines: Lines in the paragraph.
-    :param para_refs: Associated line references.
+    :param paragraph_lines: Lines in the paragraph.
+    :param paragraph_reference_ranges: Associated line references.
     :param nlp: spaCy NLP pipeline.
     :return: List of SentenceWithRange for the block.
     """
-    normalized_lines = [_normalize_inline_whitespace(line) for line in para_lines]
+    normalized_lines = [_normalize_inline_whitespace(line) for line in paragraph_lines]
     para_text = " ".join(normalized_lines)
 
     line_starts: Optional[List[int]] = None
-    if para_refs:
+    if paragraph_reference_ranges:
         line_starts = [0]
         for norm_line in normalized_lines[:-1]:
             line_starts.append(line_starts[-1] + len(norm_line) + 1)
@@ -206,17 +163,17 @@ def _process_para_block(
     for sentence in doc.sents:
         sentence_text = sentence.text.strip()
 
-        if sentence_text and para_refs and line_starts:
+        if sentence_text and paragraph_reference_ranges and line_starts:
             start_char = sentence.start_char
             end_char = sentence.end_char
 
             start_line_idx = bisect.bisect_right(line_starts, start_char) - 1
-            start_line_idx = min(start_line_idx, len(para_lines) - 1)
+            start_line_idx = min(start_line_idx, len(paragraph_lines) - 1)
 
             end_line_idx = bisect.bisect_right(line_starts, end_char - 1) - 1
-            end_line_idx = min(end_line_idx, len(para_lines) - 1)
+            end_line_idx = min(end_line_idx, len(paragraph_lines) - 1)
 
-            sentence_refs = para_refs[start_line_idx: end_line_idx + 1]
+            sentence_refs = paragraph_reference_ranges[start_line_idx: end_line_idx + 1]
             min_ref = min(sentence_refs) if sentence_refs else 0
             max_ref = max(sentence_refs) if sentence_refs else 0
         else:
@@ -227,8 +184,8 @@ def _process_para_block(
     return block_sentences
 
 
-@Language.component("markdown_sentence_fixer")
-def markdown_sentence_fixer(doc: Doc) -> Doc:
+@Language.component("_spacy_markdown_sentence_fixer")
+def _spacy_markdown_sentence_fixer(doc: Doc) -> Doc:
     """
     Adjust sentence segmentation to better handle Markdown syntax.
     Prevents sentence breaks after Markdown-specific tokens like headers, list items, and code blocks.
@@ -265,7 +222,7 @@ def markdown_sentence_fixer(doc: Doc) -> Doc:
 def _get_nlp() -> Language:
     """
     Get NLP model for sentence splitting.
-    :return: SpaCy language model.
+    :return: spaCy language model.
     """
     nlp = spacy.load("en_core_web_md", disable=["parser"])
 
@@ -274,16 +231,104 @@ def _get_nlp() -> Language:
     if not nlp.has_pipe("sentencizer"):
         nlp.add_pipe("sentencizer")
 
-    if not nlp.has_pipe("markdown_sentence_fixer"):
-        nlp.add_pipe("markdown_sentence_fixer", after="sentencizer")
+    if not nlp.has_pipe("_spacy_markdown_sentence_fixer"):
+        nlp.add_pipe("_spacy_markdown_sentence_fixer", after="sentencizer")
 
     return nlp
 
 
-# noinspection PyDefaultArgument
-def split_sentences(text: str, per_line_references: ReferenceList = []) -> List[SentenceWithRange]:
+def text_to_clean_lines(text: str) -> List[str]:
+    lines = splitlines_exact(text)
+    stripped_lines = [line.strip() for line in lines]
+    return stripped_lines
+
+
+def _extract_paragraphs_with_reference_ranges(
+        lines: List[str],
+        per_line_references: ReferenceList,
+) -> List[Tuple[List[str], ReferenceList]]:
     """
-    Split text into sentences and assign per-sentence reference ranges.
+    Extract paragraphs from text lines.
+    - Respects empty lines.
+    - Turns Markdown list items into separate paragraphs to let NLP (spaCy) work properly.
+    :param lines: Text lines.
+    :param per_line_references: Per-line reference numbers (lines or pages).
+    :return: List of (paragraph lines, associated refs) tuples.
+    """
+
+    # TODO: Refactor into nested DocumentContent
+    para_blocks: List[Tuple[List[str], ReferenceList]] = []
+
+    current_paragraph: List[str] = []
+    current_references: ReferenceList = []
+
+    has_references = bool(per_line_references)
+
+    for line_index, line_text in enumerate(lines):
+
+        next_paragraph = False
+        discard_line = False
+
+        # Empty line starts new paragraph
+        if not line_text:
+            next_paragraph = True
+            discard_line = True
+
+        # Markdown item starts new paragraph
+        if line_text.startswith("- "):
+            next_paragraph = True
+
+        # Push current paragraph and start next
+        if next_paragraph:
+            if current_paragraph:
+                para_blocks.append((current_paragraph, current_references))
+                current_paragraph = []
+                current_references = []
+
+        # Discard line
+        if discard_line:
+            continue
+
+        # Append text line with page or line number reference
+        current_paragraph.append(line_text)
+        if has_references:
+            current_references.append(per_line_references[line_index])
+
+    # Push last paragraph if non-empty
+    if current_paragraph:
+        para_blocks.append((current_paragraph, current_references))
+
+    return para_blocks
+
+
+def _extract_sentences_with_reference_ranges(
+        paragraphs_with_reference_ranges: List[Tuple[List[str], ReferenceList]],
+        nlp: Language,
+) -> List[SentenceWithRange]:
+    sentences_with_reference_ranges: List[SentenceWithRange] = []
+
+    for paragraph_index, (paragraph_lines, paragraph_reference_ranges) in enumerate(paragraphs_with_reference_ranges):
+
+        if paragraph_index > 0:
+            # Insert paragraph delimiter: empty sentence with zero range.
+            # (Unit tests are sentitive to this logic)
+            sentences_with_reference_ranges.append(SentenceWithRange("", (0, 0)))
+
+        paragraph_sentences_with_reference_ranges = _extract_paragraph_sentences_with_reference_ranges(
+            paragraph_lines=paragraph_lines,
+            paragraph_reference_ranges=paragraph_reference_ranges,
+            nlp=nlp,
+        )
+
+        sentences_with_reference_ranges.extend(paragraph_sentences_with_reference_ranges)
+
+    return sentences_with_reference_ranges
+
+
+# noinspection PyDefaultArgument
+def get_sentences_with_reference_ranges(text: str, per_line_references: ReferenceList = []) -> List[SentenceWithRange]:
+    """
+    Use preprocessing and NLP (spaCy) to split text into sentences, keeping track of references.
 
     Processes text with paragraph and sentence handling, inferring ranges from provided references (lines or pages)
     if available, or defaulting to (0, 0).
@@ -292,26 +337,14 @@ def split_sentences(text: str, per_line_references: ReferenceList = []) -> List[
     :param per_line_references: Per-line reference numbers (e.g., absolute line or page numbers).
     :return: List of SentenceWithRange (text and range pairs).
     """
-    lines = splitlines_exact(text)
-    stripped_lines = [line.strip() for line in lines]
+    clean_lines = text_to_clean_lines(text)
 
-    nlp = _get_nlp()
+    paragraphs_with_reference_ranges = _extract_paragraphs_with_reference_ranges(clean_lines, per_line_references)
 
-    para_blocks = _build_para_blocks(stripped_lines, per_line_references)
-
-    sentences_with_ranges: List[SentenceWithRange] = []
-
-    for i, (para_lines, para_refs) in enumerate(para_blocks):
-
-        if i > 0:
-            # Insert empty sentence with zero range between paragraphs
-            # (Unit tests are sentitive to this logic)
-            sentences_with_ranges.append(SentenceWithRange("", (0, 0)))
-
-        block_sentences = _process_para_block(para_lines, para_refs, nlp)
-        sentences_with_ranges.extend(block_sentences)
-
-    return sentences_with_ranges
+    return _extract_sentences_with_reference_ranges(
+        paragraphs_with_reference_ranges=paragraphs_with_reference_ranges,
+        nlp=_get_nlp(),
+    )
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -392,8 +425,8 @@ def _format_chunk(file_path: str, header: str, body: str) -> str:
     ])
 
 
-def generate_chunks_with_ranges(
-    sentences_with_ranges: List[SentenceWithRange],
+def generate_chunks_with_reference_ranges(
+    sentences_with_references: List[SentenceWithRange],
     chunk_callback: Callable[[List[str]], ChunkSchema],
     chunk_lines_block: int,
     file_path: str
@@ -402,14 +435,14 @@ def generate_chunks_with_ranges(
     Chunkify a list of sentences into AI-determined chunks, carrying over leftover sentences where needed,
     and annotate each chunk with the corresponding (min, max) line reference range.
 
-    :param sentences_with_ranges: List of sentences with their reference ranges.
+    :param sentences_with_references: List of sentences with their reference ranges.
     :param chunk_callback: Chunk callback.
     :param chunk_lines_block: Number of sentences per block to be chunked.
     :param file_path: Path to the originating file (used for logging and labeling).
     :return: List of ChunkWithRange objects containing the formatted chunk and its reference range.
     """
-    sentences = [s.text for s in sentences_with_ranges]
-    sentence_reference_ranges = [s.reference_range for s in sentences_with_ranges]
+    sentences = [s.text for s in sentences_with_references]
+    sentence_reference_ranges = [s.reference_range for s in sentences_with_references]
 
     if len(sentence_reference_ranges) != len(sentences):
         logger.error(

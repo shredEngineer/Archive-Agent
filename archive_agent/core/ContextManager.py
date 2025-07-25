@@ -9,6 +9,7 @@ from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.ai_provider.AiProviderParams import AiProviderParams
 from archive_agent.profile.ProfileManager import ProfileManager
 from archive_agent.config.ConfigManager import ConfigManager
+from archive_agent.core.CacheManager import CacheManager
 from archive_agent.core.CliManager import CliManager
 from archive_agent.config.DecoderSettings import DecoderSettings, OcrStrategy
 from archive_agent.watchlist.WatchlistManager import WatchlistManager
@@ -19,8 +20,6 @@ from archive_agent.ai.AiManager import AiManager
 
 from archive_agent.ai_provider.ai_provider_registry import ai_provider_registry
 from archive_agent.ai_provider.AiProvider import AiProvider
-
-from archive_agent.core.CacheManager import CacheManager
 
 
 logger = logging.getLogger(__name__)
@@ -45,9 +44,9 @@ class ContextManager:
         """
         self.invalidate_cache = invalidate_cache
 
-        self.cli = CliManager(verbose=verbose)
-
         settings_path = Path.home() / ".archive-agent-settings"
+
+        self.cli = CliManager(verbose=verbose)
 
         self.profile_manager = ProfileManager(
             cli=self.cli,

@@ -19,9 +19,11 @@ A smart file indexer with AI search (RAG engine), automatic OCR, and MCP interfa
 **Features**:
 - Indexes [plaintext, documents, PDFs, images](#which-files-are-processed)
 - Processes images using [automatic OCR](#ocr-strategies) and entity extraction
-- Search and query files using AI ([OpenAI](https://platform.openai.com/docs/overview), [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/))
+- Search and query files using AI ([OpenAI](https://platform.openai.com/docs/overview) / compatible **¹**, [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/))
 - [MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension included
 
+<small>**¹** Includes [xAI / Grok](https://x.ai/api) and [Claude](https://docs.anthropic.com/en/api/openai-sdk) OpenAI compatible APIs.  
+Simply adjust the URL [settings](#archive-agent-settings) and overwrite `OPENAI_API_KEY`.</small>
 
 **Usage**:
 - [Selects and tracks files using patterns](#how-files-are-selected-for-tracking) like `~/Documents/*.pdf` 
@@ -156,7 +158,7 @@ chmod +x install.sh
 The `install.sh` script will execute the following steps in order:
 - Download and install `uv` (used for Python environment management)
 - Install the custom Python environment
-- Install the `spaCy` tokenizer model (used for chunking)
+- Install the `spaCy` model for natural language processing (pre-chunking)
 - Install `pandoc` (used for document parsing)
 - Download and install the Qdrant docker image with persistent storage and auto-restart
 - Install a global `archive-agent` command for the current user
@@ -260,6 +262,7 @@ graph LR
     K --> L[Show Reply]
   end
 ```
+([view diagram in Mermaid.live](https://mermaid.live/edit#pako:eNptkU1P4zAQhv_KyBKcSrWhTT9yQCppKQXEQov2gMPBTYbGamJHtgPtVv3v69ihaCVO8czzzjsfOZBUZkgislGsyuFhmYhEAJydwUJsUBsuBTzxCgsusAG6XnvlCTdZgAl9USzdAhMZxLIsuYEbXqB-g4uLK7imT0xphHP4HS_ffMW1IzFdYcmE4SnEeS22XGxaHjs-pbNyjZmHukVTh2Z0ZaRC-IOp_WrgAp4zZb2cCkV2WuW5RrX_eQ2HvOsNnehtk3Br-cHnbftT1kvnDt7SJRrF8QPhEZmyiv_HnHmVD25dsLAldsQtrPewxAI_mEixlS-c4o7OdpW_ojC4My28c_CezlFYA4MwEfoTVUvvHX2gq1x-Wt-q2H_dgHTsn-UZiYyqsUNKVCVrQnJoBAkxOZaYkMg-M3xndWESkoijLbNDvEpZflUqWW9yEr2zQtuorjI7xJQze8Vvie2HKpa1MCQaOwcSHciOREFv2A2DXjgaBWF42e_3wg7ZN-mg2wsu--FwPBgOBuPw2CF_Xc9f3dEwPP4DQ93QoQ))
 
 ###  Which files are processed
 
@@ -801,7 +804,7 @@ To run unit tests, check types, and check style, run this:
 - [ ] Rejected images (e.g., due to OpenAI content filter policy violation) from PDF pages in `strict` OCR mode are currently left empty instead of resorting to text extracted from PDF OCR layer (if any).
 
 
-- [ ] The SpaCy model `en_core_web_md` used for sentence splitting is only suitable for English source text. Multilingual support is missing at the moment.
+- [ ] The spaCy model `en_core_web_md` used for sentence splitting is only suitable for English source text. Multilingual support is missing at the moment.
 
 
 - [ ] HTML document images are not supported.

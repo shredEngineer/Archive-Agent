@@ -1,19 +1,21 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import typer
-import logging
-import pathlib
-import subprocess
-from typing import List
+from archive_agent.util.Informer import Informer
+
+with Informer("Starting…"):
+    import typer
+    import logging
+    import pathlib
+    import subprocess
+    from typing import List
+
+    from archive_agent.core.ContextManager import ContextManager
+
+    from archive_agent.mcp_server.McpServer import McpServer
+
 
 logger = logging.getLogger(__name__)
-
-logger.info("Starting...")
-
-from archive_agent.core.ContextManager import ContextManager
-
-from archive_agent.mcp_server.McpServer import McpServer
 
 
 app = typer.Typer(

@@ -22,7 +22,7 @@ from archive_agent.util.image_util import image_resize_safe, image_to_base64
 from archive_agent.data.loader.text import is_plaintext, load_plaintext
 from archive_agent.data.loader.text import is_ascii_document, load_ascii_document
 from archive_agent.data.loader.text import is_binary_document, load_binary_document
-from archive_agent.data.chunk import generate_chunks_with_ranges, split_sentences
+from archive_agent.data.chunk import generate_chunks_with_reference_ranges, get_sentences_with_reference_ranges
 
 
 DecoderCallable = Callable[[], Optional[DocumentContent]]
@@ -58,6 +58,7 @@ class FileData:
         self.image_to_text_callback_ocr = self.image_to_text_ocr if self.ai.ai_provider.supports_vision else None
 
         if not self.decoder_settings.image_entity_extract:
+            # Fallback to OCR when entity extraction is disabled
             self.image_to_text_callback_entity = self.image_to_text_callback_ocr
 
         self.decoder_func: Optional[DecoderCallable] = self.get_decoder_func()
@@ -191,7 +192,9 @@ class FileData:
         :param block_of_sentences: List of sentences to chunk.
         :return: ChunkSchema result.
         """
-        return self.ai.chunk(block_of_sentences)
+        chunk_result = self.ai.chunk(block_of_sentences)
+
+        return chunk_result
 
     def process(self) -> bool:
         """
@@ -199,16 +202,32 @@ class FileData:
 
         :return: True if successful, False otherwise.
         """
-        doc_content = self.decode()
+
+        # TODO: Outsource call
+        # Call the loader function assigned to this file data.
+        # NOTE: DocumentContent is an array of text lines, mapped to page or line numbers.
+        doc_content: Optional[DocumentContent] = self.decode()
+
+        # Decoder may fail, e.g. on I/O error, exhausted AI attempts, …
         if doc_content is None:
             self.ai.cli.logger.warning(f"Failed to process {format_file(self.file_path)}")
             return False
 
-        per_line_references = doc_content.pages_per_line if doc_content.pages_per_line is not None else doc_content.lines_per_line or []
-        sentences_with_ranges = split_sentences(doc_content.text, per_line_references)
+        # ...
+        is_page_based = doc_content.pages_per_line is not None
+        if is_page_based:
+            per_line_references = doc_content.pages_per_line
+        else:
+            per_line_references = doc_content.lines_per_line
 
-        chunks_with_ranges = generate_chunks_with_ranges(
-            sentences_with_ranges=sentences_with_ranges,
+        assert per_line_references is not None, "Missing references (WTF)"
+
+        # TODO: Pass DocumentContent
+        # Use preprocessing and NLP (spaCy) to split text into sentences, keeping track of references.
+        sentences_with_reference_ranges = get_sentences_with_reference_ranges(doc_content.text, per_line_references)
+
+        chunks_with_reference_ranges = generate_chunks_with_reference_ranges(
+            sentences_with_references=sentences_with_reference_ranges,
             chunk_callback=self.chunk_callback,
             chunk_lines_block=self.chunk_lines_block,
             file_path=self.file_path
@@ -216,20 +235,25 @@ class FileData:
 
         is_page_based = doc_content.pages_per_line is not None
 
-        for chunk_index, chunk_with_range in enumerate(chunks_with_ranges):
-            self.ai.cli.logger.info(f"Processing chunk ({chunk_index + 1}) / ({len(chunks_with_ranges)}) of {format_file(self.file_path)}")
+        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-            vector = self.ai.embed(text=chunk_with_range.text)
+        for chunk_index, chunk_with_reference_ranges in enumerate(chunks_with_reference_ranges):
+            self.ai.cli.logger.info(
+                f"Processing chunk ({chunk_index + 1}) / ({len(chunks_with_reference_ranges)}) "
+                f"of {format_file(self.file_path)}"
+            )
+
+            vector = self.ai.embed(text=chunk_with_reference_ranges.text)
 
             payload = {
                 'file_path': self.file_path,
                 'file_mtime': self.file_meta['mtime'],
                 'chunk_index': chunk_index,
-                'chunks_total': len(chunks_with_ranges),
-                'chunk_text': chunk_with_range.text,
+                'chunks_total': len(chunks_with_reference_ranges),
+                'chunk_text': chunk_with_reference_ranges.text,
             }
 
-            chunk_range = chunk_with_range.reference_range
+            chunk_range = chunk_with_reference_ranges.reference_range
             if chunk_range != (0, 0):
                 min_r, max_r = chunk_range
                 range_list = [min_r, max_r] if min_r != max_r else [min_r]
