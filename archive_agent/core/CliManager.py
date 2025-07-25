@@ -44,7 +44,7 @@ class CliManager:
         CliManager.VERBOSE_RERANK = verbose
         CliManager.VERBOSE_EMBED = verbose
         CliManager.VERBOSE_QUERY = verbose
-	CliManager.VERBOSE_VISION = verbose
+        CliManager.VERBOSE_VISION = verbose
         CliManager.VERBOSE_RETRIEVAL = verbose
 
         self.logger = logging.getLogger(__name__)
