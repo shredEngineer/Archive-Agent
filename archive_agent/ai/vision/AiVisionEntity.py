@@ -89,6 +89,9 @@ AiVisionRelation.register("next_to",
 AiVisionRelation.register("adjacent_to",
                           "X is adjacent to Y.",
                           lambda s, o: f"The {s} is adjacent to the {o}.")
+AiVisionRelation.register("intersects",
+                          "X intersects Y (e.g., overlapping or crossing).",
+                          lambda s, o: f"The {s} intersects the {o}.")
 
 # Structural relations
 AiVisionRelation.register("part_of",
@@ -211,7 +214,8 @@ class AiVisionEntity:
             "    - Extract the maximum number of meaningful relations without fabrication, staying faithful to the image content.",
             "    - From text: Parse sentences for subject-predicate-object structures, implied hierarchies, or references.",
             "    - From visuals: Use arrows, proximity, groupings, flows, or hierarchies to infer relations.",
-            "    - Use only relation types from the following list whenever possible. If none fits, create a short, descriptive predicate:",
+            "    - Use only relation types from the following list whenever possible. If none fits, create a short, descriptive predicate",
+            "      matching existing styles (e.g., 'under_condition_of' instead of 'for').",
             "",
             AiVisionRelation.for_prompt(),
             "",
