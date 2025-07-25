@@ -22,7 +22,7 @@ from archive_agent.util.image_util import image_resize_safe, image_to_base64
 from archive_agent.data.loader.text import is_plaintext, load_plaintext
 from archive_agent.data.loader.text import is_ascii_document, load_ascii_document
 from archive_agent.data.loader.text import is_binary_document, load_binary_document
-from archive_agent.data.chunk import generate_chunks_with_reference_ranges, get_sentences_with_reference_ranges
+from archive_agent.data.chunk import get_chunks_with_reference_ranges, get_sentences_with_reference_ranges
 
 
 DecoderCallable = Callable[[], Optional[DocumentContent]]
@@ -226,7 +226,7 @@ class FileData:
         # Use preprocessing and NLP (spaCy) to split text into sentences, keeping track of references.
         sentences_with_reference_ranges = get_sentences_with_reference_ranges(doc_content.text, per_line_references)
 
-        chunks_with_reference_ranges = generate_chunks_with_reference_ranges(
+        chunks = get_chunks_with_reference_ranges(
             sentences_with_references=sentences_with_reference_ranges,
             chunk_callback=self.chunk_callback,
             chunk_lines_block=self.chunk_lines_block,
@@ -237,30 +237,35 @@ class FileData:
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-        for chunk_index, chunk_with_reference_ranges in enumerate(chunks_with_reference_ranges):
+        for chunk_index, chunk in enumerate(chunks):
             self.ai.cli.logger.info(
-                f"Processing chunk ({chunk_index + 1}) / ({len(chunks_with_reference_ranges)}) "
+                f"Processing chunk ({chunk_index + 1}) / ({len(chunks)}) "
                 f"of {format_file(self.file_path)}"
             )
 
-            vector = self.ai.embed(text=chunk_with_reference_ranges.text)
+            if self.ai.cli.VERBOSE_CHUNK:
+                reference_type = "Pages" if is_page_based else "Lines"
+                self.ai.cli.logger.info(f"Reference range: {reference_type} {chunk.reference_range[0]}–{chunk.reference_range[1]}")
+
+            vector = self.ai.embed(text=chunk.text)
 
             payload = {
                 'file_path': self.file_path,
                 'file_mtime': self.file_meta['mtime'],
                 'chunk_index': chunk_index,
-                'chunks_total': len(chunks_with_reference_ranges),
-                'chunk_text': chunk_with_reference_ranges.text,
+                'chunks_total': len(chunks),
+                'chunk_text': chunk.text,
             }
 
-            chunk_range = chunk_with_reference_ranges.reference_range
-            if chunk_range != (0, 0):
-                min_r, max_r = chunk_range
+            if chunk.reference_range != (0, 0):
+                min_r, max_r = chunk.reference_range
                 range_list = [min_r, max_r] if min_r != max_r else [min_r]
                 if is_page_based:
                     payload['page_range'] = range_list
                 else:
                     payload['line_range'] = range_list
+            else:
+                self.ai.cli.logger.warning("Missing reference range for chunk")
 
             self.points.append(
                 PointStruct(

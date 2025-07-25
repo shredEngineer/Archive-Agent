@@ -425,7 +425,10 @@ def _format_chunk(file_path: str, header: str, body: str) -> str:
     ])
 
 
-def generate_chunks_with_reference_ranges(
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+
+def get_chunks_with_reference_ranges(
     sentences_with_references: List[SentenceWithRange],
     chunk_callback: Callable[[List[str]], ChunkSchema],
     chunk_lines_block: int,
@@ -457,7 +460,7 @@ def generate_chunks_with_reference_ranges(
 
     chunks_with_ranges: List[ChunkWithRange] = []
     carry: Optional[str] = None
-    carry_range: SentenceRange = (0, 0)
+    carry_reference_ranges: Optional[List[SentenceRange]] = None
     last_carry_header: Optional[str] = None
 
     idx = 0
@@ -469,12 +472,13 @@ def generate_chunks_with_reference_ranges(
         logger.info(f"Chunking block ({block_index + 1}) / ({len(blocks_of_sentences)}) of {format_file(file_path)}")
 
         if carry:
+            assert carry_reference_ranges is not None
             carry_lines = splitlines_exact(carry)
 
             current_block_line_count: int = len(carry_lines) + len(block_of_sentences)
             logger.info(f"Carrying over ({len(carry_lines)}) lines; current block has ({current_block_line_count}) lines")
             block_of_sentences = carry_lines + block_of_sentences
-            block_sentence_reference_ranges = [carry_range] + block_sentence_reference_ranges
+            block_sentence_reference_ranges = carry_reference_ranges + block_sentence_reference_ranges
 
         range_start = block_sentence_reference_ranges[0] if block_sentence_reference_ranges else (0, 0)
         range_stop = block_sentence_reference_ranges[-1] if block_sentence_reference_ranges else (0, 0)
@@ -504,12 +508,11 @@ def generate_chunks_with_reference_ranges(
 
         if carry:
             carry_reference_ranges = block_sentence_reference_ranges[ranges[-1][0] - 1:ranges[-1][1] - 1]
-            carry_range = _aggregate_ranges(carry_reference_ranges)
-
             last_carry_header = headers[-1]
 
     if carry:
         assert last_carry_header is not None, "Internal error: carry exists but no header was recorded"
+        assert carry_reference_ranges is not None
         carry_lines = splitlines_exact(carry)
         final_chunk_line_count: int = len(carry_lines)
         logger.info(f"Appending final carry of ({final_chunk_line_count}) lines; final chunk has ({final_chunk_line_count}) lines")
@@ -518,6 +521,7 @@ def generate_chunks_with_reference_ranges(
             header=last_carry_header,
             body=carry,
         )
+        carry_range = _aggregate_ranges(carry_reference_ranges)
         chunks_with_ranges.append(ChunkWithRange(formatted_carry, carry_range))
 
     return chunks_with_ranges

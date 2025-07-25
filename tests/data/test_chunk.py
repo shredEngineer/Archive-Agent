@@ -4,7 +4,7 @@
 
 from typing import List
 
-from archive_agent.data.chunk import get_sentences_with_reference_ranges, generate_chunks_with_reference_ranges, SentenceWithRange
+from archive_agent.data.chunk import get_sentences_with_reference_ranges, get_chunks_with_reference_ranges, SentenceWithRange
 from archive_agent.ai.chunk.AiChunk import ChunkSchema
 
 
@@ -135,7 +135,7 @@ def test_generate_chunks_with_ranges_basic_no_carry():
     chunk_lines_block = 2
     file_path = "test.txt"
 
-    result = generate_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
+    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
 
     assert len(result) == 1
     assert result[0].reference_range == (1, 2)
@@ -158,7 +158,7 @@ def test_generate_chunks_with_ranges_with_carry():
     chunk_lines_block = 2
     file_path = "test.txt"
 
-    result = generate_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
+    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
 
     assert len(result) == 1
     assert result[0].reference_range == (1, 3)
@@ -181,7 +181,7 @@ def test_generate_chunks_with_ranges_ignores_zeros_in_agg():
     chunk_lines_block = 3
     file_path = "test.txt"
 
-    result = generate_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
+    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
 
     assert len(result) == 1
     assert result[0].reference_range == (1, 2)
@@ -200,6 +200,6 @@ def test_generate_chunks_with_ranges_empty():
     chunk_lines_block = 1
     file_path = "test.txt"
 
-    result = generate_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
+    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
 
     assert result == []
