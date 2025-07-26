@@ -84,7 +84,7 @@ graph LR
 
 ---
 
-## Structure
+## Documentation
 
 <!-- TOC -->
 * [Archive Agent](#archive-agent)
@@ -93,7 +93,7 @@ graph LR
   * [Cutting-edge AI Support](#cutting-edge-ai-support)
   * [Architecture](#architecture)
   * [Just getting started?](#just-getting-started)
-  * [Structure](#structure)
+  * [Documentation](#documentation)
   * [Supported OS](#supported-os)
   * [Install Archive Agent](#install-archive-agent)
     * [Ubuntu / Linux Mint](#ubuntu--linux-mint)
