@@ -49,28 +49,28 @@ Simply adjust the URL [settings](#archive-agent-settings) and overwrite `OPENAI_
 
 ## Architecture
 
-([If you can't see the diagram below, view it on Mermaid.live](https://mermaid.live/edit#pako:eNqNk21v2jAQx7_KyVL3itA8UEisqRKltGWlG4VuLxaqySQHiUhs5DgUWvW7z3agq6Zp2zv7Hn7nu__5hSQiRULJSrJNBuPpnM85wMkJjPgKK5ULDpN8g0XO0TiqetFEvrmNFaAfP0iWrIHxFAaiLHMFV3mB1ceFPJ9IsdRnCkpn_EiZYsY6EEWBiSFQYDLJ8i06bIVcOW9hTmfpu0m3Ez2C45zDRTxhskL4AF8GU4OYKckUrvYUKiXzRBlbv1YCHjKJVSaKlELgG-uo1GgYcpWrPQx3Oi9R-j2yxsfm_Re2wiCeYcl0VAKDrObrnK9M9lg3X8FFIZI1Bc91je1Oj62gsNoop9P2HN_1zxy343idA3BggZfxsFxg2tCqd3kKd8pB40t1ESdwCiZXaAK-6aEICbP8WU8scHv-AXhpgcN4pr0ITVQFOYf7VOon23mg3KKEr9MxhUypDT091W9mRSYqRbtBEFgU8vRN5Psa5f7PAltXU_oq7ldrY7CCN2JcHzo7Wv_Z26GNa5t9E09RS4ZbhM_ItFjq3YhmienwLteL4bY9uyvWB3dsR6HjHkjDhtRcbuxlpLF6GGtY7GGKBW4ZT_B3QPBf-o0s8FM83G2aneamrXesKUvzuqJw1OeTTbiNr5GjWUvo8-oJ5V9rGecDlhuTUEutt9f2DrhbixvHs0w86V42xd6SBhM4qDwRUq9w6LrhUVXS0r84Twk1e90iJcqSmSt5MQFzojIscU6oPqa4ZHWh5mTOX3WabvG7EOUxU4p6lRG6ZEWlb_VG_0W8zJnei18huh7Kgai5IlR_Ccsg9IXsCHXbYdQJ_KgXhl037Pmh3yJ7Qnt-u3vmBoEXRUHH9cPotUWebVXdte-73cDrRZ7rRV7Qff0JXFR03w))
+([If you can't see the diagram below, view it on Mermaid.live](https://mermaid.live/edit#pako:eNqNk29v2jAQxr_KyVLfEZaE8C-qkGhKKS1sLXSbtNEXJrkGi8SJHKeFon732U5gLZu0vUHxPXe_u8c-9iTMIiQ-iQXN1zCdL_mSA5ydwYTHWEiWcbhjOSaMoxaKclVlHmUdBRj-PF8NHgQNN0B5BEGWpkzCFUuwOP-0GpyvxGBR5nkmZAF3InvSwiNY1gAudGVF-5g_LGWWUslC-BLMYSEFlRjvtDJJaYww4pLJHYy2Sgn1JI_VKBcGG2jsAlPKNSFYl3zDeHxgvzC5VkNyiVsJ10gjFIWOT5XNAnIUcJFk4cYHx7Z1_HsmoipuSD64VXymLi_xIc6l5TUdy7XdtmV7luPVswRmlks9yyhdYVSVHy3W5XoKC7UeqRmtlpVQEaNO-IahzAQs2Cv60LK7bs29NNyR8agS8IQ7zUKawH0klHuIqKQrWqApRR4dX_i-RLH7--saqWp1pZsMi42OmQfXTaqnG__29V78p7PaxNhArjVkjlIwfEb4jFToTfjoZxFqjzPGfbCbjo5UOszo1gfProGjClgdrs1hUtHVRWxgtYM5JvhMeYgH8ntO67-edGK4N8b6Nq-W3ezRCXJOI1YWalPquhtTd6vrxshRbzMMefGC4uTO_uysxQdMc11UCrUJTtOpqbeGOq2o8gTIOATTSQPGX9XPLLg7bABpqL87i4gvRYkNkqJIqT6SvU5YErnGFJfEV58RPtEykUuy5G-qTPn9kWXpoVJkZbwm_hNNCnUqc7VqeMmo2qH0GBWqIYogK7kkvuN4XUMh_p5siW85_VbTsdudXrfnui3X7rgNsiN-32t22nbLc9uO2-7Z_d5bg7yaxsq6q9JaTrvf99yO2337BQ1sfns))
 
 ```mermaid
 graph LR
 
   %% Ingestion Pipeline
   subgraph Ingestion
-    A[Track and Commit Files<br>Profile: test_data<br>Collection: archive-agent-test_data-4f20c649] --> B[Parse & OCR<br>Strategy: strict<br>Auto Threshold: 32<br>Image Entity Extract: true]
-    B --> C[Semantic Chunking<br>Lines Block: 100<br>Model: gpt-4.1-2025-04-14]
-    C --> D[Embed Chunks<br>Model: text-embedding-3-large<br>Vector Size: 3072]
-    D --> E[Store Vectors in Qdrant<br>Server URL: http://localhost:6333]
+    A[<b>Track and Commit Files</b><br>Supports Profiles] --> B[<b>Ingest Files</b><br>Automatic OCR Strategy<br>Image Entity Extraction]
+    B --> C[<b>Semantic Chunking</b><br>with Context Headers<br>Lines per Block: 100<br>Words per Chunk: 200<br>Model: gpt-4.1-2025-04-14]
+    C --> D[<b>Embed Chunks</b><br>Model: text-embedding-3-large<br>Vector Size: 3072]
+    D --> E[<b>Store Chunks</b><br>Local Qdrant database]
   end
 
   %% Query Pipeline
   subgraph Query
-    F[Ask Question] --> G[Embed Question<br>Model: text-embedding-3-large]
-    G --> H[Retrieve Nearest Chunks<br>Score Min: 0.1<br>Chunks Max: 40]
+    F[<b>Ask Question</b>] --> G[<b>Embed Question</b><br>Model: text-embedding-3-large]
+    G --> H[<b>Retrieve Nearest Chunks</b><br>Score Min: 0.1<br>Chunks Max: 40]
     E --> H
-    H --> I[Rerank by Relevance<br>Chunks Max: 30<br>Model: gpt-4.1-2025-04-14]
-    I --> J[Expand Context<br>Chunks Radius: 2]
-    J --> K[Generate Answer<br>Model: gpt-4.1-2025-04-14<br>Temperature: 1.1]
-    K --> L[Show Reply<br>MCP Server Port: 8008]
+    H --> I[<b>Rerank by Relevance</b><br>Chunks Max: 30<br>Model: gpt-4.1-2025-04-14]
+    I --> J[<b>Expand Context</b><br>Chunks Radius: 2]
+    J --> K[<b>Generate Answer</b><br>Model: gpt-4.1-2025-04-14<br>Temperature: 1.1]
+    K --> L[<b>Get Answer</b><br>in CLI, GUI, MCP]
   end
 ```
 
