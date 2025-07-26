@@ -128,8 +128,6 @@ class FileData:
             self.ai.cli.logger.warning(f"Failed to resize {format_file(self.file_path)}")
             return None
 
-        self.ai.cli.logger.info(f"Image dimensions: ({image_possibly_resized.width} × {image_possibly_resized.height} px)")
-
         image_base64 = image_to_base64(image_possibly_resized)
 
         vision_result = self.ai.vision(image_base64)
@@ -177,7 +175,7 @@ class FileData:
         :param image: PIL Image object.
         :return: Combined text or None if any part failed.
         """
-        self.ai.cli.logger.info("Requesting vision with OCR and entity extraction combined")
+        self.ai.cli.logger.info("Requesting vision with combined OCR and entity extraction")
 
         # OCR first
         self.ai.request_ocr()
@@ -257,7 +255,8 @@ class FileData:
             sentences_with_references=sentences_with_reference_ranges,
             chunk_callback=self.chunk_callback,
             chunk_lines_block=self.chunk_lines_block,
-            file_path=self.file_path
+            file_path=self.file_path,
+            verbose=self.ai.cli.VERBOSE_CHUNK,
         )
 
         is_page_based = doc_content.pages_per_line is not None
