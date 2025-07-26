@@ -2,7 +2,7 @@
 
 ---
 
-# ⚡ Archive Agent
+# Archive Agent
 
 *A smart file indexer with AI search (RAG engine), automatic OCR, and MCP interface.*  
 
@@ -31,15 +31,15 @@
 - **Includes local AI File System Indexer**
 - Natively ingests [PDFs, images, Markdown, plaintext, Microsoft Word documents (experimental)](#which-files-are-processed)
 - [Selects and tracks files using patterns](#how-files-are-selected-for-tracking) like `~/Documents/*.pdf` 
-- Transcibes images using [automatic OCR](#ocr-strategies) and entity extraction
+- Transcribes images using [automatic OCR](#ocr-strategies) and entity extraction
 - Changes across files are tracked and committed to local database  
 
 ---
 
-## Cutting Edge AI Support
+## Cutting-edge AI Support
 
 - **Supports [OpenAI](https://platform.openai.com/docs/overview) or compatible **¹**, [Ollama](https://ollama.com/), and [LM Studio](https://lmstudio.ai/)**
-- Includes [MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension included
+- Includes [MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension
 
 <small>**¹** Includes [xAI / Grok](https://x.ai/api) and [Claude](https://docs.anthropic.com/en/api/openai-sdk) OpenAI compatible APIs.  
 Simply adjust the URL [settings](#archive-agent-settings) and overwrite `OPENAI_API_KEY`.</small>
@@ -77,20 +77,20 @@ graph LR
 
 ## Just getting started?
 
-- 🟢 [Install Archive Agent on Linux](#install-archive-agent)
-- 💻 [Run Archive Agent](#run-archive-agent) (CLI command reference)
-- 🧰 [MCP Tools](#mcp-tools) (MCP tool reference)
-- ⬆️ [Update Archive Agent](#update-archive-agent) (get latest features)
+- 👉 [Install Archive Agent on Linux](#install-archive-agent)
+- 👉 [Run Archive Agent](#run-archive-agent) (CLI command reference)
+- 👉 [MCP Tools](#mcp-tools) (MCP tool reference)
+- 👉 [Update Archive Agent](#update-archive-agent) (get latest features)
 
 ---
 
 ## Structure
 
 <!-- TOC -->
-* [⚡ Archive Agent](#-archive-agent)
+* [Archive Agent](#archive-agent)
   * [Find your files with natural language and ask questions](#find-your-files-with-natural-language-and-ask-questions)
   * [Natively index and ingest your documents](#natively-index-and-ingest-your-documents-)
-  * [Cutting Edge AI Support](#cutting-edge-ai-support)
+  * [Cutting-edge AI Support](#cutting-edge-ai-support)
   * [Architecture](#architecture)
   * [Just getting started?](#just-getting-started)
   * [Structure](#structure)
@@ -113,7 +113,7 @@ graph LR
   * [Run Archive Agent](#run-archive-agent)
   * [Quickstart on the command line (CLI)](#quickstart-on-the-command-line-cli)
   * [CLI command reference](#cli-command-reference)
-    * [Show list of commands](#show-list-of-commands)
+    * [See list of commands](#see-list-of-commands)
     * [Create or switch profile](#create-or-switch-profile)
     * [Open current profile config in nano](#open-current-profile-config-in-nano)
     * [Add included patterns](#add-included-patterns)
@@ -141,7 +141,7 @@ graph LR
     * [Code testing and analysis](#code-testing-and-analysis)
   * [Known issues](#known-issues)
   * [Licensed under GNU GPL v3.0](#licensed-under-gnu-gpl-v30)
-  * [Collaborators welcome](#collaborators-welcome-)
+  * [Collaborators welcome](#collaborators-welcome)
   * [Learn about Archive Agent](#learn-about-archive-agent)
 <!-- TOC -->
 
@@ -161,8 +161,8 @@ If you've successfully installed and tested **Archive Agent** with a different s
 
 Please install these requirements before proceeding:
 
-- 🐳 [Docker](https://docs.docker.com/engine/install/) *(for running Qdrant server)*
-- 🐍 [Python](https://www.python.org/downloads/) **>= 3.10** *(core runtime)* (usually already installed)
+- [Docker](https://docs.docker.com/engine/install/) *(for running Qdrant server)*
+- [Python](https://www.python.org/downloads/) **>= 3.10** *(core runtime)* (usually already installed)
 
 ### Ubuntu / Linux Mint
 
@@ -177,7 +177,7 @@ chmod +x install.sh
 ./install.sh
 ```
 
-The `install.sh` script will execute the following steps in order:
+The `install.sh` script will execute the following steps:
 - Download and install `uv` (used for Python environment management)
 - Install the custom Python environment
 - Install the `spaCy` model for natural language processing (pre-chunking)
@@ -185,7 +185,7 @@ The `install.sh` script will execute the following steps in order:
 - Download and install the Qdrant docker image with persistent storage and auto-restart
 - Install a global `archive-agent` command for the current user
 
-🚀 **Archive Agent is now installed!**
+**Archive Agent is now installed!**
 
 👉 **Please complete the [AI provider setup](#ai-provider-setup) next.**  
 (Afterward, you'll be ready to [Run Archive Agent](#run-archive-agent)!)
@@ -196,11 +196,11 @@ The `install.sh` script will execute the following steps in order:
 
 **Archive Agent** lets you choose between different AI providers:
 
-- Remote APIs *(higher performance and costs, less privacy)*:
+- Remote APIs *(higher performance and cost, less privacy)*:
   - **OpenAI**: Requires an OpenAI API key.
 
 
-- Local APIs *(lower performance and costs, best privacy)*:
+- Local APIs *(lower performance and cost, best privacy)*:
   - **Ollama**: Requires Ollama running locally.
   - **LM Studio**: Requires LM Studio running locally.
 
@@ -332,7 +332,7 @@ PDF documents often contain small/scattered images related to page style/layout 
 - Each vector is turned into a *point* with file metadata.
 - Each *point* is stored in the Qdrant database.
 
-See [Archive Agent settings](#archive-agent-settings): `chunk_lines_block`
+See [Archive Agent settings](#archive-agent-settings): `chunk_lines_block`, `chunk_words_target`
 
 💡 **Good to know:** This **smart chunking** improves the accuracy and effectiveness of the retrieval. 
 
@@ -364,7 +364,7 @@ See [Archive Agent settings](#archive-agent-settings): `retrieve_score_min`, `re
 
 **Archive Agent** filters the retrieved chunks .
 
-- The retrieved chunks are reranked by relevance to your question.
+- Retrieved chunks are reranked by relevance to your question.
 - Only the top relevant chunks are kept (the other chunks are discarded).
 - Each selected chunk is expanded to get a larger context from the relevant documents.
 
@@ -376,7 +376,7 @@ See [Archive Agent settings](#archive-agent-settings): `rerank_chunks_max`, `exp
 
 **Archive Agent** answers your question using the reranked and expanded chunks like this:
 - The LLM receives the chunks as context to the question.
-- The LLM's answer is returned as structured output and formatted.
+- LLM's answer is returned as structured output and formatted.
 
 💡 **Good to know:** **Archive Agent** uses an answer template that aims to be universally helpful.
 
@@ -415,7 +415,7 @@ This approach gives you the best control over the specific files or file types t
 - **AI provider** (see [AI Provider Setup](#ai-provider-setup))
 - **OCR strategy** (see [OCR strategies](#ocr-strategies))
 
-📷 Screenshot of **command-line** interface (CLI):
+Screenshot of **command-line** interface (CLI):
 
 ![](archive_agent/assets/Screenshot-CLI.png)
 
@@ -446,9 +446,9 @@ archive-agent query "Which files mention donuts?"
 
 ## CLI command reference
 
-### Show list of commands
+### See list of commands
 
-To show the list of supported commands, run this:
+To see the list of supported commands, run this:
 
 ```bash
 archive-agent
@@ -512,7 +512,7 @@ archive-agent remove "~/Documents/*.txt"
 
 ### List included / excluded patterns
 
-To show the list of included / excluded patterns, run this: 
+To see the list of included / excluded patterns, run this: 
 
 ```bash
 archive-agent patterns
@@ -528,7 +528,7 @@ archive-agent track
 
 ### List tracked files
 
-To show the list of tracked files, run this: 
+To see the list of tracked files, run this: 
 
 ```bash
 archive-agent list
@@ -538,7 +538,7 @@ archive-agent list
 
 ### List changed files
 
-To show the list of changed files, run this: 
+To see the list of changed files, run this: 
 
 ```bash
 archive-agent diff
@@ -654,7 +654,7 @@ archive-agent mcp
 
 ## Update Archive Agent
 
-This step is not needed right away if you just installed Archive Agent.
+This step is not immediately needed if you just installed Archive Agent.
 However, to get the latest features, you should update your installation regularly.
 
 To update your **Archive Agent** installation, run this in the installation directory:
@@ -702,6 +702,7 @@ The profile configuration is contained in the profile folder as `config.json`.
 | `ocr_auto_threshold`   | Minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict` |
 | `image_entity_extract` | Image handling: `true` uses combined OCR and entity extraction, `false` uses OCR only.           |
 | `chunk_lines_block`    | Number of lines per block for chunking                                                           |
+| `chunk_words_target`   | Target number of words per chunk                                                                 |
 | `qdrant_server_url`    | URL of the Qdrant server                                                                         |
 | `qdrant_collection`    | Name of the Qdrant collection                                                                    |
 | `retrieve_score_min`   | Minimum similarity score of retrieved chunks (`0`...`1`)                                         |
@@ -846,9 +847,8 @@ See [LICENSE](LICENSE) for details.
 
 ---
 
-## Collaborators welcome  
-You are invited to contribute to this open source project!  
-Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues) and [submit pull requests](https://github.com/shredEngineer/Archive-Agent/pulls) anytime.
+## Collaborators welcome
+You are invited to contribute to this open source project! Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues) and [submit pull requests](https://github.com/shredEngineer/Archive-Agent/pulls) anytime.
 
 ---
 
