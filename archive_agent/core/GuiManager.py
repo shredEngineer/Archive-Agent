@@ -95,7 +95,7 @@ class GuiManager:
             search_col, button_col = st.columns([5, 1])
             with search_col:
                 query = st.text_input(
-                    "Ask a question",
+                    "Ask something…",
                     label_visibility="collapsed",
                     placeholder="Ask something…"
                 )
