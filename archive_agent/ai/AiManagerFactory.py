@@ -18,6 +18,7 @@ class AiManagerFactory(Exception):
             self,
             cli: CliManager,
             chunk_lines_block: int,
+            chunk_words_target: int,
             ai_provider_class: Type[AiProvider],
             ai_provider_params: AiProviderParams,
             ai_cache: CacheManager,
@@ -28,6 +29,7 @@ class AiManagerFactory(Exception):
         Initialize AI manager factory.
         :param cli: CLI manager.
         :param chunk_lines_block: Number of lines per block for chunking.
+        :param chunk_words_target: Target number of words per chunk.
         :param ai_provider_class: AI provider class.
         :param ai_cache: AI cache.
         :param invalidate_cache: Invalidate cache if enabled, probe cache otherwise.
@@ -35,6 +37,7 @@ class AiManagerFactory(Exception):
         """
         self.cli = cli
         self.chunk_lines_block = chunk_lines_block
+        self.chunk_words_target = chunk_words_target
         self.ai_provider_class = ai_provider_class
         self.ai_provider_params = ai_provider_params
         self.ai_cache = ai_cache
@@ -48,6 +51,7 @@ class AiManagerFactory(Exception):
         return AiManager(
             cli=self.cli,
             chunk_lines_block=self.chunk_lines_block,
+            chunk_words_target=self.chunk_words_target,
             ai_provider=self._load_ai_provider(),
         )
 

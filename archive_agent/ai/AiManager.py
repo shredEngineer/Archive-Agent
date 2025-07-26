@@ -29,17 +29,20 @@ class AiManager(RetryManager):
             self,
             cli: CliManager,
             chunk_lines_block: int,
+            chunk_words_target: int,
             ai_provider: AiProvider,
     ):
         """
         Initialize AI manager.
         :param cli: CLI manager.
         :param chunk_lines_block: Number of lines per block for chunking.
+        :param chunk_words_target: Target number of words per chunk.
         :param ai_provider: AI provider.
         """
         self.cli = cli
 
         self.chunk_lines_block = chunk_lines_block
+        self.chunk_words_target = chunk_words_target
 
         self.ai_provider = ai_provider
 
@@ -91,7 +94,7 @@ class AiManager(RetryManager):
         :return: ChunkSchema.
         """
         line_numbered_text = "\n".join(prepend_line_numbers(sentences))
-        prompt = AiChunk.get_prompt_chunk(line_numbered_text=line_numbered_text)
+        prompt = AiChunk.get_prompt_chunk(line_numbered_text=line_numbered_text, chunk_words_target=self.chunk_words_target)
         callback = lambda: self.ai_provider.chunk_callback(prompt=prompt)
 
         for _ in range(retries):

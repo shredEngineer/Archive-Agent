@@ -35,6 +35,7 @@ class ConfigManager(StorageManager, AiProviderKeys):
     IMAGE_ENTITY_EXTRACT = 'image_entity_extract'
 
     CHUNK_LINES_BLOCK = 'chunk_lines_block'
+    CHUNK_WORDS_TARGET = 'chunk_words_target'
 
     QDRANT_SERVER_URL = 'qdrant_server_url'
     QDRANT_COLLECTION = 'qdrant_collection'
@@ -47,7 +48,7 @@ class ConfigManager(StorageManager, AiProviderKeys):
     EXPAND_CHUNKS_RADIUS = 'expand_chunks_radius'
 
     DEFAULT_CONFIG = {
-        CONFIG_VERSION: 8,  # TODO:  DON'T FORGET TO UPDATE BOTH  `CONFIG_VERSION`  AND  `upgrade()`
+        CONFIG_VERSION: 9,  # TODO:  DON'T FORGET TO UPDATE BOTH  `CONFIG_VERSION`  AND  `upgrade()`
 
         MCP_SERVER_PORT: 8008,
 
@@ -59,6 +60,7 @@ class ConfigManager(StorageManager, AiProviderKeys):
         IMAGE_ENTITY_EXTRACT: "true",
 
         CHUNK_LINES_BLOCK: 100,
+        CHUNK_WORDS_TARGET: 200,
 
         QDRANT_SERVER_URL: "http://localhost:6333",
         QDRANT_COLLECTION: "archive-agent",
@@ -239,6 +241,13 @@ class ConfigManager(StorageManager, AiProviderKeys):
         if version < 8:
             self._set_version(8)
             self._add_option(self.IMAGE_ENTITY_EXTRACT)
+            upgraded = True
+
+        # Option(s) added in v9:
+        # - `chunk_words_target`
+        if version < 9:
+            self._set_version(9)
+            self._add_option(self.CHUNK_WORDS_TARGET)
             upgraded = True
 
         return upgraded

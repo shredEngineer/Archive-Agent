@@ -72,6 +72,7 @@ class ContextManager:
         self.ai_factory = AiManagerFactory(
             cli=self.cli,
             chunk_lines_block=self.config.data[self.config.CHUNK_LINES_BLOCK],
+            chunk_words_target=self.config.data[self.config.CHUNK_WORDS_TARGET],
             ai_provider_class=self._get_ai_provider_class(),
             ai_cache=self.ai_cache,
             ai_provider_params=self._get_ai_provider_params(),
