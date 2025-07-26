@@ -478,7 +478,10 @@ def get_chunks_with_reference_ranges(
             carry_lines = splitlines_exact(carry)
 
             current_block_line_count: int = len(carry_lines) + len(block_of_sentences)
-            logger.info(f"Carrying over ({len(carry_lines)}) lines; current block has ({current_block_line_count}) lines")
+
+            if verbose:
+                logger.info(f"Carrying over ({len(carry_lines)}) lines; current block has ({current_block_line_count}) lines")
+
             block_of_sentences = carry_lines + block_of_sentences
             block_sentence_reference_ranges = carry_reference_ranges + block_sentence_reference_ranges
 

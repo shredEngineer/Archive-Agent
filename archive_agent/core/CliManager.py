@@ -89,8 +89,6 @@ class CliManager:
         :param line_numbered_text: Text with line numbers.
         :return: AI result.
         """
-        self.logger.info(f"Chunking...")
-
         if CliManager.VERBOSE_CHUNK:
             self.console.print(Panel(f"{line_numbered_text}", title="Text", style="blue", border_style="blue"))
 
