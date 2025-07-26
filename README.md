@@ -4,7 +4,7 @@
 
 # Archive Agent
 
-*A smart file indexer with AI search (RAG engine), automatic OCR, and MCP interface.*  
+*An intelligent file indexer with powerful AI search (RAG engine), automatic OCR, and a seamless MCP interface.*
 
 ![GitHub Release](https://img.shields.io/github/v/release/shredEngineer/Archive-Agent)
 ![GitHub License](https://img.shields.io/github/license/shredEngineer/Archive-Agent)
@@ -16,9 +16,9 @@
 
 ---
 
-## Find your files with natural language and ask questions
+## Find what you need with natural language
 
-- **Includes semantic AI file search & query**
+- **Unlock your documents with semantic AI search & query**
 - Files are split using [semantic chunking with context headers](#how-smart-chunking-works) and committed to a local database.
 - [RAG engine](#how-chunks-are-retrieved)**¹** uses [reranking and expanding](#how-chunks-are-reranked-and-expanded) of retrieved chunks
  
@@ -26,21 +26,21 @@
 
 ---
 
-## Natively index your documents into a local database
+## Natively index your documents on-device
 
 - **Includes local AI file system indexer**
 - Natively ingests [PDFs, images, Markdown, plaintext, Microsoft Word documents (experimental)](#which-files-are-processed)
 - [Selects and tracks files using patterns](#how-files-are-selected-for-tracking) like `~/Documents/*.pdf` 
 - Transcribes images using [automatic OCR](#ocr-strategies) and entity extraction
-- Changes across files are tracked and committed to a local [Qdrant](https://qdrant.tech/) database  
+- Changes are automatically synced to a local [Qdrant](https://qdrant.tech/) vector database.
 
 ---
 
-## Supports your favorite AI provider
+## Your AI, Your Choice
 
 - **[OpenAI](https://platform.openai.com/docs/overview) or compatible API ¹ for best performance**
 - **[Ollama](https://ollama.com/) and [LM Studio](https://lmstudio.ai/) for best privacy (local LLM)**
-- Includes [MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension
+- **Integrates with your workflow** via a built-in [MCP](https://modelcontextprotocol.io/introduction) server.
 
 <small>**¹** Includes [xAI / Grok](https://x.ai/api) and [Claude](https://docs.anthropic.com/en/api/openai-sdk) OpenAI compatible APIs.  
 Simply adjust the URL [settings](#archive-agent-settings) and overwrite `OPENAI_API_KEY`.</small>
@@ -89,9 +89,9 @@ graph LR
 
 <!-- TOC -->
 * [Archive Agent](#archive-agent)
-  * [Find your files with natural language and ask questions](#find-your-files-with-natural-language-and-ask-questions)
-  * [Natively index and ingest your documents](#natively-index-and-ingest-your-documents-)
-  * [Cutting-edge AI Support](#cutting-edge-ai-support)
+  * [Find what you need with natural language](#find-what-you-need-with-natural-language)
+  * [Natively index your documents on-device](#natively-index-your-documents-on-device)
+  * [Your AI, Your Choice](#your-ai-your-choice)
   * [Architecture](#architecture)
   * [Just getting started?](#just-getting-started)
   * [Documentation](#documentation)
