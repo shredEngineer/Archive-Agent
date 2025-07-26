@@ -28,7 +28,7 @@ def is_plaintext(file_path: str) -> bool:
     :param file_path: File path.
     :return: True if valid plaintext extension, False otherwise.
     """
-    extensions: Set[str] = {".txt", ".md"}
+    extensions: Set[str] = {".txt", ".md", ".markdown"}
     return any(file_path.lower().endswith(ext) for ext in extensions)
 
 
