@@ -8,6 +8,7 @@ import io
 import base64
 from PIL import Image
 
+# TODO: Inject logger for future thread-safety
 logger = logging.getLogger(__name__)
 
 
@@ -35,13 +36,15 @@ def image_resize_safe(
             f"from ({image.width} × {image.height} px) "
             f"to ({image_copy.width} × {image_copy.height} px)"
         )
+    else:
+        logger.info(f"Image size: ({image_copy.width} × {image_copy.height} px)")
 
     for quality in range(100, 0, -5):
-        img_bytes = io.BytesIO()
-        image_copy.save(img_bytes, format="JPEG", quality=quality)
-        if img_bytes.tell() <= max_bytes:
-            img_bytes.seek(0)
-            return Image.open(img_bytes)
+        image_bytes = io.BytesIO()
+        image_copy.save(image_bytes, format="JPEG", quality=quality)
+        if image_bytes.tell() <= max_bytes:
+            image_bytes.seek(0)
+            return Image.open(image_bytes)
         logger.warning(f"Reducing image quality to ({quality} %)")
 
     logger.warning(f"Failed to resize image: Too huge")

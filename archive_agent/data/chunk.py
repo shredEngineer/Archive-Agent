@@ -432,7 +432,8 @@ def get_chunks_with_reference_ranges(
     sentences_with_references: List[SentenceWithRange],
     chunk_callback: Callable[[List[str]], ChunkSchema],
     chunk_lines_block: int,
-    file_path: str
+    file_path: str,
+    verbose: bool = True,
 ) -> List[ChunkWithRange]:
     """
     Chunkify a list of sentences into AI-determined chunks, carrying over leftover sentences where needed,
@@ -442,6 +443,7 @@ def get_chunks_with_reference_ranges(
     :param chunk_callback: Chunk callback.
     :param chunk_lines_block: Number of sentences per block to be chunked.
     :param file_path: Path to the originating file (used for logging and labeling).
+    :param verbose: Enable to show additional information.
     :return: List of ChunkWithRange objects containing the formatted chunk and its reference range.
     """
     sentences = [s.text for s in sentences_with_references]
@@ -515,7 +517,10 @@ def get_chunks_with_reference_ranges(
         assert carry_reference_ranges is not None
         carry_lines = splitlines_exact(carry)
         final_chunk_line_count: int = len(carry_lines)
-        logger.info(f"Appending final carry of ({final_chunk_line_count}) lines; final chunk has ({final_chunk_line_count}) lines")
+
+        if verbose:
+            logger.info(f"Appending final carry of ({final_chunk_line_count}) lines; final chunk has ({final_chunk_line_count}) lines")
+
         formatted_carry = _format_chunk(
             file_path=file_path,
             header=last_carry_header,
