@@ -25,7 +25,7 @@ class DocumentContent:
 
         # NOTE: Chunks that were added before v5.0.0 don't have the fields `page_range` and `line_range.
         #       This is handled gracefully in `get_point_reference_info()`.
-        #       HOWEVER, since the code constructing this object is beyond v6.0.0, it MUST include one.
+        #       HOWEVER, since the code constructing this object is beyond v5.0.0, it MUST include one.
         if self.lines_per_line is None and self.pages_per_line is None:
             raise ValueError("Require exactly one of `pages_per_line` or `lines_per_line`")
 

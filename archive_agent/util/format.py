@@ -70,7 +70,7 @@ def get_point_reference_info(point: ScoredPoint) -> str:
     if page_line_info is None:
         # TODO: Find out why some chunks don't seem to have these payload fields, even though they were added with v5.0.0+ (WTF)
         logger.warning(
-            f"Chunk added by Archive Agent < 5.0.0 is missing lines and pages info:\n"
+            f"Chunk missing lines and pages info:\n"
             f"{point.payload}"
         )
 
