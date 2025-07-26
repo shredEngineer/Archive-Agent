@@ -18,7 +18,7 @@
 
 ## Find your files with natural language and ask questions
 
-- **Includes semantic AI File search & query.**
+- **Includes semantic AI file search & query**
 - Files are split using [semantic chunking with context headers](#how-smart-chunking-works) and committed to local database.
 - [RAG engine](#how-chunks-are-retrieved)**¹** uses [reranking and expanding](#how-chunks-are-reranked-and-expanded) of retrieved chunks
  
@@ -26,19 +26,20 @@
 
 ---
 
-## Natively index and ingest your documents 
+## Natively index your documents into a local database
 
-- **Includes local AI File System Indexer**
+- **Includes local AI file system indexer**
 - Natively ingests [PDFs, images, Markdown, plaintext, Microsoft Word documents (experimental)](#which-files-are-processed)
 - [Selects and tracks files using patterns](#how-files-are-selected-for-tracking) like `~/Documents/*.pdf` 
 - Transcribes images using [automatic OCR](#ocr-strategies) and entity extraction
-- Changes across files are tracked and committed to local database  
+- Changes across files are tracked and committed to a local [Qdrant](https://qdrant.tech/) database  
 
 ---
 
-## Cutting-edge AI Support
+## Supports your favorite AI provider
 
-- **Supports [OpenAI](https://platform.openai.com/docs/overview) or compatible **¹**, [Ollama](https://ollama.com/), and [LM Studio](https://lmstudio.ai/)**
+- **[OpenAI](https://platform.openai.com/docs/overview) or compatible API ¹ for best performance**
+- **[Ollama](https://ollama.com/) and [LM Studio](https://lmstudio.ai/) for best privacy (local LLM)**
 - Includes [MCP](https://modelcontextprotocol.io/introduction) server for automation through IDE or AI extension
 
 <small>**¹** Includes [xAI / Grok](https://x.ai/api) and [Claude](https://docs.anthropic.com/en/api/openai-sdk) OpenAI compatible APIs.  
@@ -78,9 +79,9 @@ graph LR
 ## Just getting started?
 
 - 👉 [Install Archive Agent on Linux](#install-archive-agent)
-- 👉 [Run Archive Agent](#run-archive-agent) (CLI command reference)
-- 👉 [MCP Tools](#mcp-tools) (MCP tool reference)
-- 👉 [Update Archive Agent](#update-archive-agent) (get latest features)
+- 👉 [Run Archive Agent](#run-archive-agent)
+- 👉 [MCP Tools](#mcp-tools)
+- 👉 [Update Archive Agent](#update-archive-agent)
 
 ---
 
