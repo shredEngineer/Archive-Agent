@@ -54,18 +54,19 @@ def get_point_reference_info(point: ScoredPoint) -> str:
 
     if 'page_range' in point.payload and point.payload['page_range']:
         r = point.payload['page_range']
-        page_line_info = f"pages {r[0]}–{r[-1]}]" if len(r) > 1 else f"page {r[0]}"
+        page_line_info = f"pages [{r[0]}–{r[-1]}]" if len(r) > 1 else f"page {r[0]}"
 
     elif 'line_range' in point.payload and point.payload['line_range']:
         r = point.payload['line_range']
-        page_line_info = f"lines {r[0]}–{r[-1]}" if len(r) > 1 else f"line {r[0]}"
+        page_line_info = f"lines [{r[0]}–{r[-1]}]" if len(r) > 1 else f"line {r[0]}"
 
     else:
         page_line_info = None
 
-    origin_info = f"{page_line_info} ({chunk_info})" if page_line_info is not None else f"({chunk_info})"
+    origin_info = f"({page_line_info})" if page_line_info is not None else f"({chunk_info})"
 
-    reference_info = f"{format_file(point.payload['file_path'])} · {origin_info} · ({format_time(point.payload['file_mtime'])})"
+    reference_info = f"{format_file(point.payload['file_path'])} · {origin_info}"
+    # reference_info += " · ({format_time(point.payload['file_mtime'])})
 
     if page_line_info is None:
         # TODO: Find out why some chunks don't seem to have these payload fields, even though they were added with v5.0.0+ (WTF)
