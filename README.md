@@ -262,7 +262,7 @@ At least 32 GiB RAM is recommended for smooth performance.
 
 **Archive Agent** currently supports these file types:
 - Text:
-  - Plaintext: `.txt`, `.md`
+  - Plaintext: `.txt`, `.md`, `.markdown`
   - Documents:
     - ASCII documents: `.html`, `.htm` (images **not** supported)
     - Binary documents: `.odt`, `.docx` (including images)
