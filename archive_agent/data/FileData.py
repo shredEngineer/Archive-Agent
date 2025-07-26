@@ -133,7 +133,7 @@ class FileData:
         vision_result = self.ai.vision(image_base64)
 
         if vision_result.is_rejected:
-            self.ai.cli.logger.critical(f"⚠️  Image rejected: \"{vision_result.rejection_reason}\"")
+            self.ai.cli.logger.critical(f"⚠️ Image rejected: \"{vision_result.rejection_reason}\"")
             return None
 
         return vision_result

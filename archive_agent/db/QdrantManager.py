@@ -385,7 +385,7 @@ class QdrantManager:
         query_result = self.ai.query(question, points)
 
         if query_result.is_rejected:
-            logger.warning(f"⚠️  Query rejected: \"{query_result.rejection_reason}\"")
+            logger.warning(f"⚠️ Query rejected: \"{query_result.rejection_reason}\"")
 
         answer_text = AiQuery.get_answer_text(query_result)
 
