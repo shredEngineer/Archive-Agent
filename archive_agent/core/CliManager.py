@@ -94,7 +94,7 @@ class CliManager:
         if CliManager.VERBOSE_CHUNK:
             self.console.print(Panel(f"{line_numbered_text}", title="Text", style="blue", border_style="blue"))
 
-        self.logger.info("⌛ Awaiting AI chunking …")
+        self.logger.info("⌛ Awaiting AI chunking…")
 
         result: AiResult = callback()
 
@@ -117,8 +117,6 @@ class CliManager:
         :param indexed_chunks: Indexed chunks.
         :return: AI result.
         """
-        self.logger.info(f"Reranking...")
-
         if CliManager.VERBOSE_RERANK:
             indexed_chunks_str = "\n".join([
                 f"{index:>3} : {format_chunk_brief(chunk=chunk)}"
@@ -126,7 +124,7 @@ class CliManager:
             ])
             self.console.print(Panel(f"{indexed_chunks_str}", title="Indexed Chunks", style="blue", border_style="blue"))
 
-        self.logger.info("⌛ Awaiting AI reranking …")
+        self.logger.info("⌛ Awaiting AI reranking…")
 
         result: AiResult = callback()
 
@@ -149,12 +147,10 @@ class CliManager:
         :param text: Text.
         :return: AI result.
         """
-        self.logger.info(f"Embedding...")
-
         if CliManager.VERBOSE_EMBED:
             self.format_chunk(text)
 
-        self.logger.info("⌛ Awaiting AI embedding …")
+        self.logger.info("⌛ Awaiting AI embedding…")
 
         result: AiResult = callback()
 
@@ -174,12 +170,10 @@ class CliManager:
         :param prompt: Prompt.
         :return: AI result.
         """
-        self.logger.info(f"Querying...")
-
         if CliManager.VERBOSE_QUERY:
             self.console.print(Panel(f"{prompt}", title="Query", style="magenta", border_style="magenta"))
 
-        self.logger.info("⌛ Awaiting AI response …")
+        self.logger.info("⌛ Awaiting AI response…")
 
         result: AiResult = callback()
 
@@ -200,7 +194,7 @@ class CliManager:
         :param callback: Vision callback returning AI result.
         :return: AI result.
         """
-        self.logger.info("⌛ Awaiting AI vision …")
+        self.logger.info("⌛ Awaiting AI vision…")
 
         result: AiResult = callback()
 
