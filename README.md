@@ -19,7 +19,7 @@
 ## Find your files with natural language and ask questions
 
 - **Includes semantic AI file search & query**
-- Files are split using [semantic chunking with context headers](#how-smart-chunking-works) and committed to local database.
+- Files are split using [semantic chunking with context headers](#how-smart-chunking-works) and committed to a local database.
 - [RAG engine](#how-chunks-are-retrieved)**¹** uses [reranking and expanding](#how-chunks-are-reranked-and-expanded) of retrieved chunks
  
 **¹** *[Retrieval Augmented Generation](https://en.wikipedia.org/wiki/Retrieval-augmented_generation) is the method of matching pre-made snippets of information to a query.*
