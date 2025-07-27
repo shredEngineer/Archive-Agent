@@ -76,7 +76,8 @@
 
     - **Edge Cases**: Short references default to 0.
       Monotonic references preserved in min-max.
-      `spaCy` model `en_core_web_md` for sentence splitting, with custom component `_spacy_markdown_sentence_fixer` for better Markdown handling.
+      `spaCy` model `en_core_web_md` for sentence splitting,
+      with custom component `_spacy_markdown_sentence_fixer` for better Markdown handling.
 
     - **Types**: `ReferenceList=List[int]`.
       `SentenceRange=Tuple[int, int]`.
