@@ -296,7 +296,9 @@ class FileData:
             )
 
             if self.ai.cli.VERBOSE_CHUNK:
-                self.ai.cli.logger.info(f"Chunk reference: {get_point_page_line_info(point)}")
+                self.ai.cli.logger.info(f"Reference for chunk ({chunk_index + 1}) / ({len(chunks)}): {get_point_page_line_info(point)}")
+
+            point.vector = vector
 
             self.points.append(point)
 
