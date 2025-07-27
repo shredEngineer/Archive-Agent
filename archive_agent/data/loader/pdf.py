@@ -46,6 +46,8 @@ class PdfPageContent:
     other_blocks: List[LayoutBlock] = field(default_factory=list)
     image_objects: List[ImageObject] = field(default_factory=list)
 
+    ocr_strategy: OcrStrategy = field(default=OcrStrategy.AUTO)
+
 
 def is_pdf_document(file_path: str) -> bool:
     """
@@ -176,9 +178,11 @@ def extract_image_texts_per_page(
 
                     assert len(splitlines_exact(image_text)) == 1, f"Text from image must be single line:\n'{image_text}'"
 
-                    # NOTE: The brackets indicate that the text maps to an image.
-                    # TODO: Remove the brackets in `strict` OCR strategy.
-                    image_texts.append(f"[{image_text}]")
+                    if content.ocr_strategy == OcrStrategy.RELAXED:
+                        # Add brackets around image text for `relaxed` OCR strategy (separate from "actual" text)
+                        image_text = f"[{image_text}]"
+
+                    image_texts.append(image_text)
 
             except Exception as e:
                 logger.warning(f"{log_header}: Failed to extract text: {e}")
@@ -249,20 +253,18 @@ def get_pdf_page_contents(
         page_content: PdfPageContent = get_pdf_page_content(page)
 
         # Resolve `auto` OCR strategy
-        ocr_strategy_to_apply: OcrStrategy
-
         if decoder_settings.ocr_strategy == OcrStrategy.AUTO:
             if len(page_content.text) >= decoder_settings.ocr_auto_threshold:
-                ocr_strategy_to_apply = OcrStrategy.RELAXED
+                page_content.ocr_strategy = OcrStrategy.RELAXED
                 logger.info(f"- OCR strategy: 'auto' resolved to 'relaxed'")
             else:
-                ocr_strategy_to_apply = OcrStrategy.STRICT
+                page_content.ocr_strategy = OcrStrategy.STRICT
                 logger.info(f"- OCR strategy: 'auto' resolved to 'strict'")
         else:
-            ocr_strategy_to_apply = decoder_settings.ocr_strategy
-            logger.info(f"- OCR strategy: '{ocr_strategy_to_apply.value}'")
+            page_content.ocr_strategy = decoder_settings.ocr_strategy
+            logger.info(f"- OCR strategy: '{page_content.ocr_strategy.value}'")
 
-        if ocr_strategy_to_apply == OcrStrategy.STRICT:
+        if page_content.ocr_strategy == OcrStrategy.STRICT:
             # Replace page content with only one full-page image.
             logger.info(f"- IGNORING ({len(page_content.image_blocks)}) image(s)")
             logger.info(f"- IGNORING ({len(page_content.text)}) character(s) in ({len(page_content.text_blocks)}) text block(s)")
@@ -272,7 +274,7 @@ def get_pdf_page_contents(
                 layout_image_bytes=[page.get_pixmap(dpi=OCR_STRATEGY_STRICT_PAGE_DPI).tobytes()],
             )
 
-        elif ocr_strategy_to_apply == OcrStrategy.RELAXED:
+        elif page_content.ocr_strategy == OcrStrategy.RELAXED:
             # Keep page content as-is.
             logger.info(f"- Decoding ({len(page_content.image_blocks)}) image(s)")
             logger.info(f"- Decoding ({len(page_content.text)}) character(s) in ({len(page_content.text_blocks)}) text block(s)")
@@ -285,7 +287,7 @@ def get_pdf_page_contents(
                 logger.warning(f"- IGNORING ({len(page_content.vector_blocks)}) vector diagram(s)")
 
         else:
-            raise ValueError(f"Invalid or unhandled OCR strategy: '{ocr_strategy_to_apply.value}'")
+            raise ValueError(f"Invalid or unhandled OCR strategy: '{page_content.ocr_strategy.value}'")
 
         page_contents.append(page_content)
 
