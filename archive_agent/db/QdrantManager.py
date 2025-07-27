@@ -238,7 +238,6 @@ class QdrantManager:
                 reranked_indices = range(len(points))  # Fallback
 
             if len(reranked_indices) > self.rerank_chunks_max:
-                logger.info(f"ℹ️  Limiting ({len(reranked_indices)}) reranked chunks down to ({self.rerank_chunks_max})")
                 reranked_indices = reranked_indices[:self.rerank_chunks_max]
 
             points_reranked = []
