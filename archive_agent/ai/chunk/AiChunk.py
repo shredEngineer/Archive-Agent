@@ -6,11 +6,23 @@ from typing import List
 from pydantic import BaseModel, ConfigDict
 
 
-class ChunkSchema(BaseModel):
-    chunk_start_lines: List[int]
-    headers: List[str]
+class ChunkItem(BaseModel):
+    start_line: int
+    header: str
 
-    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
+    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false — DO NOT REMOVE THIS
+
+
+class ChunkSchema(BaseModel):
+    chunk_items: List[ChunkItem]
+
+    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false — DO NOT REMOVE THIS
+
+    def get_chunk_start_lines(self):
+        return [chunk_item.start_line for chunk_item in self.chunk_items]
+
+    def get_chunk_headers(self):
+        return [chunk_item.header for chunk_item in self.chunk_items]
 
 
 class AiChunk:
@@ -26,12 +38,12 @@ class AiChunk:
             "",
             f"RESPONSE FIELDS:",
             "",
-            f"- `chunk_start_lines`:",
-            f"    List of line numbers. Each marks the start of a chunk. The first value MUST be 1 (the first line).",
-            f"    The list must be strictly increasing. No duplicates.",
-            "",
-            f"- `headers`:",
-            f"    List of header strings, one for each chunk, in the same order as `chunk_start_lines`.",
+            f"- `chunk_items`:",
+            f"    List of chunk items. Each item is an object with:",
+            f"    - `start_line`: The line number marking the start of the chunk.",
+            f"    - `header`: The header string for that chunk.",
+            f"    The first `start_line` MUST be 1 (the first line).",
+            f"    The `start_line` values must be strictly increasing. No duplicates.",
             "",
             f"HEADER RULES:",
             f"- Each header must be absolute, concise, and hyper-specific:",

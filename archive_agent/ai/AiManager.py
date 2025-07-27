@@ -111,28 +111,30 @@ class AiManager(RetryManager):
                     self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
                     raise RuntimeError("No parsed schema returned")
 
-                result.parsed_schema = cast(ChunkSchema, result.parsed_schema)
+                chunk_result = cast(ChunkSchema, result.parsed_schema)
+                chunk_start_lines = chunk_result.get_chunk_start_lines()
+                chunk_headers = chunk_result.get_chunk_headers()
 
-                if len(result.parsed_schema.chunk_start_lines) != len(result.parsed_schema.headers):
+                if len(chunk_start_lines) != len(chunk_headers):
                     self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
                     raise RuntimeError(
                         f"Mismatch: "
-                        f"chunk_start_lines[{len(result.parsed_schema.chunk_start_lines)}] != headers[{len(result.parsed_schema.headers)}]"
+                        f"chunk_start_lines[{len(chunk_start_lines)}] != headers[{len(chunk_headers)}]"
                     )
 
-                if len(result.parsed_schema.chunk_start_lines) == 0:
+                if len(chunk_start_lines) == 0:
                     self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
-                    raise RuntimeError(f"Missing chunk start lines: {result.parsed_schema.chunk_start_lines}")
+                    raise RuntimeError(f"Missing chunk start lines: {chunk_start_lines}")
 
-                if result.parsed_schema.chunk_start_lines[0] != 1:
+                if chunk_start_lines[0] != 1:
                     self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
-                    raise RuntimeError(f"First chunk must start at line 1: {result.parsed_schema.chunk_start_lines}")
+                    raise RuntimeError(f"First chunk must start at line 1: {chunk_start_lines}")
 
-                if not 0 < any(result.parsed_schema.chunk_start_lines) <= len(sentences):
+                if not 0 < any(chunk_start_lines) <= len(sentences):
                     self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
-                    raise RuntimeError(f"Invalid line numbers: {result.parsed_schema.chunk_start_lines}")
+                    raise RuntimeError(f"Invalid line numbers: {chunk_start_lines}")
 
-                return result.parsed_schema
+                return chunk_result
 
             except Exception as e:
                 self.cli.logger.exception(f"Chunking error: {e}")

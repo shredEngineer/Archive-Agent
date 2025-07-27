@@ -246,6 +246,7 @@ def text_to_clean_lines(text: str) -> List[str]:
 # TODO: Refactor to use nested DocumentContent instead of bare type
 ParagraphWithReferenceRanges = Tuple[List[str], ReferenceList]
 
+
 def _extract_paragraphs_with_reference_ranges(
         lines: List[str],
         per_line_references: ReferenceList,
@@ -503,8 +504,9 @@ def get_chunks_with_reference_ranges(
         logger.debug(f"Chunking block {block_index + 1}: {len(block_of_sentences)} sentences, range {range_start} to {range_stop}")
 
         chunk_result: ChunkSchema = chunk_callback(block_of_sentences)
-        ranges = _chunk_start_to_ranges(chunk_result.chunk_start_lines, len(block_of_sentences))
-        headers = chunk_result.headers
+        chunk_start_lines = chunk_result.get_chunk_start_lines()
+        chunk_headers = chunk_result.get_chunk_headers()
+        ranges = _chunk_start_to_ranges(start_lines=chunk_start_lines, total_lines=len(block_of_sentences))
 
         block_chunks, carry = _extract_chunks_and_carry(block_of_sentences, ranges)
 
@@ -518,7 +520,7 @@ def get_chunks_with_reference_ranges(
             body = "\n".join(block_of_sentences[r_start - 1:r_end - 1])
             chunk_text = _format_chunk(
                 file_path=file_path,
-                header=headers[i],
+                header=chunk_headers[i],
                 body=body,
             )
 
@@ -526,7 +528,7 @@ def get_chunks_with_reference_ranges(
 
         if carry:
             carry_reference_ranges = block_sentence_reference_ranges[ranges[-1][0] - 1:ranges[-1][1] - 1]
-            last_carry_header = headers[-1]
+            last_carry_header = chunk_headers[-1]
 
     if carry:
         assert last_carry_header is not None, "Internal error: carry exists but no header was recorded"

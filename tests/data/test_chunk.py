@@ -6,7 +6,7 @@ import logging
 from typing import List
 
 from archive_agent.data.chunk import get_sentences_with_reference_ranges, get_chunks_with_reference_ranges, SentenceWithRange
-from archive_agent.ai.chunk.AiChunk import ChunkSchema
+from archive_agent.ai.chunk.AiChunk import ChunkSchema, ChunkItem
 
 logger = logging.getLogger(__name__)
 
@@ -119,9 +119,7 @@ def dummy_chunk_callback(block_of_sentences: List[str]) -> ChunkSchema:
     Output: ChunkSchema with one chunk starting at line 1, with a header, or empty if no sentences.
     Used to test chunking logic deterministically.
     """
-    start_lines = [1] if block_of_sentences else []
-    headers = ["Header 1"] if block_of_sentences else []
-    return ChunkSchema(chunk_start_lines=start_lines, headers=headers)
+    return ChunkSchema(chunk_items=[ChunkItem(start_line=1, header="Header 1")] if block_of_sentences else [])
 
 
 def test_generate_chunks_with_ranges_basic_no_carry():
