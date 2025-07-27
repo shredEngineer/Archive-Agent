@@ -47,7 +47,7 @@ def get_point_page_line_info(point: ScoredPoint | PointStruct) -> Optional[str]:
     :param point: Point.
     :return: Page or line info (optional).
     """
-    assert point.payload is not None
+    assert point.payload is not None  # makes pyright happy
 
     if 'page_range' in point.payload and point.payload['page_range']:
         r = point.payload['page_range']
@@ -89,7 +89,6 @@ def get_point_reference_info(point: ScoredPoint, verbose: bool = False) -> str:
         reference_info += f" · {format_time(point.payload['file_mtime'])}"
 
     if page_line_info is None:
-        # TODO: Find out why some chunks don't seem to have these payload fields, even though they were added with v5.0.0+ (WTF)
         logger.warning(
             f"Chunk is missing lines and pages info:\n"
             f"{point.payload}"
