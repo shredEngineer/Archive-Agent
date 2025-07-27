@@ -164,7 +164,7 @@ class FileData:
         self.ai.request_entity()
         vision_result = self.image_to_text(image)
         if vision_result is not None:
-            return AiVisionEntity.format_vision_answer(logger=self.ai.cli.logger, vision_result=vision_result)
+            return AiVisionEntity.format_vision_answer(vision_result=vision_result)
         else:
             return None
 

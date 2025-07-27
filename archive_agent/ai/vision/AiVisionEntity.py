@@ -3,17 +3,17 @@
 
 from typing import Callable, Dict, List, Tuple
 
-from archive_agent.ai.vision.AiVisionSchema import VisionSchema
+from archive_agent.ai.vision.AiVisionSchema import VisionSchema, Entity
 
 
 class AiVisionRelation:
     """
     Registry for all canonical relation types and their human formatting.
     """
-    _registry: Dict[str, Tuple[str, Callable[[str, str], str]]] = {}
+    _registry: Dict[str, Tuple[str, Callable[[Entity, Entity], str]]] = {}
 
     @classmethod
-    def register(cls, predicate: str, description: str, formatter: Callable[[str, str], str]) -> None:
+    def register(cls, predicate: str, description: str, formatter: Callable[[Entity, Entity], str]) -> None:
         """
         Register a relation type with its description and formatter.
         """
@@ -27,7 +27,7 @@ class AiVisionRelation:
         return list(cls._registry.keys())
 
     @classmethod
-    def format(cls, predicate: str, subject: str, object_: str) -> str:
+    def format(cls, predicate: str, subject: Entity, object_: Entity) -> str:
         """
         Format a relation using its formatter. Fallback to generic for unknown.
         """
@@ -35,7 +35,7 @@ class AiVisionRelation:
             _, fmt = cls._registry[predicate]
             return fmt(subject, object_)
         # Fallback: Graceful, readable, still parseable.
-        return f"The {subject} {predicate.replace('_', ' ')} the {object_}."
+        return f"The {subject.name} ({subject.description}) {predicate.replace('_', ' ')} the {object_.name} ({object_.description})"
 
     @classmethod
     def for_prompt(cls) -> str:
@@ -44,7 +44,7 @@ class AiVisionRelation:
         """
         lines = []
         for pred, (desc, fmt) in cls._registry.items():
-            example = fmt("X", "Y")
+            example = fmt(Entity(name="X", description="example X desc"), Entity(name="Y", description="example Y desc"))
             lines.append(f"- `{pred}`: {desc} (e.g., \"{example}\")")
         return "\n".join(lines)
 
@@ -54,92 +54,92 @@ class AiVisionRelation:
 # Spatial relations
 AiVisionRelation.register("left_of",
                           "X is visually to the left of Y.",
-                          lambda s, o: f"The {s} is positioned to the left of the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is positioned to the left of the {o.name} ({o.description})")
 AiVisionRelation.register("right_of",
                           "X is visually to the right of Y.",
-                          lambda s, o: f"The {s} is positioned to the right of the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is positioned to the right of the {o.name} ({o.description})")
 AiVisionRelation.register("above",
                           "X is visually above Y.",
-                          lambda s, o: f"The {s} is positioned above the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is positioned above the {o.name} ({o.description})")
 AiVisionRelation.register("below",
                           "X is visually below Y.",
-                          lambda s, o: f"The {s} is positioned below the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is positioned below the {o.name} ({o.description})")
 AiVisionRelation.register("inside",
                           "X is inside Y.",
-                          lambda s, o: f"The {s} is located within the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is located within the {o.name} ({o.description})")
 AiVisionRelation.register("contains",
                           "X contains Y.",
-                          lambda s, o: f"The {s} contains the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) contains the {o.name} ({o.description})")
 AiVisionRelation.register("on",
                           "X is on top of Y (e.g., resting or placed).",
-                          lambda s, o: f"The {s} is on the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is on the {o.name} ({o.description})")
 AiVisionRelation.register("under",
                           "X is under Y.",
-                          lambda s, o: f"The {s} is under the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is under the {o.name} ({o.description})")
 AiVisionRelation.register("behind",
                           "X is behind Y.",
-                          lambda s, o: f"The {s} is behind the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is behind the {o.name} ({o.description})")
 AiVisionRelation.register("in_front_of",
                           "X is in front of Y.",
-                          lambda s, o: f"The {s} is in front of the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is in front of the {o.name} ({o.description})")
 AiVisionRelation.register("next_to",
                           "X is next to Y (adjacent).",
-                          lambda s, o: f"The {s} is next to the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is next to the {o.name} ({o.description})")
 AiVisionRelation.register("adjacent_to",
                           "X is adjacent to Y.",
-                          lambda s, o: f"The {s} is adjacent to the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is adjacent to the {o.name} ({o.description})")
 AiVisionRelation.register("intersects",
                           "X intersects Y (e.g., overlapping or crossing).",
-                          lambda s, o: f"The {s} intersects the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) intersects the {o.name} ({o.description})")
 
 # Structural relations
 AiVisionRelation.register("part_of",
                           "X is a part of Y.",
-                          lambda s, o: f"The {s} is a component of the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is a component of the {o.name} ({o.description})")
 AiVisionRelation.register("has_part",
                           "X has Y as a part.",
-                          lambda s, o: f"The {s} has the {o} as a part.")
+                          lambda s, o: f"The {s.name} ({s.description}) has the {o.name} ({o.description}) as a part")
 AiVisionRelation.register("composed_of",
                           "X is composed of Y.",
-                          lambda s, o: f"The {s} is composed of the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is composed of the {o.name} ({o.description})")
 
 # Semantic relations
 AiVisionRelation.register("describes",
                           "X describes Y (e.g., text describes a figure or object).",
-                          lambda s, o: f"The {s} describes the entity {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) describes the entity {o.name} ({o.description})")
 AiVisionRelation.register("references",
                           "X references Y (e.g., text or document refers to an entity).",
-                          lambda s, o: f"The {s} refers to the entity {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) refers to the entity {o.name} ({o.description})")
 AiVisionRelation.register("links_to",
                           "X is connected to Y in a visual or logical flow.",
-                          lambda s, o: f"The {s} is connected to the {o} in a flow.")
+                          lambda s, o: f"The {s.name} ({s.description}) is connected to the {o.name} ({o.description}) in a flow")
 AiVisionRelation.register("has_attribute",
                           "X has the attribute Y (e.g., object has value, date, or property).",
-                          lambda s, o: f"The {s} has the attribute {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) has the attribute {o.name} ({o.description})")
 AiVisionRelation.register("defines",
                           "X defines Y (e.g., term defines a concept).",
-                          lambda s, o: f"The {s} defines the concept of {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) defines the concept of {o.name} ({o.description})")
 AiVisionRelation.register("is_a",
                           "X is a type of Y (hierarchical classification).",
-                          lambda s, o: f"The {s} is a {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is a {o.name} ({o.description})")
 AiVisionRelation.register("used_for",
                           "X is used for Y (functional relation).",
-                          lambda s, o: f"The {s} is used for {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is used for {o.name} ({o.description})")
 AiVisionRelation.register("similar_to",
                           "X is similar to Y.",
-                          lambda s, o: f"The {s} is similar to the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is similar to the {o.name} ({o.description})")
 AiVisionRelation.register("holding",
                           "X is holding Y (interaction).",
-                          lambda s, o: f"The {s} is holding the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is holding the {o.name} ({o.description})")
 AiVisionRelation.register("wearing",
                           "X is wearing Y.",
-                          lambda s, o: f"The {s} is wearing the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is wearing the {o.name} ({o.description})")
 AiVisionRelation.register("riding",
                           "X is riding Y.",
-                          lambda s, o: f"The {s} is riding the {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) is riding the {o.name} ({o.description})")
 AiVisionRelation.register("under_condition_of",
                           "X exists under the condition of Y.",
-                          lambda s, o: f"The {s} exists under the condition of {o}.")
+                          lambda s, o: f"The {s.name} ({s.description}) exists under the condition of {o.name} ({o.description})")
 
 
 class AiVisionEntity:
@@ -194,7 +194,7 @@ class AiVisionEntity:
             "    - Identify all distinct, meaningful entities such as objects, people, concepts, key terms, text snippets, dates,",
             "      numbers, or visual elements like shapes, labels, or symbols.",
             "    - Decompose complex visuals into sub-entities where appropriate",
-            "      (e.g., for a diagram, extract the overall shape, internal patterns, "
+            "      (e.g., for a diagram, extract the overall shape, internal patterns, ",
             "       labels as separate entities if they add unique value).",
             "      Break down compound text phrases into granular parts",
             "      (e.g., main term and parentheticals) if they represent distinct ideas.",
@@ -213,15 +213,15 @@ class AiVisionEntity:
             "- RELATION EXTRACTION:",
             "    - Identify all possible connections between entities, capturing their spatial, semantic, structural,",
             "      or contextual relationships.",
-            "    - Prioritize spatial relations (e.g., 'above', 'below', 'inside') for visual layouts,"
-            "      and use them exhaustively where evident (e.g., text below a diagram, elements inside a shape)."
+            "    - Prioritize spatial relations (e.g., 'above', 'below', 'inside') for visual layouts,",
+            "      and use them exhaustively where evident (e.g., text below a diagram, elements inside a shape).",
             "      Infer hierarchies from groupings or flows.",
             "    - Extract the maximum number of meaningful relations without fabrication, staying faithful to the image content.",
             "    - From text: Parse sentences for subject-predicate-object structures, implied hierarchies, or references.",
             "    - From visuals: Use arrows, proximity, groupings, flows, or hierarchies to infer relations.",
             "    - Use entity descriptions to infer additional relations",
             "      (e.g., 'filled with a symmetrical dotted pattern' suggests 'contains symmetrical dotted pattern').",
-            "    - Use all 26 relation types from the following list whenever possible."
+            "    - Use relation types from the following list whenever possible.",
             "      If none fits, create a short, descriptive predicate matching existing styles",
             "      (e.g., 'under_condition_of' instead of 'for').",
             "    - Avoid overusing 'below'; prefer 'has_attribute' or 'under_condition_of' for textual conditions.",
@@ -250,62 +250,41 @@ class AiVisionEntity:
     def format_vision_answer(vision_result: VisionSchema) -> str:
         """
         Format vision result as a single line compound sentence with ', and ' connectors for NLP compatibility.
-        Each statement integrates all entity descriptions and relations into a concise, cohesive clause, ensuring no information is lost.
-        All entities are utilized either in relations or as descriptive clauses, with minimized redundancy.
+        Each statement integrates entity descriptions directly into relations for concise output.
         :param vision_result: Vision result.
         :return: Formatted answer.
         """
         assert not vision_result.is_rejected
 
         entities = vision_result.entities
+        entity_dict = {e.name: e for e in entities}  # Efficient lookup
         used_in_relation = set()
         statements = []
-        used_desc_fragments = set()  # Track unique description fragments
 
-        # Format relations as explicit sentences, integrating unique descriptions
+        # Format relations, integrating descriptions via formatters
         for r in vision_result.relations:
-            subject = next((e for e in entities if e.name == r.subject), None)
-            object_ = next((e for e in entities if e.name == r.object), None)
-            base_statement = AiVisionRelation.format(r.predicate, r.subject, r.object).rstrip('.')
-            desc_clause = []
-            if subject:
-                desc_fragments = [f.strip() for f in subject.description.lower().split(',') if f.strip()]
-                for fragment in desc_fragments:
-                    normalized_fragment = fragment.replace('a ', '').replace('an ', '')
-                    if normalized_fragment and normalized_fragment not in used_desc_fragments:
-                        desc_clause.append(normalized_fragment)
-                        used_desc_fragments.add(normalized_fragment)
+            subject = entity_dict.get(r.subject)
+            object_ = entity_dict.get(r.object)
+            if subject and object_:
+                statement = AiVisionRelation.format(r.predicate, subject, object_)
+                statements.append(statement)
                 used_in_relation.add(r.subject)
-            if object_:
-                desc_fragments = [f.strip() for f in object_.description.lower().split(',') if f.strip()]
-                for fragment in desc_fragments:
-                    normalized_fragment = fragment.replace('a ', '').replace('an ', '')
-                    if normalized_fragment and normalized_fragment not in used_desc_fragments:
-                        desc_clause.append(normalized_fragment)
-                        used_desc_fragments.add(normalized_fragment)
                 used_in_relation.add(r.object)
-            statement = f"{base_statement}, {', '.join(desc_clause).rstrip(',')}" if desc_clause else base_statement
-            statements.append(statement)
 
-        # Include all entities not used in relations with their full unique descriptions
+        # Include unused entities as standalone clauses
         for e in entities:
             if e.name not in used_in_relation:
-                desc_fragments = [f.strip() for f in e.description.lower().split(',') if f.strip()]
-                new_fragments = [
-                    f.replace('a ', '').replace('an ', '')
-                    for f in desc_fragments
-                    if f.replace('a ', '').replace('an ', '') not in used_desc_fragments
-                ]
-                if new_fragments:
-                    statements.append(f"the {e.name} includes {', '.join(new_fragments)}")
-                    used_desc_fragments.update(new_fragments)
+                statements.append(f"there is the {e.name} ({e.description})")
 
         # Fallback for no relations
         if not statements:
             return "No meaningful information was extracted from the image."
 
-        # Join into a single compound sentence: Capitalize first, lowercase others, connect with ', and '
+        # Join into a single compound sentence: Capitalize first, lowercase starting letter of others, connect with ', and '
         first_statement = statements[0].capitalize()
-        remaining_statements = [s.lower() for s in statements[1:]]
+        remaining_statements = []
+        for s in statements[1:]:
+            if s:
+                remaining_statements.append(s[0].lower() + s[1:])
         joined = ", and ".join([first_statement] + remaining_statements) + "."
         return joined
