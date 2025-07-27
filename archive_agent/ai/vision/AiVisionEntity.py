@@ -10,10 +10,10 @@ class AiVisionRelation:
     """
     Registry for all canonical relation types and their human formatting.
     """
-    _registry: Dict[str, Tuple[str, Callable[[Entity, Entity], str]]] = {}
+    _registry: Dict[str, Tuple[str, Callable[[Entity, Entity, bool, bool], str]]] = {}
 
     @classmethod
-    def register(cls, predicate: str, description: str, formatter: Callable[[Entity, Entity], str]) -> None:
+    def register(cls, predicate: str, description: str, formatter: Callable[[Entity, Entity, bool, bool], str]) -> None:
         """
         Register a relation type with its description and formatter.
         """
@@ -27,15 +27,16 @@ class AiVisionRelation:
         return list(cls._registry.keys())
 
     @classmethod
-    def format(cls, predicate: str, subject: Entity, object_: Entity) -> str:
+    def format(cls, predicate: str, subject: Entity, object_: Entity, include_sub_desc: bool = True, include_obj_desc: bool = True) -> str:
         """
         Format a relation using its formatter. Fallback to generic for unknown.
         """
         if predicate in cls._registry:
             _, fmt = cls._registry[predicate]
-            return fmt(subject, object_)
+            return fmt(subject, object_, include_sub_desc, include_obj_desc)
         # Fallback: Graceful, readable, still parseable.
-        return f"The {subject.name} ({subject.description}) {predicate.replace('_', ' ')} the {object_.name} ({object_.description})"
+        return (f"The {subject.name}{' (' + subject.description + ')' if include_sub_desc else ''} {predicate.replace('_', ' ')} "
+                f"the {object_.name}{' (' + object_.description + ')' if include_obj_desc else ''}")
 
     @classmethod
     def for_prompt(cls) -> str:
@@ -44,7 +45,7 @@ class AiVisionRelation:
         """
         lines = []
         for pred, (desc, fmt) in cls._registry.items():
-            example = fmt(Entity(name="X", description="example X desc"), Entity(name="Y", description="example Y desc"))
+            example = fmt(Entity(name="X", description="example X desc"), Entity(name="Y", description="example Y desc"), True, True)
             lines.append(f"- `{pred}`: {desc} (e.g., \"{example}\")")
         return "\n".join(lines)
 
@@ -54,92 +55,120 @@ class AiVisionRelation:
 # Spatial relations
 AiVisionRelation.register("left_of",
                           "X is visually to the left of Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) is positioned to the left of the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is positioned to the left of the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("right_of",
                           "X is visually to the right of Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) is positioned to the right of the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is positioned to the right of the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("above",
                           "X is visually above Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) is positioned above the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is positioned above the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("below",
                           "X is visually below Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) is positioned below the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is positioned below the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("inside",
                           "X is inside Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) is located within the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is located within the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("contains",
                           "X contains Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) contains the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"contains the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("on",
                           "X is on top of Y (e.g., resting or placed).",
-                          lambda s, o: f"The {s.name} ({s.description}) is on the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is on the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("under",
                           "X is under Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) is under the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is under the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("behind",
                           "X is behind Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) is behind the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is behind the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("in_front_of",
                           "X is in front of Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) is in front of the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is in front of the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("next_to",
                           "X is next to Y (adjacent).",
-                          lambda s, o: f"The {s.name} ({s.description}) is next to the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is next to the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("adjacent_to",
                           "X is adjacent to Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) is adjacent to the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is adjacent to the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("intersects",
                           "X intersects Y (e.g., overlapping or crossing).",
-                          lambda s, o: f"The {s.name} ({s.description}) intersects the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"intersects the {o.name}{' (' + o.description + ')' if od else ''}")
 
 # Structural relations
 AiVisionRelation.register("part_of",
                           "X is a part of Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) is a component of the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is a component of the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("has_part",
                           "X has Y as a part.",
-                          lambda s, o: f"The {s.name} ({s.description}) has the {o.name} ({o.description}) as a part")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"has the {o.name}{' (' + o.description + ')' if od else ''} as a part")
 AiVisionRelation.register("composed_of",
                           "X is composed of Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) is composed of the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is composed of the {o.name}{' (' + o.description + ')' if od else ''}")
 
 # Semantic relations
 AiVisionRelation.register("describes",
                           "X describes Y (e.g., text describes a figure or object).",
-                          lambda s, o: f"The {s.name} ({s.description}) describes the entity {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"describes the entity {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("references",
                           "X references Y (e.g., text or document refers to an entity).",
-                          lambda s, o: f"The {s.name} ({s.description}) refers to the entity {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"refers to the entity {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("links_to",
                           "X is connected to Y in a visual or logical flow.",
-                          lambda s, o: f"The {s.name} ({s.description}) is connected to the {o.name} ({o.description}) in a flow")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is connected to the {o.name}{' (' + o.description + ')' if od else ''} in a flow")
 AiVisionRelation.register("has_attribute",
                           "X has the attribute Y (e.g., object has value, date, or property).",
-                          lambda s, o: f"The {s.name} ({s.description}) has the attribute {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"has the attribute {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("defines",
                           "X defines Y (e.g., term defines a concept).",
-                          lambda s, o: f"The {s.name} ({s.description}) defines the concept of {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"defines the concept of {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("is_a",
                           "X is a type of Y (hierarchical classification).",
-                          lambda s, o: f"The {s.name} ({s.description}) is a {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is a {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("used_for",
                           "X is used for Y (functional relation).",
-                          lambda s, o: f"The {s.name} ({s.description}) is used for {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is used for {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("similar_to",
                           "X is similar to Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) is similar to the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is similar to the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("holding",
                           "X is holding Y (interaction).",
-                          lambda s, o: f"The {s.name} ({s.description}) is holding the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is holding the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("wearing",
                           "X is wearing Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) is wearing the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is wearing the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("riding",
                           "X is riding Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) is riding the {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"is riding the {o.name}{' (' + o.description + ')' if od else ''}")
 AiVisionRelation.register("under_condition_of",
                           "X exists under the condition of Y.",
-                          lambda s, o: f"The {s.name} ({s.description}) exists under the condition of {o.name} ({o.description})")
+                          lambda s, o, sd, od: f"The {s.name}{' (' + s.description + ')' if sd else ''} "
+                                               f"exists under the condition of {o.name}{' (' + o.description + ')' if od else ''}")
 
 
 class AiVisionEntity:
@@ -259,22 +288,29 @@ class AiVisionEntity:
         entities = vision_result.entities
         entity_dict = {e.name: e for e in entities}  # Efficient lookup
         used_in_relation = set()
+        described = set()  # Track entities that have had their descriptions included
         statements = []
 
-        # Format relations, integrating descriptions via formatters
+        # Format relations, integrating descriptions via formatters only on first mention
         for r in vision_result.relations:
             subject = entity_dict.get(r.subject)
             object_ = entity_dict.get(r.object)
             if subject and object_:
-                statement = AiVisionRelation.format(r.predicate, subject, object_)
+                include_sub_desc = r.subject not in described
+                include_obj_desc = r.object not in described
+                statement = AiVisionRelation.format(r.predicate, subject, object_, include_sub_desc, include_obj_desc)
                 statements.append(statement)
                 used_in_relation.add(r.subject)
                 used_in_relation.add(r.object)
+                if include_sub_desc:
+                    described.add(r.subject)
+                if include_obj_desc:
+                    described.add(r.object)
 
-        # Include unused entities as standalone clauses
+        # Include unused entities as standalone clauses (always with description since not mentioned)
         for e in entities:
             if e.name not in used_in_relation:
-                statements.append(f"there is the {e.name} ({e.description})")
+                statements.append(f"the {e.name} ({e.description})")
 
         # Fallback for no relations
         if not statements:
