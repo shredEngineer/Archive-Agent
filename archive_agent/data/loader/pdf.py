@@ -171,8 +171,10 @@ def extract_image_texts_per_page(
 
                     image_text = image_to_text_callback(image)
                     if image_text is None:
-                        # NOTE: The brackets indicate that the text maps to an image.
-                        image_texts.append(f"[Unprocessable image]")
+                        if content.ocr_strategy == OcrStrategy.STRICT:
+                            image_texts.append(f"[Unprocessable page]")
+                        else:
+                            image_texts.append(f"[Unprocessable image]")
                         logger.warning(f"{log_header}: Unprocessable image")
                         continue
 
@@ -272,6 +274,7 @@ def get_pdf_page_contents(
             page_content = PdfPageContent(
                 text="",
                 layout_image_bytes=[page.get_pixmap(dpi=OCR_STRATEGY_STRICT_PAGE_DPI).tobytes()],
+                ocr_strategy=OcrStrategy.STRICT,
             )
 
         elif page_content.ocr_strategy == OcrStrategy.RELAXED:
@@ -288,6 +291,8 @@ def get_pdf_page_contents(
 
         else:
             raise ValueError(f"Invalid or unhandled OCR strategy: '{page_content.ocr_strategy.value}'")
+
+        assert page_content.ocr_strategy != OcrStrategy.AUTO, "BUG DETECTED: Unresolved `auto` OCR strategy"  # should never happen
 
         page_contents.append(page_content)
 
