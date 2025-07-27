@@ -2,6 +2,7 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import json
+from enum import Enum
 from typing import cast, Dict, List, Optional
 
 from qdrant_client.http.models import ScoredPoint
@@ -18,6 +19,11 @@ from archive_agent.ai_provider.AiProvider import AiProvider
 from archive_agent.core.CliManager import CliManager
 from archive_agent.util.RetryManager import RetryManager
 from archive_agent.util.text_util import prepend_line_numbers
+
+
+class AiVisionRequest(Enum):
+    ENTITY = 'entity'
+    OCR = 'ocr'
 
 
 class AiManager(RetryManager):
@@ -53,8 +59,7 @@ class AiManager(RetryManager):
         self.total_tokens_vision = 0
 
         # NOTE: This switches between `AiVisionEntity` and `AiVisionOCR` modules
-        # TODO: Use enum instead of 'entity' and 'ocr' literals
-        self.requested: Optional[str] = None
+        self.requested: Optional[AiVisionRequest] = None
 
         RetryManager.__init__(
             self,
@@ -227,9 +232,9 @@ class AiManager(RetryManager):
         :param image_base64: Image as UTF-8 encoded Base64 string.
         :return: VisionSchema.
         """
-        if self.requested == 'entity':
+        if self.requested == AiVisionRequest.ENTITY:
             prompt = AiVisionEntity.get_prompt_vision()
-        elif self.requested == 'ocr':
+        elif self.requested == AiVisionRequest.OCR:
             prompt = AiVisionOCR.get_prompt_vision()
         else:
             self.cli.logger.critical("BUG DETECTED: Unrequested call to `AiManager.vision()` — falling back to OCR")
@@ -250,7 +255,7 @@ class AiManager(RetryManager):
         return vision_result
 
     def request_entity(self):
-        self.requested = 'entity'
+        self.requested = AiVisionRequest.ENTITY
 
     def request_ocr(self):
-        self.requested = 'ocr'
+        self.requested = AiVisionRequest.OCR
