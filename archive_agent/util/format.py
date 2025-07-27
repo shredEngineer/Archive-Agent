@@ -40,12 +40,13 @@ def format_file(file_path: str | pathlib.Path) -> str:
     return f"file://{urllib.parse.quote(uri_path, safe='/')}"
 
 
-def get_point_reference_info(point: ScoredPoint) -> str:
+def get_point_reference_info(point: ScoredPoint, verbose: bool = False) -> str:
     """
     Get point reference info.
     NOTE: Chunks that were added before v5.0.0 don't have the fields `page_range` and `line_range.
           This is handled gracefully in here.
     :param point: Point.
+    :param verbose: Append additional chunk info
     :return: Point reference info.
     """
     assert point.payload is not None  # makes pyright happy
@@ -54,24 +55,31 @@ def get_point_reference_info(point: ScoredPoint) -> str:
 
     if 'page_range' in point.payload and point.payload['page_range']:
         r = point.payload['page_range']
-        page_line_info = f"pages [{r[0]}–{r[-1]}]" if len(r) > 1 else f"page {r[0]}"
+        page_line_info = f"pages {r[0]}–{r[-1]}" if len(r) > 1 else f"page {r[0]}"
 
     elif 'line_range' in point.payload and point.payload['line_range']:
         r = point.payload['line_range']
-        page_line_info = f"lines [{r[0]}–{r[-1]}]" if len(r) > 1 else f"line {r[0]}"
+        page_line_info = f"lines {r[0]}–{r[-1]}" if len(r) > 1 else f"line {r[0]}"
 
     else:
         page_line_info = None
 
-    origin_info = f"({page_line_info})" if page_line_info is not None else f"({chunk_info})"
+    if page_line_info is not None:
+        origin_info = f"{page_line_info}"
+        if verbose:
+            origin_info += f" · {chunk_info}"
+    else:
+        origin_info = f"{chunk_info}"
 
     reference_info = f"{format_file(point.payload['file_path'])} · {origin_info}"
-    # reference_info += " · ({format_time(point.payload['file_mtime'])})
+
+    if verbose:
+        reference_info += f" · {format_time(point.payload['file_mtime'])}"
 
     if page_line_info is None:
         # TODO: Find out why some chunks don't seem to have these payload fields, even though they were added with v5.0.0+ (WTF)
         logger.warning(
-            f"Chunk missing lines and pages info:\n"
+            f"Chunk is missing lines and pages info:\n"
             f"{point.payload}"
         )
 
