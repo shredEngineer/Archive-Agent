@@ -123,7 +123,7 @@ class FileData:
             self.ai.cli.logger.info(f"Converted image from '{image.mode}' to 'RGB'")
             image = image.convert("RGB")
 
-        image_possibly_resized = image_resize_safe(image)
+        image_possibly_resized = image_resize_safe(image=image, logger=self.ai.cli.logger)
         if image_possibly_resized is None:
             self.ai.cli.logger.warning(f"Failed to resize {format_file(self.file_path)}")
             return None

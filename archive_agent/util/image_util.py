@@ -1,19 +1,17 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import logging
+from logging import Logger
 from typing import Optional
 
 import io
 import base64
 from PIL import Image
 
-# TODO: Inject logger for future thread-safety
-logger = logging.getLogger(__name__)
-
 
 def image_resize_safe(
     image: Image.Image,
+    logger: Logger,
     # OpenAI highest resolution specs
     max_w: int = 768,
     max_h: int = 2000,
@@ -22,6 +20,7 @@ def image_resize_safe(
     """
     Resize image to safe dimensions or data size, if required.
     :param image: Image data.
+    :param logger: Logger.
     :param max_w: Maximum width.
     :param max_h: Maximum height.
     :param max_bytes: Maximum data size (in bytes).
