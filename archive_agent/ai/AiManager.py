@@ -113,7 +113,7 @@ class AiManager(RetryManager):
 
                 result.parsed_schema = cast(ChunkSchema, result.parsed_schema)
 
-                # TODO: Use schema with [start_line, header] items instead of separate lists
+                # TODO: Refactor to use schema with [start_line, header] items instead of separate lists, avoiding list count discrepancies
                 if len(result.parsed_schema.chunk_start_lines) != len(result.parsed_schema.headers):
                     self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
                     raise RuntimeError(

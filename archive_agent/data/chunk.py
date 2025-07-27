@@ -243,10 +243,13 @@ def text_to_clean_lines(text: str) -> List[str]:
     return stripped_lines
 
 
+# TODO: Refactor to use nested DocumentContent instead of bare type
+ParagraphWithReferenceRanges = Tuple[List[str], ReferenceList]
+
 def _extract_paragraphs_with_reference_ranges(
         lines: List[str],
         per_line_references: ReferenceList,
-) -> List[Tuple[List[str], ReferenceList]]:
+) -> List[ParagraphWithReferenceRanges]:
     """
     Extract paragraphs from text lines.
     - Respects empty lines.
@@ -256,9 +259,7 @@ def _extract_paragraphs_with_reference_ranges(
     :param per_line_references: Per-line reference numbers (lines or pages).
     :return: List of (paragraph lines, associated refs) tuples.
     """
-
-    # TODO: Refactor into nested DocumentContent
-    para_blocks: List[Tuple[List[str], ReferenceList]] = []
+    para_blocks: List[ParagraphWithReferenceRanges] = []
 
     current_paragraph: List[str] = []
     current_references: ReferenceList = []
@@ -313,7 +314,7 @@ def _extract_paragraphs_with_reference_ranges(
 
 
 def _extract_sentences_with_reference_ranges(
-        paragraphs_with_reference_ranges: List[Tuple[List[str], ReferenceList]],
+        paragraphs_with_reference_ranges: List[ParagraphWithReferenceRanges],
         nlp: Language,
 ) -> List[SentenceWithRange]:
     sentences_with_reference_ranges: List[SentenceWithRange] = []
