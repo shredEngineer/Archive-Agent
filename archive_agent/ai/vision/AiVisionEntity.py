@@ -35,7 +35,11 @@ class AiVisionRelation:
             _, fmt = cls._registry[predicate]
             return fmt(subject, object_, include_sub_desc, include_obj_desc)
         # Fallback: Graceful, readable, still parseable.
-        return (f"The {subject.name}{' (' + subject.description + ')' if include_sub_desc else ''} {predicate.replace('_', ' ')} "
+        verb = predicate.replace('_', ' ')
+        # Simple plural adjustment: strip 's' for plural subjects if verb ends with 's'
+        if subject.name.endswith('s') and verb.endswith('s'):
+            verb = verb[:-1]
+        return (f"The {subject.name}{' (' + subject.description + ')' if include_sub_desc else ''} {verb} "
                 f"the {object_.name}{' (' + object_.description + ')' if include_obj_desc else ''}")
 
     @classmethod
