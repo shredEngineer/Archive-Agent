@@ -1,7 +1,6 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-from logging import Logger
 from typing import Callable, Dict, List, Tuple
 
 from archive_agent.ai.vision.AiVisionSchema import VisionSchema
@@ -138,6 +137,9 @@ AiVisionRelation.register("wearing",
 AiVisionRelation.register("riding",
                           "X is riding Y.",
                           lambda s, o: f"The {s} is riding the {o}.")
+AiVisionRelation.register("under_condition_of",
+                          "X exists under the condition of Y.",
+                          lambda s, o: f"The {s} exists under the condition of {o}.")
 
 
 class AiVisionEntity:
@@ -159,6 +161,8 @@ class AiVisionEntity:
             "            The name, label, or primary identifier of the entity.",
             "        - `description`:",
             "            A short, factual description of the entity, faithful to the image. For formulas, use LaTeX enclosed in $...$.",
+            "            Use descriptions to infer additional entities and relations where applicable",
+            "            (e.g., 'divided into four sectors' suggests 'four sector lines' as an entity with 'contains' relation).",
             "",
             "- `relations`:",
             "    A list of relations connecting entities. Extract the maximum number of meaningful relations possible.",
@@ -199,9 +203,10 @@ class AiVisionEntity:
             "    - For textual elements like labels or captions, explicitly mark them as such to distinguish them from actual objects",
             "      (e.g., 'label \"apple\"' instead of 'apple').",
             "    - Descriptions must be short, factual, and context-specific (e.g., 'date of invoice issuance' for '2023-10-15').",
+            "    - Use descriptions to extract additional entities (e.g., 'divided into four sectors' implies 'four sector lines').",
             "    - Examples:",
             "        - For a dotted circle diagram, entities could include 'circle: enclosing boundary shape',",
-            "         'dots: symmetrical point pattern inside circle'.",
+            "         'dots: symmetrical point pattern inside circle', 'four sector lines: radiating lines'.",
             "        - For text '2D closed surface (sphere)', entities could include '2D closed surface: main phrase',",
             "          'sphere: parenthetical example'.",
             "",
@@ -214,8 +219,15 @@ class AiVisionEntity:
             "    - Extract the maximum number of meaningful relations without fabrication, staying faithful to the image content.",
             "    - From text: Parse sentences for subject-predicate-object structures, implied hierarchies, or references.",
             "    - From visuals: Use arrows, proximity, groupings, flows, or hierarchies to infer relations.",
-            "    - Use only relation types from the following list whenever possible. If none fits, create a short, descriptive predicate",
-            "      matching existing styles (e.g., 'under_condition_of' instead of 'for').",
+            "    - Use entity descriptions to infer additional relations",
+            "      (e.g., 'filled with a symmetrical dotted pattern' suggests 'contains symmetrical dotted pattern').",
+            "    - Use all 26 relation types from the following list whenever possible."
+            "      If none fits, create a short, descriptive predicate matching existing styles",
+            "      (e.g., 'under_condition_of' instead of 'for').",
+            "    - Avoid overusing 'below'; prefer 'has_attribute' or 'under_condition_of' for textual conditions.",
+            "    - Examples:",
+            "        - For a circle with sectors, use 'circle contains four sector lines'.",
+            "        - For text '2D closed surface (sphere)', use '2D closed surface has_attribute sphere'.",
             "",
             AiVisionRelation.for_prompt(),
             "",
@@ -225,6 +237,8 @@ class AiVisionEntity:
             "- Every output unit MUST be clean, faithful to the image, and suitable for downstream semantic indexing.",
             "- Avoid vague predicates like 'related_to' unless no specific relation applies.",
             "- Ensure all entities are used in at least one relation, if possible, to maximize connectivity.",
+            "- The chunked text output MUST be a single, cohesive sentence reflecting all entities and relations, joined with ', and ',",
+            "  matching the format_vision_answer output.",
             "- Only set `is_rejected: true` if the image is technically unreadable or corrupted, and cannot be interpreted",
             "  meaningfully (e.g. blurred, distorted, broken file).",
             "- ALWAYS include the additional required blank `answer` field.",
@@ -233,12 +247,11 @@ class AiVisionEntity:
         ])
 
     @staticmethod
-    def format_vision_answer(logger: Logger, vision_result: VisionSchema) -> str:
+    def format_vision_answer(vision_result: VisionSchema) -> str:
         """
         Format vision result as a single line compound sentence with ', and ' connectors for NLP compatibility.
-        Each statement is explicit, self-contained, and joined into one flowing sentence.
-        Relations are formatted first, followed by descriptions for entities not used in relations.
-        :param logger: Logger.
+        Each statement integrates all entity descriptions and relations into a concise, cohesive clause, ensuring no information is lost.
+        All entities are utilized either in relations or as descriptive clauses, with minimized redundancy.
         :param vision_result: Vision result.
         :return: Formatted answer.
         """
@@ -247,21 +260,45 @@ class AiVisionEntity:
         entities = vision_result.entities
         used_in_relation = set()
         statements = []
+        used_desc_fragments = set()  # Track unique description fragments
 
-        # Format relations as explicit, atomic sentences
+        # Format relations as explicit sentences, integrating unique descriptions
         for r in vision_result.relations:
-            statement = AiVisionRelation.format(r.predicate, r.subject, r.object)
-            statements.append(statement.rstrip('.'))
-            used_in_relation.add(r.subject)
-            used_in_relation.add(r.object)
+            subject = next((e for e in entities if e.name == r.subject), None)
+            object_ = next((e for e in entities if e.name == r.object), None)
+            base_statement = AiVisionRelation.format(r.predicate, r.subject, r.object).rstrip('.')
+            desc_clause = []
+            if subject:
+                desc_fragments = [f.strip() for f in subject.description.lower().split(',') if f.strip()]
+                for fragment in desc_fragments:
+                    normalized_fragment = fragment.replace('a ', '').replace('an ', '')
+                    if normalized_fragment and normalized_fragment not in used_desc_fragments:
+                        desc_clause.append(normalized_fragment)
+                        used_desc_fragments.add(normalized_fragment)
+                used_in_relation.add(r.subject)
+            if object_:
+                desc_fragments = [f.strip() for f in object_.description.lower().split(',') if f.strip()]
+                for fragment in desc_fragments:
+                    normalized_fragment = fragment.replace('a ', '').replace('an ', '')
+                    if normalized_fragment and normalized_fragment not in used_desc_fragments:
+                        desc_clause.append(normalized_fragment)
+                        used_desc_fragments.add(normalized_fragment)
+                used_in_relation.add(r.object)
+            statement = f"{base_statement}, {', '.join(desc_clause).rstrip(',')}" if desc_clause else base_statement
+            statements.append(statement)
 
-        # Add descriptions only for entities not used in any relation
+        # Include all entities not used in relations with their full unique descriptions
         for e in entities:
             if e.name not in used_in_relation:
-                logger.warning(f"Entity '{e.name}' not included in any relation.")
-                desc = e.description.strip().rstrip('.')
-                if desc:
-                    statements.append(f"The {e.name} is described as {desc.lower()}")
+                desc_fragments = [f.strip() for f in e.description.lower().split(',') if f.strip()]
+                new_fragments = [
+                    f.replace('a ', '').replace('an ', '')
+                    for f in desc_fragments
+                    if f.replace('a ', '').replace('an ', '') not in used_desc_fragments
+                ]
+                if new_fragments:
+                    statements.append(f"the {e.name} includes {', '.join(new_fragments)}")
+                    used_desc_fragments.update(new_fragments)
 
         # Fallback for no relations
         if not statements:
