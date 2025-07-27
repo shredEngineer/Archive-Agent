@@ -16,7 +16,7 @@
 
     - **Processing Steps**: Cleans text by removing extra spaces.
       Groups into paragraphs.
-      Splits into sentences using `spaCy`.
+      Splits into sentences using `spaCy` with custom Markdown handling.
       Chunks with AI help.
 
     - **Tracing Back**: Each chunk gets a range like `(2,4)` for pages 2 to 4.
@@ -31,7 +31,7 @@
       Default to `(0,0)` if no numbers are given.
 
     - **Structure Preservation**: Keep paragraph breaks using empty strings `""`.
-      Respect Markdown lists as separate paragraphs.
+      Respect Markdown lists and headings as separate paragraphs.
 
     - **Sentence Splitting**: Join paragraph lines with spaces.
       Use `spaCy` to break into sentences.
@@ -54,15 +54,15 @@
 
     ### Implementation Details for Developers
 
-    - **Function `split_sentences`**: Main entry point.
+    - **Function `get_sentences_with_reference_ranges`**: Main entry point.
       Strips lines.
-      Builds paragraph blocks in `_build_para_blocks` (handles blanks and Markdown).
+      Builds paragraph blocks in `_extract_paragraphs_with_reference_ranges` (handles blanks, Markdown lists and headings).
       Normalizes whitespace in `_normalize_inline_whitespace`.
-      Sentencizes in `_process_para_block` (uses bisect for reference aggregation).
+      Sentencizes in `_extract_paragraph_sentences_with_reference_ranges` (uses bisect for reference aggregation).
       Inserts `"" (0,0)` for breaks.
       Returns `List[SentenceWithRange]`.
 
-    - **Function `generate_chunks_with_ranges`**: Takes sentences.
+    - **Function `get_chunks_with_reference_ranges`**: Takes sentences.
       Groups blocks.
       Calls callback for `ChunkSchema` (starts and headers).
       Extracts chunks and carry.
@@ -76,7 +76,7 @@
 
     - **Edge Cases**: Short references default to 0.
       Monotonic references preserved in min-max.
-      `spaCy` model `en_core_web_md` for sentence splitting.
+      `spaCy` model `en_core_web_md` for sentence splitting, with custom component `_spacy_markdown_sentence_fixer` for better Markdown handling.
 
     - **Types**: `ReferenceList=List[int]`.
       `SentenceRange=Tuple[int, int]`.
