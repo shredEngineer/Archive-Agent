@@ -84,7 +84,7 @@ class QdrantManager:
         except ResponseHandlingException as e:
             logger.error(
                 f"Failed to connect to Qdrant collection: {e}\n"
-                f"Make sure the Qdrant server is running: ./manage-qdrant.sh start"
+                f"Make sure the Qdrant server is running ('./manage-qdrant.sh start')"
             )
             raise typer.Exit(code=1)
 
