@@ -6,8 +6,9 @@ import os
 import pathlib
 import urllib.parse
 from datetime import datetime, timezone
+from typing import Optional
 
-from qdrant_client.http.models import ScoredPoint
+from qdrant_client.http.models import ScoredPoint, PointStruct
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,26 @@ def format_file(file_path: str | pathlib.Path) -> str:
     return f"file://{urllib.parse.quote(uri_path, safe='/')}"
 
 
+def get_point_page_line_info(point: ScoredPoint | PointStruct) -> Optional[str]:
+    """
+    Get point page or line info
+    :param point: Point.
+    :return: Page or line info (optional).
+    """
+    assert point.payload is not None
+
+    if 'page_range' in point.payload and point.payload['page_range']:
+        r = point.payload['page_range']
+        return f"pages {r[0]}–{r[-1]}" if len(r) > 1 else f"page {r[0]}"
+
+    elif 'line_range' in point.payload and point.payload['line_range']:
+        r = point.payload['line_range']
+        return f"lines {r[0]}–{r[-1]}" if len(r) > 1 else f"line {r[0]}"
+
+    else:
+        return None
+
+
 def get_point_reference_info(point: ScoredPoint, verbose: bool = False) -> str:
     """
     Get point reference info.
@@ -53,16 +74,7 @@ def get_point_reference_info(point: ScoredPoint, verbose: bool = False) -> str:
 
     chunk_info = f"chunk {point.payload['chunk_index'] + 1}/{point.payload['chunks_total']}"
 
-    if 'page_range' in point.payload and point.payload['page_range']:
-        r = point.payload['page_range']
-        page_line_info = f"pages {r[0]}–{r[-1]}" if len(r) > 1 else f"page {r[0]}"
-
-    elif 'line_range' in point.payload and point.payload['line_range']:
-        r = point.payload['line_range']
-        page_line_info = f"lines {r[0]}–{r[-1]}" if len(r) > 1 else f"line {r[0]}"
-
-    else:
-        page_line_info = None
+    page_line_info = get_point_page_line_info(point)
 
     if page_line_info is not None:
         origin_info = f"{page_line_info}"

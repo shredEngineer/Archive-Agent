@@ -15,7 +15,7 @@ from archive_agent.ai.vision.AiVisionOCR import AiVisionOCR
 from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 from archive_agent.config.DecoderSettings import DecoderSettings
 from archive_agent.data.DocumentContent import DocumentContent
-from archive_agent.util.format import format_file
+from archive_agent.util.format import format_file, get_point_page_line_info
 from archive_agent.data.loader.pdf import is_pdf_document, load_pdf_document
 from archive_agent.data.loader.image import is_image, load_image
 from archive_agent.data.loader.text import is_plaintext, load_plaintext
@@ -189,7 +189,7 @@ class FileData:
         vision_result_entity = self.image_to_text(image)
         if vision_result_entity is None:
             return None
-        text_entity = AiVisionEntity.format_vision_answer(logger=self.ai.cli.logger, vision_result=vision_result_entity)
+        text_entity = AiVisionEntity.format_vision_answer(vision_result=vision_result_entity)
 
         # Join with a single space
         return text_ocr + " " + text_entity
@@ -245,7 +245,7 @@ class FileData:
         else:
             per_line_references = doc_content.lines_per_line
 
-        assert per_line_references is not None, "Missing references (WTF)"
+        assert per_line_references is not None, "Missing references (WTF, please report)"
 
         # TODO: Pass DocumentContent
         # Use preprocessing and NLP (spaCy) to split text into sentences, keeping track of references.
@@ -256,6 +256,7 @@ class FileData:
             chunk_callback=self.chunk_callback,
             chunk_lines_block=self.chunk_lines_block,
             file_path=self.file_path,
+            logger=self.ai.cli.logger,
             verbose=self.ai.cli.VERBOSE_CHUNK,
         )
 
@@ -269,9 +270,7 @@ class FileData:
                 f"of {format_file(self.file_path)}"
             )
 
-            if self.ai.cli.VERBOSE_CHUNK:
-                reference_type = "Pages" if is_page_based else "Lines"
-                self.ai.cli.logger.info(f"Reference range: {reference_type} {chunk.reference_range[0]}–{chunk.reference_range[1]}")
+            assert chunk.reference_range != (0, 0), "Invalid chunk reference range (WTF, please report)"
 
             vector = self.ai.embed(text=chunk.text)
 
@@ -283,22 +282,22 @@ class FileData:
                 'chunk_text': chunk.text,
             }
 
-            if chunk.reference_range != (0, 0):
-                min_r, max_r = chunk.reference_range
-                range_list = [min_r, max_r] if min_r != max_r else [min_r]
-                if is_page_based:
-                    payload['page_range'] = range_list
-                else:
-                    payload['line_range'] = range_list
+            min_r, max_r = chunk.reference_range
+            range_list = [min_r, max_r] if min_r != max_r else [min_r]
+            if is_page_based:
+                payload['page_range'] = range_list
             else:
-                self.ai.cli.logger.warning("Missing reference range for chunk")
+                payload['line_range'] = range_list
 
-            self.points.append(
-                PointStruct(
-                    id=str(uuid.uuid4()),
-                    vector=vector,
-                    payload=payload,
-                )
+            point = PointStruct(
+                id=str(uuid.uuid4()),
+                vector=vector,
+                payload=payload,
             )
+
+            if self.ai.cli.VERBOSE_CHUNK:
+                self.ai.cli.logger.info(f"Chunk reference: {get_point_page_line_info(point)}")
+
+            self.points.append(point)
 
         return True

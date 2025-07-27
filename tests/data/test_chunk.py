@@ -2,10 +2,13 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
+import logging
 from typing import List
 
 from archive_agent.data.chunk import get_sentences_with_reference_ranges, get_chunks_with_reference_ranges, SentenceWithRange
 from archive_agent.ai.chunk.AiChunk import ChunkSchema
+
+logger = logging.getLogger(__name__)
 
 
 def test_split_sentences_output():
@@ -135,7 +138,7 @@ def test_generate_chunks_with_ranges_basic_no_carry():
     chunk_lines_block = 2
     file_path = "test.txt"
 
-    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
+    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path, logger)
 
     assert len(result) == 1
     assert result[0].reference_range == (1, 2)
@@ -158,7 +161,7 @@ def test_generate_chunks_with_ranges_with_carry():
     chunk_lines_block = 2
     file_path = "test.txt"
 
-    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
+    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path, logger)
 
     assert len(result) == 1
     assert result[0].reference_range == (1, 3)
@@ -181,7 +184,7 @@ def test_generate_chunks_with_ranges_ignores_zeros_in_agg():
     chunk_lines_block = 3
     file_path = "test.txt"
 
-    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
+    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path, logger)
 
     assert len(result) == 1
     assert result[0].reference_range == (1, 2)
@@ -200,6 +203,6 @@ def test_generate_chunks_with_ranges_empty():
     chunk_lines_block = 1
     file_path = "test.txt"
 
-    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path)
+    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path, logger)
 
     assert result == []

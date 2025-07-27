@@ -86,7 +86,7 @@
     For integration, see `FileData.py`.
 """
 
-import logging
+from logging import Logger
 import re
 from typing import List, Tuple, Optional, Callable
 from dataclasses import dataclass
@@ -101,7 +101,6 @@ from archive_agent.ai.chunk.AiChunk import ChunkSchema
 from archive_agent.util.format import format_file
 from archive_agent.util.text_util import splitlines_exact
 
-logger = logging.getLogger(__name__)
 
 ReferenceList = List[int]
 SentenceRange = Tuple[int, int]
@@ -433,6 +432,7 @@ def get_chunks_with_reference_ranges(
     chunk_callback: Callable[[List[str]], ChunkSchema],
     chunk_lines_block: int,
     file_path: str,
+    logger: Logger,
     verbose: bool = True,
 ) -> List[ChunkWithRange]:
     """
@@ -443,6 +443,7 @@ def get_chunks_with_reference_ranges(
     :param chunk_callback: Chunk callback.
     :param chunk_lines_block: Number of sentences per block to be chunked.
     :param file_path: Path to the originating file (used for logging and labeling).
+    :param logger: Logger.
     :param verbose: Enable to show additional information.
     :return: List of ChunkWithRange objects containing the formatted chunk and its reference range.
     """
@@ -450,13 +451,12 @@ def get_chunks_with_reference_ranges(
     sentence_reference_ranges = [s.reference_range for s in sentences_with_references]
 
     if len(sentence_reference_ranges) != len(sentences):
-        logger.error(
+        raise ValueError(
             f"Reference range mismatch: "
             f"{len(sentence_reference_ranges)} ranges, "
             f"{len(sentences)} sentences "
             f"for {format_file(file_path)}"
         )
-        raise ValueError("Reference range mismatch")
 
     blocks_of_sentences = _group_blocks_of_sentences(sentences, chunk_lines_block)
 
