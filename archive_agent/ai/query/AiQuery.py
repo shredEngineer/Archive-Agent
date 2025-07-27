@@ -14,7 +14,7 @@ from archive_agent.util.format import get_point_reference_info
 class AnswerItem(BaseModel):
     answer: str
     chunk_ref_list: List[str]
-    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
+    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false — DO NOT REMOVE THIS
 
 
 class QuerySchema(BaseModel):
@@ -25,7 +25,7 @@ class QuerySchema(BaseModel):
     is_rejected: bool
     rejection_reason: str
 
-    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
+    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false — DO NOT REMOVE THIS
 
 
 class AiQuery:

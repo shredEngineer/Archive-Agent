@@ -10,7 +10,7 @@ class Entity(BaseModel):
     name: str
     description: str
 
-    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
+    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false — DO NOT REMOVE THIS
 
 
 class Relation(BaseModel):
@@ -18,7 +18,7 @@ class Relation(BaseModel):
     predicate: str
     object: str
 
-    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
+    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false — DO NOT REMOVE THIS
 
 
 class VisionSchema(BaseModel):

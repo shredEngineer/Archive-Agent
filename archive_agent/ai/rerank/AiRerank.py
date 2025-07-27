@@ -11,7 +11,7 @@ class RerankSchema(BaseModel):
     is_rejected: bool
     rejection_reason: str
 
-    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false
+    model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false — DO NOT REMOVE THIS
 
 
 class AiRerank:
