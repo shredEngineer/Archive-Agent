@@ -250,6 +250,7 @@ def _extract_paragraphs_with_reference_ranges(
     Extract paragraphs from text lines.
     - Respects empty lines.
     - Turns Markdown list items into separate paragraphs to let NLP (spaCy) work properly.
+    - Turns Markdown headings into separate paragraphs.
     :param lines: Text lines.
     :param per_line_references: Per-line reference numbers (lines or pages).
     :return: List of (paragraph lines, associated refs) tuples.
@@ -277,6 +278,10 @@ def _extract_paragraphs_with_reference_ranges(
         if line_text.startswith("- "):
             next_paragraph = True
 
+        # Markdown heading starts new paragraph
+        if line_text.startswith("#"):
+            next_paragraph = True
+
         # Push current paragraph and start next
         if next_paragraph:
             if current_paragraph:
@@ -292,6 +297,12 @@ def _extract_paragraphs_with_reference_ranges(
         current_paragraph.append(line_text)
         if has_references:
             current_references.append(per_line_references[line_index])
+
+        # If heading, push as single-line paragraph
+        if line_text.startswith("#"):
+            para_blocks.append((current_paragraph, current_references))
+            current_paragraph = []
+            current_references = []
 
     # Push last paragraph if non-empty
     if current_paragraph:
