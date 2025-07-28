@@ -21,8 +21,8 @@ class DocumentContent:
     _text: str = field(init=False, repr=False)
     _lines: List[str] = field(init=False, repr=False)
 
-    lines_per_line: Optional[List[int]] = None  # Line-based: Absolute line number for each line of `text`.
-    pages_per_line: Optional[List[int]] = None  # Page-based: Absolute page number for each line of `text`.
+    lines_per_line: Optional[ReferenceList] = None  # Line-based: Absolute line number for each line of `text`.
+    pages_per_line: Optional[ReferenceList] = None  # Page-based: Absolute page number for each line of `text`.
 
     @property
     def text(self) -> str:
@@ -73,8 +73,8 @@ class DocumentContent:
     @classmethod
     def from_lines(
         cls, lines: List[str], *,
-        lines_per_line: Optional[List[int]] = None,
-        pages_per_line: Optional[List[int]] = None,
+        lines_per_line: Optional[ReferenceList] = None,
+        pages_per_line: Optional[ReferenceList] = None,
     ) -> "DocumentContent":
         obj = cls(lines_per_line=lines_per_line, pages_per_line=pages_per_line)
         obj.lines = lines  # Uses setter: updates _text too
@@ -84,8 +84,8 @@ class DocumentContent:
     @classmethod
     def from_text(
         cls, text: str, *,
-        lines_per_line: Optional[List[int]] = None,
-        pages_per_line: Optional[List[int]] = None,
+        lines_per_line: Optional[ReferenceList] = None,
+        pages_per_line: Optional[ReferenceList] = None,
     ) -> "DocumentContent":
         obj = cls(lines_per_line=lines_per_line, pages_per_line=pages_per_line)
         obj.text = text  # Uses setter: updates _lines too

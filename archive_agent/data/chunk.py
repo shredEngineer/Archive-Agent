@@ -1,92 +1,6 @@
 # Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 # This file is part of Archive Agent. See LICENSE for details.
 
-"""
-    ## Overview of Text Processing and Chunking
-
-    This module turns raw document text into searchable chunks for Archive Agent.
-    It extends the README's sections on "smart chunking" and "chunk references."
-    The focus is on making chunks meaningful and traceable.
-    It handles both line-based and page-based files in the same way.
-
-    ### Key Concepts for Beginners
-
-    - **Text Input**: Starts with plain text from files like `.txt` or `.pdf`.
-      Optional list of numbers—one per line—for line numbers or page numbers.
-
-    - **Processing Steps**: Cleans text by removing extra spaces.
-      Groups into paragraphs.
-      Splits into sentences using `spaCy` with custom Markdown handling.
-      Chunks with AI help.
-
-    - **Tracing Back**: Each chunk gets a range like `(2,4)` for pages 2 to 4.
-      Ranges are approximate due to joining and splitting content.
-
-    - **Special Marker `(0,0)`**: Placeholder for items without a real reference, like paragraph breaks.
-      Ignored later to avoid fake "page 0".
-
-    ### Specs: What the Module Must Do
-
-    - **Agnostic Handling**: Treat line numbers and page numbers the same—no special cases.
-      Default to `(0,0)` if no numbers are given.
-
-    - **Structure Preservation**: Keep paragraph breaks using empty strings `""`.
-      Respect Markdown lists and headings as separate paragraphs.
-
-    - **Sentence Splitting**: Join paragraph lines with spaces.
-      Use `spaCy` to break into sentences.
-
-    - **Range Approximation**: For sentences spanning lines, aggregate to min-max.
-      For example, lines 1 to 3 become `(1,3)`.
-      Ignore `(0,0)` in final chunks.
-
-    - **Chunking**: Group sentences into blocks.
-      Call AI for splits and headers.
-      Handle leftovers with carry-over across blocks.
-
-    - **Output**: Paired dataclasses for text and range.
-      From splitting: `List[SentenceWithRange]`.
-      From chunking: `List[ChunkWithRange]`.
-
-    - **Robustness**: Handle short or missing references by defaulting to 0.
-      Return empty list `[]` for empty input.
-      Skip blanks.
-
-    ### Implementation Details for Developers
-
-    - **Function `get_sentences_with_reference_ranges`**: Main entry point.
-      Strips lines.
-      Builds paragraph blocks in `_extract_paragraphs_with_reference_ranges` (handles blanks, Markdown lists and headings).
-      Normalizes whitespace in `_normalize_inline_whitespace`.
-      Sentencizes in `_extract_paragraph_sentences_with_reference_ranges` (uses bisect for reference aggregation).
-      Inserts `"" (0,0)` for breaks.
-      Returns `List[SentenceWithRange]`.
-
-    - **Function `get_chunks_with_reference_ranges`**: Takes sentences.
-      Groups blocks.
-      Calls callback for `ChunkSchema` (starts and headers).
-      Extracts chunks and carry.
-      Aggregates ranges in `_aggregate_ranges` (filters >0).
-      Formats in `_format_chunk`.
-      Returns `List[ChunkWithRange]`.
-
-    - **Sentinel `(0,0)` Handling**: Inserted for breaks or no references.
-      Filtered in aggregation to keep traces clean.
-      No inheritance to maintain honest mapping.
-
-    - **Edge Cases**: Short references default to 0.
-      Monotonic references preserved in min-max.
-      `spaCy` model `en_core_web_md` for sentence splitting,
-      with custom component `_spacy_markdown_sentence_fixer` for better Markdown handling.
-
-    - **Types**: `ReferenceList=List[int]`.
-      `SentenceRange=Tuple[int, int]`.
-      Dataclasses avoid parallel lists.
-
-    For tests, see `test_chunk.py`.
-    For integration, see `FileData.py`.
-"""
-
 from logging import Logger
 import re
 from typing import List, Tuple, Optional, Callable
@@ -134,23 +48,23 @@ def _normalize_inline_whitespace(text: str) -> str:
 
 
 def _extract_paragraph_sentences_with_reference_ranges(
-    paragraph_lines: List[str],
-    paragraph_reference_ranges: ReferenceList,
+    paragraph_doc_content: DocumentContent,
     nlp: Language
 ) -> List[SentenceWithRange]:
     """
     Process a single paragraph block: Normalize, sentencize, and compute ranges.
-
-    :param paragraph_lines: Lines in the paragraph.
-    :param paragraph_reference_ranges: Associated line references.
+    :param paragraph_doc_content: Document content (single paragraph).
     :param nlp: spaCy NLP pipeline.
     :return: List of SentenceWithRange for the block.
     """
+    paragraph_lines = paragraph_doc_content.lines
+    paragraph_references = paragraph_doc_content.get_per_line_references()
+
     normalized_lines = [_normalize_inline_whitespace(line) for line in paragraph_lines]
     para_text = " ".join(normalized_lines)
 
     line_starts: Optional[List[int]] = None
-    if paragraph_reference_ranges:
+    if paragraph_references:
         line_starts = [0]
         for norm_line in normalized_lines[:-1]:
             line_starts.append(line_starts[-1] + len(norm_line) + 1)
@@ -162,7 +76,7 @@ def _extract_paragraph_sentences_with_reference_ranges(
     for sentence in doc.sents:
         sentence_text = sentence.text.strip()
 
-        if sentence_text and paragraph_reference_ranges and line_starts:
+        if sentence_text and paragraph_references and line_starts:
             start_char = sentence.start_char
             end_char = sentence.end_char
 
@@ -172,7 +86,7 @@ def _extract_paragraph_sentences_with_reference_ranges(
             end_line_idx = bisect.bisect_right(line_starts, end_char - 1) - 1
             end_line_idx = min(end_line_idx, len(paragraph_lines) - 1)
 
-            sentence_refs = paragraph_reference_ranges[start_line_idx: end_line_idx + 1]
+            sentence_refs = paragraph_references[start_line_idx: end_line_idx + 1]
             min_ref = min(sentence_refs) if sentence_refs else 0
             max_ref = max(sentence_refs) if sentence_refs else 0
         else:
@@ -236,25 +150,21 @@ def _get_nlp() -> Language:
     return nlp
 
 
-# TODO: Refactor to use List[DocumentContent]
-ParagraphWithReferenceRanges = Tuple[List[str], ReferenceList]
-
-
-def _extract_paragraphs_with_reference_ranges(doc_content: DocumentContent) -> List[ParagraphWithReferenceRanges]:
+def _extract_paragraphs(doc_content: DocumentContent) -> List[DocumentContent]:
     """
-    Extract paragraphs from text lines.
+    Extract paragraphs.
     - Respects empty lines.
     - Turns Markdown list items into separate paragraphs to let NLP (spaCy) work properly.
     - Turns Markdown headings into separate paragraphs.
     :param doc_content: Document content.
-    :return: List of (paragraph lines, associated refs) tuples.
+    :return: List document content (one per paragraph).
     """
     per_line_references = doc_content.get_per_line_references()
 
-    para_blocks: List[ParagraphWithReferenceRanges] = []
+    para_blocks: List[DocumentContent] = []
 
-    current_paragraph: List[str] = []
-    current_references: ReferenceList = []
+    current_paragraph_lines: List[str] = []
+    current_reference_list: ReferenceList = []
 
     has_references = bool(per_line_references)
 
@@ -278,40 +188,40 @@ def _extract_paragraphs_with_reference_ranges(doc_content: DocumentContent) -> L
 
         # Push current paragraph and start next
         if next_paragraph:
-            if current_paragraph:
-                para_blocks.append((current_paragraph, current_references))
-                current_paragraph = []
-                current_references = []
+            if current_paragraph_lines:
+                para_blocks.append(DocumentContent.from_lines(lines=current_paragraph_lines, lines_per_line=current_reference_list))
+                current_paragraph_lines = []
+                current_reference_list = []
 
         # Discard line
         if discard_line:
             continue
 
         # Append text line with page or line number reference
-        current_paragraph.append(line_text)
+        current_paragraph_lines.append(line_text)
         if has_references:
-            current_references.append(per_line_references[line_index])
+            current_reference_list.append(per_line_references[line_index])
 
         # If heading, push as single-line paragraph
         if line_text.startswith("#"):
-            para_blocks.append((current_paragraph, current_references))
-            current_paragraph = []
-            current_references = []
+            para_blocks.append(DocumentContent.from_lines(lines=current_paragraph_lines, lines_per_line=current_reference_list))
+            current_paragraph_lines = []
+            current_reference_list = []
 
     # Push last paragraph if non-empty
-    if current_paragraph:
-        para_blocks.append((current_paragraph, current_references))
+    if current_paragraph_lines:
+        para_blocks.append(DocumentContent.from_lines(lines=current_paragraph_lines, lines_per_line=current_reference_list))
 
     return para_blocks
 
 
 def _extract_sentences_with_reference_ranges(
-        paragraphs_with_reference_ranges: List[ParagraphWithReferenceRanges],
+        paragraphs_doc_content: List[DocumentContent],
         nlp: Language,
 ) -> List[SentenceWithRange]:
     sentences_with_reference_ranges: List[SentenceWithRange] = []
 
-    for paragraph_index, (paragraph_lines, paragraph_reference_ranges) in enumerate(paragraphs_with_reference_ranges):
+    for paragraph_index, paragraph_doc_content in enumerate(paragraphs_doc_content):
 
         if paragraph_index > 0:
             # Insert paragraph delimiter: empty sentence with zero range.
@@ -319,8 +229,7 @@ def _extract_sentences_with_reference_ranges(
             sentences_with_reference_ranges.append(SentenceWithRange("", (0, 0)))
 
         paragraph_sentences_with_reference_ranges = _extract_paragraph_sentences_with_reference_ranges(
-            paragraph_lines=paragraph_lines,
-            paragraph_reference_ranges=paragraph_reference_ranges,
+            paragraph_doc_content=paragraph_doc_content,
             nlp=nlp,
         )
 
@@ -332,16 +241,13 @@ def _extract_sentences_with_reference_ranges(
 # noinspection PyDefaultArgument
 def get_sentences_with_reference_ranges(doc_content: DocumentContent) -> List[SentenceWithRange]:
     """
-    Use preprocessing and NLP (spaCy) to split text into sentences, keeping track of references.
-
-    Processes text with paragraph and sentence handling, inferring ranges from provided references (lines or pages)
-    if available, or defaulting to (0, 0).
-
+    Use preprocessing and NLP (spaCy) to split text into sentences, keeping track of reference ranges.
+    Processes text with paragraph and sentence handling, inferring ranges from provided references (lines or pages).
     :param doc_content: Document content.
     :return: List of SentenceWithRange (text and range pairs).
     """
     return _extract_sentences_with_reference_ranges(
-        paragraphs_with_reference_ranges=_extract_paragraphs_with_reference_ranges(doc_content),
+        paragraphs_doc_content=_extract_paragraphs(doc_content),
         nlp=_get_nlp(),
     )
 
