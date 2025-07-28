@@ -46,4 +46,4 @@ class PageTextBuilder:
         if len(self._lines) == 0:
             return None
 
-        return DocumentContent(text="\n".join(self._lines), pages_per_line=self._page_numbers)
+        return DocumentContent.from_lines(lines=self._lines, pages_per_line=self._page_numbers)

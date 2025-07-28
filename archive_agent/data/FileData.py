@@ -239,6 +239,8 @@ class FileData:
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+        doc_content.strip_lines()
+
         # Use preprocessing and NLP (spaCy) to split text into sentences, keeping track of references.
         sentences_with_reference_ranges = get_sentences_with_reference_ranges(doc_content)
 

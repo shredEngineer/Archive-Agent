@@ -236,29 +236,21 @@ def _get_nlp() -> Language:
     return nlp
 
 
-def text_to_clean_lines(text: str) -> List[str]:
-    lines = splitlines_exact(text)
-    stripped_lines = [line.strip() for line in lines]
-    return stripped_lines
-
-
-# TODO: Refactor to use nested DocumentContent instead of bare type
+# TODO: Refactor to use List[DocumentContent]
 ParagraphWithReferenceRanges = Tuple[List[str], ReferenceList]
 
 
-def _extract_paragraphs_with_reference_ranges(
-        lines: List[str],
-        per_line_references: ReferenceList,
-) -> List[ParagraphWithReferenceRanges]:
+def _extract_paragraphs_with_reference_ranges(doc_content: DocumentContent) -> List[ParagraphWithReferenceRanges]:
     """
     Extract paragraphs from text lines.
     - Respects empty lines.
     - Turns Markdown list items into separate paragraphs to let NLP (spaCy) work properly.
     - Turns Markdown headings into separate paragraphs.
-    :param lines: Text lines.
-    :param per_line_references: Per-line reference numbers (lines or pages).
+    :param doc_content: Document content.
     :return: List of (paragraph lines, associated refs) tuples.
     """
+    per_line_references = doc_content.get_per_line_references()
+
     para_blocks: List[ParagraphWithReferenceRanges] = []
 
     current_paragraph: List[str] = []
@@ -266,7 +258,7 @@ def _extract_paragraphs_with_reference_ranges(
 
     has_references = bool(per_line_references)
 
-    for line_index, line_text in enumerate(lines):
+    for line_index, line_text in enumerate(doc_content.lines):
 
         next_paragraph = False
         discard_line = False
@@ -348,13 +340,8 @@ def get_sentences_with_reference_ranges(doc_content: DocumentContent) -> List[Se
     :param doc_content: Document content.
     :return: List of SentenceWithRange (text and range pairs).
     """
-    paragraphs_with_reference_ranges = _extract_paragraphs_with_reference_ranges(
-        lines=text_to_clean_lines(doc_content.text),
-        per_line_references=doc_content.get_per_line_references(),
-    )
-
     return _extract_sentences_with_reference_ranges(
-        paragraphs_with_reference_ranges=paragraphs_with_reference_ranges,
+        paragraphs_with_reference_ranges=_extract_paragraphs_with_reference_ranges(doc_content),
         nlp=_get_nlp(),
     )
 

@@ -25,7 +25,7 @@ def test_split_sentences_output():
     with open("./tests/data/test_data/test_sanitized.txt", "r", encoding="utf-8") as f:
         expect_text = f.read().strip()
 
-    doc_content = DocumentContent(text=raw_text, lines_per_line=list(range(len(splitlines_exact(raw_text)))))
+    doc_content = DocumentContent.from_text(text=raw_text, lines_per_line=list(range(len(splitlines_exact(raw_text)))))
     result = get_sentences_with_reference_ranges(doc_content)
 
     joined_text = "\n".join([s.text for s in result]).strip()
@@ -45,7 +45,7 @@ def test_split_sentences_simple():
     """
     raw_text = "A.\nB.\n\nC."
 
-    doc_content = DocumentContent(
+    doc_content = DocumentContent.from_text(
         text=raw_text,
         lines_per_line=[1, 2, 3, 4],
     )
@@ -67,7 +67,7 @@ def test_split_sentences_with_references_spanned():
     Expected: Sentences with min-max ranges (e.g., (1,2) for spanned), break as "" (0,0).
     Tests: Reference aggregation, multi-line sentences, monotonic references.
     """
-    doc_content = DocumentContent(
+    doc_content = DocumentContent.from_text(
         text="First. Second spans\nlines.\n\nThird.",
         lines_per_line=[1, 2, 3, 4],
     )
@@ -91,7 +91,7 @@ def test_split_sentences_markdown_lists():
     Expected: Paragraph, break, each list item as separate sentence, breaks between, with correct ranges.
     Tests: Markdown list handling, paragraph breaks, reference assignment.
     """
-    doc_content = DocumentContent(
+    doc_content = DocumentContent.from_text(
         text="Para.\n\n- Item1.\n- Item2.",
         lines_per_line=[1, 2, 3, 4],
     )
@@ -116,7 +116,7 @@ def test_split_sentences_empty_or_blanks():
     Expected: Empty list for both cases.
     Tests: Edge cases for empty input, blank line handling.
     """
-    doc_content = DocumentContent(
+    doc_content = DocumentContent.from_text(
         text="",
         lines_per_line=[1],
     )
@@ -124,7 +124,7 @@ def test_split_sentences_empty_or_blanks():
     result_empty = get_sentences_with_reference_ranges(doc_content)
     assert result_empty == []
 
-    doc_content = DocumentContent(
+    doc_content = DocumentContent.from_text(
         text="\n\n",
         lines_per_line=[1, 2, 3],
     )
