@@ -42,6 +42,7 @@ class CustomLogHighlighter(ReprHighlighter):
             "image",
             "character",
             "block",
+            "feature",
         )
 
     def highlight(self, text: Text) -> None:
