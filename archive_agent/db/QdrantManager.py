@@ -1,9 +1,9 @@
-# TODO:
-#  - Implement Pydantic schema for point metadata
-#  - Add "version" field for migration
+# TODO: Implement Pydantic schema for point metadata
 
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
+
+from archive_agent import __version__
 
 import typer
 import logging
@@ -105,6 +105,11 @@ class QdrantManager:
         if len(file_data.points) == 0:
             logger.warning(f"Failed to add EMPTY file")
             return False
+
+        version_stamp = f"v{__version__}"
+        logger.info(f"Version-stamping vector(s): {version_stamp}")
+        for point in file_data.points:
+            point.payload['version'] = version_stamp
 
         partial_size = 100
         num_points_added = 0
