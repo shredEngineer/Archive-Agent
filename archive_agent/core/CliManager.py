@@ -1,10 +1,3 @@
-# TODO: Refactor:
-#  - Move `format_ai_chunk` to `AiChunk`
-#  - Move `format_ai_rerank` to `AiRerank`
-#  - Move `format_ai_embed` to `AiEmbed`
-#  - Move `format_ai_query` to `AiQuery`
-#  - Move `format_ai_vision` to `AiVision`
-
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
