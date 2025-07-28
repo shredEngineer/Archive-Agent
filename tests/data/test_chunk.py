@@ -5,8 +5,10 @@
 import logging
 from typing import List
 
+from archive_agent.data.DocumentContent import DocumentContent
 from archive_agent.data.chunk import get_sentences_with_reference_ranges, get_chunks_with_reference_ranges, SentenceWithRange
 from archive_agent.ai.chunk.AiChunk import ChunkSchema, ChunkItem
+from archive_agent.util.text_util import splitlines_exact
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,8 @@ def test_split_sentences_output():
     with open("./tests/data/test_data/test_sanitized.txt", "r", encoding="utf-8") as f:
         expect_text = f.read().strip()
 
-    result = get_sentences_with_reference_ranges(raw_text)
+    doc_content = DocumentContent(text=raw_text, lines_per_line=list(range(len(splitlines_exact(raw_text)))))
+    result = get_sentences_with_reference_ranges(doc_content)
 
     joined_text = "\n".join([s.text for s in result]).strip()
 
@@ -33,21 +36,25 @@ def test_split_sentences_output():
     assert joined_text == expect_text
 
 
-def test_split_sentences_no_references_simple():
+def test_split_sentences_simple():
     """
-    Test `split_sentences` with a simple text, no references provided.
+    Test `split_sentences` with a simple text.
     Input: Text with two sentences in one paragraph, a break, and a third sentence.
-    Expected: Sentences joined in first paragraph, break as "", third sentence separate, all with (0,0) ranges.
-    Tests: No-reference handling, paragraph breaks, sentence joining by spaCy.
+    Expected: Sentences joined in first paragraph, break as "", third sentence separate.
+    Tests: Paragraph breaks, sentence joining by spaCy.
     """
     raw_text = "A.\nB.\n\nC."
 
-    result = get_sentences_with_reference_ranges(raw_text)
+    doc_content = DocumentContent(
+        text=raw_text,
+        lines_per_line=[1, 2, 3, 4],
+    )
+    result = get_sentences_with_reference_ranges(doc_content)
 
     expected = [
-        SentenceWithRange("A. B.", (0, 0)),
+        SentenceWithRange("A. B.", (1, 2)),
         SentenceWithRange("", (0, 0)),
-        SentenceWithRange("C.", (0, 0)),
+        SentenceWithRange("C.", (4, 4)),
     ]
 
     assert result == expected
@@ -60,10 +67,12 @@ def test_split_sentences_with_references_spanned():
     Expected: Sentences with min-max ranges (e.g., (1,2) for spanned), break as "" (0,0).
     Tests: Reference aggregation, multi-line sentences, monotonic references.
     """
-    raw_text = "First. Second spans\nlines.\n\nThird."
-    per_line_references = [1, 2, 3, 4]
+    doc_content = DocumentContent(
+        text="First. Second spans\nlines.\n\nThird.",
+        lines_per_line=[1, 2, 3, 4],
+    )
 
-    result = get_sentences_with_reference_ranges(raw_text, per_line_references)
+    result = get_sentences_with_reference_ranges(doc_content)
 
     expected = [
         SentenceWithRange("First.", (1, 1)),
@@ -82,10 +91,12 @@ def test_split_sentences_markdown_lists():
     Expected: Paragraph, break, each list item as separate sentence, breaks between, with correct ranges.
     Tests: Markdown list handling, paragraph breaks, reference assignment.
     """
-    raw_text = "Para.\n\n- Item1.\n- Item2."
-    per_line_references = [1, 2, 3, 4]
+    doc_content = DocumentContent(
+        text="Para.\n\n- Item1.\n- Item2.",
+        lines_per_line=[1, 2, 3, 4],
+    )
 
-    result = get_sentences_with_reference_ranges(raw_text, per_line_references)
+    result = get_sentences_with_reference_ranges(doc_content)
 
     expected = [
         SentenceWithRange("Para.", (1, 1)),
@@ -105,10 +116,20 @@ def test_split_sentences_empty_or_blanks():
     Expected: Empty list for both cases.
     Tests: Edge cases for empty input, blank line handling.
     """
-    result_empty = get_sentences_with_reference_ranges("")
+    doc_content = DocumentContent(
+        text="",
+        lines_per_line=[1],
+    )
+
+    result_empty = get_sentences_with_reference_ranges(doc_content)
     assert result_empty == []
 
-    result_blanks = get_sentences_with_reference_ranges("\n\n")
+    doc_content = DocumentContent(
+        text="\n\n",
+        lines_per_line=[1, 2, 3],
+    )
+
+    result_blanks = get_sentences_with_reference_ranges(doc_content)
     assert result_blanks == []
 
 

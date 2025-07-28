@@ -8,6 +8,9 @@ from typing import Optional, List
 from archive_agent.util.text_util import splitlines_exact
 
 
+ReferenceList = List[int]
+
+
 @dataclass
 class DocumentContent:
     """
@@ -49,3 +52,17 @@ class DocumentContent:
                 f"text={json.dumps(text_lines, indent=2, default=str)}\n"
                 f"lines_per_line={json.dumps(self.pages_per_line, indent=2, default=str)}\n"
             )
+
+    def get_per_line_references(self) -> ReferenceList:
+        """
+        Get per-line page or line references.
+        """
+        is_page_based = self.pages_per_line is not None
+        if is_page_based:
+            per_line_references = self.pages_per_line
+        else:
+            per_line_references = self.lines_per_line
+
+        assert per_line_references is not None, "Missing references (WTF, please report)"
+
+        return per_line_references

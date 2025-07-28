@@ -237,19 +237,12 @@ class FileData:
             self.ai.cli.logger.warning(f"Failed to process {format_file(self.file_path)}")
             return False
 
-        # Select page or line references for this file
-        is_page_based = doc_content.pages_per_line is not None
-        if is_page_based:
-            per_line_references = doc_content.pages_per_line
-        else:
-            per_line_references = doc_content.lines_per_line
+        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-        assert per_line_references is not None, "Missing references (WTF, please report)"
-
-        # TODO: Refactor to pass DocumentContent instead of tuple
         # Use preprocessing and NLP (spaCy) to split text into sentences, keeping track of references.
-        sentences_with_reference_ranges = get_sentences_with_reference_ranges(doc_content.text, per_line_references)
+        sentences_with_reference_ranges = get_sentences_with_reference_ranges(doc_content)
 
+        # Group sentences into chunks, keeping track of references.
         chunks = get_chunks_with_reference_ranges(
             sentences_with_references=sentences_with_reference_ranges,
             chunk_callback=self.chunk_callback,

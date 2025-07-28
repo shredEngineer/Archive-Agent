@@ -99,11 +99,10 @@ from spacy.tokens import Doc
 import bisect
 
 from archive_agent.ai.chunk.AiChunk import ChunkSchema
+from archive_agent.data.DocumentContent import DocumentContent, ReferenceList
 from archive_agent.util.format import format_file
 from archive_agent.util.text_util import splitlines_exact
 
-
-ReferenceList = List[int]
 SentenceRange = Tuple[int, int]
 
 
@@ -339,20 +338,20 @@ def _extract_sentences_with_reference_ranges(
 
 
 # noinspection PyDefaultArgument
-def get_sentences_with_reference_ranges(text: str, per_line_references: ReferenceList = []) -> List[SentenceWithRange]:
+def get_sentences_with_reference_ranges(doc_content: DocumentContent) -> List[SentenceWithRange]:
     """
     Use preprocessing and NLP (spaCy) to split text into sentences, keeping track of references.
 
     Processes text with paragraph and sentence handling, inferring ranges from provided references (lines or pages)
     if available, or defaulting to (0, 0).
 
-    :param text: Input text (arbitrary, may have blank lines).
-    :param per_line_references: Per-line reference numbers (e.g., absolute line or page numbers).
+    :param doc_content: Document content.
     :return: List of SentenceWithRange (text and range pairs).
     """
-    clean_lines = text_to_clean_lines(text)
-
-    paragraphs_with_reference_ranges = _extract_paragraphs_with_reference_ranges(clean_lines, per_line_references)
+    paragraphs_with_reference_ranges = _extract_paragraphs_with_reference_ranges(
+        lines=text_to_clean_lines(doc_content.text),
+        per_line_references=doc_content.get_per_line_references(),
+    )
 
     return _extract_sentences_with_reference_ranges(
         paragraphs_with_reference_ranges=paragraphs_with_reference_ranges,
