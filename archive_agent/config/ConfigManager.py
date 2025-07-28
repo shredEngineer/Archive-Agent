@@ -32,6 +32,7 @@ class ConfigManager(StorageManager, AiProviderKeys):
 
     OCR_STRATEGY = 'ocr_strategy'
     OCR_AUTO_THRESHOLD = 'ocr_auto_threshold'
+    IMAGE_OCR = 'image_ocr'
     IMAGE_ENTITY_EXTRACT = 'image_entity_extract'
 
     CHUNK_LINES_BLOCK = 'chunk_lines_block'
@@ -48,7 +49,7 @@ class ConfigManager(StorageManager, AiProviderKeys):
     EXPAND_CHUNKS_RADIUS = 'expand_chunks_radius'
 
     DEFAULT_CONFIG = {
-        CONFIG_VERSION: 9,  # TODO:  DON'T FORGET TO UPDATE BOTH  `CONFIG_VERSION`  AND  `upgrade()`
+        CONFIG_VERSION: 10,  # TODO:  DON'T FORGET TO UPDATE BOTH  `CONFIG_VERSION`  AND  `upgrade()`
 
         MCP_SERVER_PORT: 8008,
 
@@ -57,6 +58,7 @@ class ConfigManager(StorageManager, AiProviderKeys):
 
         OCR_AUTO_THRESHOLD: 32,
 
+        IMAGE_OCR: "true",
         IMAGE_ENTITY_EXTRACT: "true",
 
         CHUNK_LINES_BLOCK: 100,
@@ -248,6 +250,13 @@ class ConfigManager(StorageManager, AiProviderKeys):
         if version < 9:
             self._set_version(9)
             self._add_option(self.CHUNK_WORDS_TARGET)
+            upgraded = True
+
+        # Option(s) added in v10:
+        # - `image_ocr`
+        if version < 10:
+            self._set_version(10)
+            self._add_option(self.IMAGE_OCR)
             upgraded = True
 
         return upgraded

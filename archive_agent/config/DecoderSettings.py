@@ -23,6 +23,7 @@ class DecoderSettings:
             self,
             ocr_strategy: OcrStrategy,
             ocr_auto_threshold: int,
+            image_ocr: bool,
             image_entity_extract: bool,
     ):
         """
@@ -30,15 +31,24 @@ class DecoderSettings:
         :param ocr_strategy: OCR strategy.
         :param ocr_auto_threshold: Minimum number of characters for `auto` OCR strategy
                                    to resolve to `relaxed` instead of `strict`.
-        :param image_entity_extract: True for entity extraction, False for OCR.
+        :param image_entity_extract: Enables OCR.
+        :param image_entity_extract: Enables entity extraction.
         """
         self.ocr_strategy = ocr_strategy
         self.ocr_auto_threshold = ocr_auto_threshold
+        self.image_ocr = image_ocr
         self.image_entity_extract = image_entity_extract
 
         logger.info(f"Using OCR strategy: '{self.ocr_strategy.value}'")
 
+        vision_features = []
+
+        if self.image_ocr:
+            vision_features.append('OCR')
+
         if self.image_entity_extract:
-            logger.info(f"Vision uses combined OCR and entity extraction for image files")
-        else:
-            logger.info(f"Vision uses OCR for image files")
+            vision_features.append('Entity Extraction')
+
+        vision_features_str = ", ".join(vision_features)
+
+        logger.info(f"Enabled vision feature(s): {vision_features_str}")

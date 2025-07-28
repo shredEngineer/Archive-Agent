@@ -61,13 +61,15 @@ def is_pdf_document(file_path: str) -> bool:
 
 def load_pdf_document(
         file_path: str,
-        image_to_text_callback: Optional[ImageToTextCallback],
+        image_to_text_callback_page: Optional[ImageToTextCallback],
+        image_to_text_callback_image: Optional[ImageToTextCallback],
         decoder_settings: DecoderSettings,
 ) -> Optional[DocumentContent]:
     """
     Load PDF document.
     :param file_path: File path.
-    :param image_to_text_callback: Optional image-to-text callback.
+    :param image_to_text_callback_page: Optional image-to-text callback for pages (`strict` OCR strategy).
+    :param image_to_text_callback_image: Optional image-to-text callback for images (`relaxed` OCR strategy).
     :param decoder_settings: Decoder settings.
     :return: Document content if successful, None otherwise.
     """
@@ -80,13 +82,14 @@ def load_pdf_document(
 
     image_texts_per_page = None
 
-    if image_to_text_callback is None:
+    if image_to_text_callback_page is None or image_to_text_callback_image is None:
         logger.warning(f"Image vision is DISABLED in your current configuration")
     else:
         image_texts_per_page = extract_image_texts_per_page(
-            file_path,
-            page_contents,
-            image_to_text_callback,
+            file_path=file_path,
+            page_contents=page_contents,
+            image_to_text_callback_page=image_to_text_callback_page,
+            image_to_text_callback_image=image_to_text_callback_image,
         )
 
     return build_document_text_from_pages(page_contents, image_texts_per_page)
@@ -139,13 +142,15 @@ def build_document_text_from_pages(
 def extract_image_texts_per_page(
         file_path: str,
         page_contents: List[PdfPageContent],
-        image_to_text_callback: ImageToTextCallback,
+        image_to_text_callback_page: ImageToTextCallback,
+        image_to_text_callback_image: ImageToTextCallback,
 ) -> List[List[str]]:
     """
     Extract text from images per page.
     :param file_path: File path (used for logging only).
     :param page_contents: PDF page contents.
-    :param image_to_text_callback: Image-to-text callback.
+    :param image_to_text_callback_page: Optional image-to-text callback for pages (`strict` OCR strategy).
+    :param image_to_text_callback_image: Optional image-to-text callback for images (`relaxed` OCR strategy).
     :return: List of text results per page (one list of strings per page).
     """
     image_texts_per_page: List[List[str]] = []
@@ -169,7 +174,11 @@ def extract_image_texts_per_page(
 
                     logger.info(f"{log_header}: Converting to text")
 
-                    image_text = image_to_text_callback(image)
+                    if content.ocr_strategy == OcrStrategy.STRICT:
+                        image_text = image_to_text_callback_page(image)
+                    else:
+                        image_text = image_to_text_callback_image(image)
+
                     if image_text is None:
                         if content.ocr_strategy == OcrStrategy.STRICT:
                             image_texts.append(f"[Unprocessable page]")

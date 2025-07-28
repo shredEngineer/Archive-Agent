@@ -54,9 +54,20 @@ class FileData:
 
         self.points: List[PointStruct] = []
 
+        self.image_to_text_callback_combined = self.image_to_text_combined if self.ai.ai_provider.supports_vision else None
         self.image_to_text_callback_entity = self.image_to_text_entity if self.ai.ai_provider.supports_vision else None
         self.image_to_text_callback_ocr = self.image_to_text_ocr if self.ai.ai_provider.supports_vision else None
-        self.image_to_text_callback_combined = self.image_to_text_combined if self.ai.ai_provider.supports_vision else None
+
+        self.image_to_text_callback_page = self.image_to_text_callback_ocr
+
+        if self.decoder_settings.image_ocr and self.decoder_settings.image_entity_extract:
+            self.image_to_text_callback_image = self.image_to_text_callback_combined
+        elif self.decoder_settings.image_ocr:
+            self.image_to_text_callback_image = self.image_to_text_ocr
+        elif self.decoder_settings.image_entity_extract:
+            self.image_to_text_callback_image = self.image_to_text_callback_entity
+        else:
+            self.image_to_text_callback_image = None
 
         self.decoder_func: Optional[DecoderCallable] = self.get_decoder_func()
 
@@ -67,12 +78,9 @@ class FileData:
         :return: Decoder function or None if unsupported.
         """
         if is_image(self.file_path):
-            # Use combined for image when entity extraction enabled, else OCR
-            callback = self.image_to_text_callback_combined if self.decoder_settings.image_entity_extract \
-                else self.image_to_text_callback_ocr
             return lambda: load_image(
                 file_path=self.file_path,
-                image_to_text_callback=callback,
+                image_to_text_callback=self.image_to_text_callback_image,
             )
 
         elif is_plaintext(self.file_path):
@@ -86,19 +94,16 @@ class FileData:
             )
 
         elif is_binary_document(self.file_path):
-            # Use entity extraction for binary document when enabled, else OCR
-            callback = self.image_to_text_callback_entity if self.decoder_settings.image_entity_extract \
-                else self.image_to_text_callback_ocr
             return lambda: load_binary_document(
                 file_path=self.file_path,
-                image_to_text_callback=callback,
+                image_to_text_callback=self.image_to_text_callback_image,
             )
 
         elif is_pdf_document(self.file_path):
-            # Use OCR for PDF page
             return lambda: load_pdf_document(
                 file_path=self.file_path,
-                image_to_text_callback=self.image_to_text_callback_ocr,
+                image_to_text_callback_page=self.image_to_text_callback_page,
+                image_to_text_callback_image=self.image_to_text_callback_image,
                 decoder_settings=self.decoder_settings,
             )
 
@@ -145,11 +150,11 @@ class FileData:
         :param image: PIL Image object.
         :return: OCR text or None if failed.
         """
-        self.ai.cli.logger.info("Requesting vision with OCR")
+        self.ai.cli.logger.info("Requesting vision feature: OCR")
         self.ai.request_ocr()
         vision_result = self.image_to_text(image)
         if vision_result is not None:
-            return AiVisionOCR.format_vision_answer(vision_result)
+            return AiVisionOCR.format_vision_answer(vision_result=vision_result)
         else:
             return None
 
@@ -160,7 +165,7 @@ class FileData:
         :param image: PIL Image object.
         :return: Entity text or None if failed.
         """
-        self.ai.cli.logger.info("Requesting vision with entity extraction")
+        self.ai.cli.logger.info("Requesting vision feature: Entity Extraction")
         self.ai.request_entity()
         vision_result = self.image_to_text(image)
         if vision_result is not None:
@@ -170,21 +175,18 @@ class FileData:
 
     def image_to_text_combined(self, image: Image.Image) -> Optional[str]:
         """
-        Request vision with OCR followed by entity extraction on the image, format and join the results.
-
+        Request vision with OCR and entity extraction on the image, format and join the results.
         :param image: PIL Image object.
         :return: Combined text or None if any part failed.
         """
-        self.ai.cli.logger.info("Requesting vision with combined OCR and entity extraction")
+        self.ai.cli.logger.info("Requesting vision features: OCR, Entity Extraction")
 
-        # OCR first
         self.ai.request_ocr()
         vision_result_ocr = self.image_to_text(image)
         if vision_result_ocr is None:
             return None
-        text_ocr = AiVisionOCR.format_vision_answer(vision_result_ocr)
+        text_ocr = AiVisionOCR.format_vision_answer(vision_result=vision_result_ocr)
 
-        # Then entity extraction
         self.ai.request_entity()
         vision_result_entity = self.image_to_text(image)
         if vision_result_entity is None:

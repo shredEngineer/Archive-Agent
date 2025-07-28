@@ -31,7 +31,7 @@
 - **Includes local AI file system indexer**
 - Natively ingests [PDFs, images, Markdown, plaintext, Microsoft Word documents (experimental)](#which-files-are-processed)
 - [Selects and tracks files using patterns](#how-files-are-selected-for-tracking) like `~/Documents/*.pdf` 
-- Transcribes images using [automatic OCR](#ocr-strategies) and entity extraction
+- Transcribes images using [automatic OCR](#ocr-strategies) (experimental) and entity extraction
 - Changes are automatically synced to a local [Qdrant](https://qdrant.tech/) vector database.
 
 ---
@@ -265,10 +265,12 @@ At least 32 GiB RAM is recommended for smooth performance.
 - Text:
   - Plaintext: `.txt`, `.md`, `.markdown`
   - Documents:
-    - ASCII documents: `.html`, `.htm` (images **not** supported)
+    - ASCII documents: `.html`, `.htm` (images not supported)
     - Binary documents: `.odt`, `.docx` (including images)
-  - PDF documents: `.pdf` (including images; also see [OCR strategies](#ocr-strategies))
-- Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp` (supports combined OCR and entity extraction when `image_entity_extract` is enabled)
+  - PDF documents: `.pdf` (including images; see [OCR strategies](#ocr-strategies))
+- Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
+
+📌 **Note:** Images in HTML documents are currently not supported.
 
 ---
 
@@ -279,15 +281,12 @@ Ultimately, **Archive Agent** decodes everything to text like this:
 - Documents are converted to plaintext, images are extracted.
 - PDF documents are decoded according to the OCR strategy.
 - Images are decoded to text using AI vision.
-  - When `image_entity_extract` is `true`, combines OCR text and entity extraction, joined with a space, for improved embedding.
-  - When `image_entity_extract` is `false`, uses OCR only.
+  - Uses OCR, entity extraction, or both combined (default).
   - The vision model will reject unintelligible images.
   - *Entity extraction* extracts structured information from images.
   - Structured information is formatted as image description.
 
-⚠️ **Warning:** Entity extraction is still experimental; OCR can be used alternatively.
-
-See [Archive Agent settings](#archive-agent-settings): `image_entity_extract`
+See [Archive Agent settings](#archive-agent-settings): `image_ocr`, `image_entity_extract`
 
 📌 **Note:** Unsupported files are tracked but not processed.
 
@@ -311,8 +310,6 @@ For PDF documents, there are different OCR strategies supported by **Archive Age
   - Attempts to select the best OCR strategy for each page, based on the number of characters extracted from the PDF OCR text layer, if any.
   - Decides based on `ocr_auto_threshold`, the minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict`.
   - **Trade-off between cost, speed, and accuracy.**
-
-📌 **Note:** Images use a combined OCR and entity extraction mode when `image_entity_extract` is `true`, or OCR only when `false`. PDFs always use OCR based on the selected strategy.
 
 ⚠️ **Warning:** The `auto` OCR strategy is still experimental.
 PDF documents often contain small/scattered images related to page style/layout which cause overhead while contributing little information or even cluttering the result.
@@ -701,7 +698,8 @@ The profile configuration is contained in the profile folder as `config.json`.
 | `mcp_server_port`      | MCP server port (default `8008`)                                                                 |
 | `ocr_strategy`         | OCR strategy in [`DecoderSettings.py`](archive_agent/config/DecoderSettings.py)                  |
 | `ocr_auto_threshold`   | Minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict` |
-| `image_entity_extract` | Image handling: `true` uses combined OCR and entity extraction, `false` uses OCR only.           |
+| `image_ocr`            | Image handling: `true` enables OCR, `false` disables it.                                         |
+| `image_entity_extract` | Image handling: `true` enables entity extraction, `false` disables it.                           |
 | `chunk_lines_block`    | Number of lines per block for chunking                                                           |
 | `chunk_words_target`   | Target number of words per chunk                                                                 |
 | `qdrant_server_url`    | URL of the Qdrant server                                                                         |
@@ -811,7 +809,7 @@ To run unit tests, check types, and check style, run this:
 - [ ] PDF vector images may not convert as expected, due to missing tests. (Using `strict` OCR strategy would certainly help in the meantime.) 
 
 
-- [ ] Binary document page numbers (e.g., `.docx`) are not supported yet. **Microsoft Word document support is experimental!**
+- [ ] Binary document page numbers (e.g., `.docx`) are not supported yet; Microsoft Word document support is experimental.
 
 
 - [ ] References are only *approximate* due to paragraph/sentence splitting/joining in the chunking process.
