@@ -14,6 +14,8 @@ from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 class AiResult:
     """
     AI result.
+
+    💀 💀 💀 DO NOT TOUCH THIS FILE — INSTANCES OF THIS CLASS MAY ALREADY BE CACHED — REFACTORING WOULD BREAK COMPATIBILITY 💀 💀 💀
     """
 
     total_tokens: int = field(default=0)
