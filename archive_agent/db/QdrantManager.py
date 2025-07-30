@@ -98,10 +98,6 @@ class QdrantManager:
         if not quiet:
             logger.info(f"- ADDING {format_file(file_data.file_path)}")
 
-        if not file_data.process():
-            logger.warning(f"Failed to add file")
-            return False
-
         if len(file_data.points) == 0:
             logger.warning(f"Failed to add EMPTY file")
             return False

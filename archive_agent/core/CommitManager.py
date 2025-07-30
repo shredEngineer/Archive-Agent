@@ -1,24 +1,25 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import typer
+import concurrent.futures
 import logging
+from typing import Tuple, Optional, Any
+
+import typer
+from rich.progress import Progress
 
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
-
 from archive_agent.config.DecoderSettings import DecoderSettings
-
+from archive_agent.core.CliManager import CliManager
+from archive_agent.core.lock import file_lock
 from archive_agent.data.FileData import FileData
-
 from archive_agent.db.QdrantManager import QdrantManager
-
+from archive_agent.util.format import format_file
 from archive_agent.watchlist.WatchlistManager import TrackedFiles, WatchlistManager
 
-from archive_agent.util.format import format_file
-
-from archive_agent.core.lock import file_lock
-
 logger = logging.getLogger(__name__)
+
+MAX_WORKERS = 8
 
 
 class CommitManager:
@@ -28,6 +29,7 @@ class CommitManager:
 
     def __init__(
             self,
+            cli: CliManager,
             watchlist: WatchlistManager,
             ai_factory: AiManagerFactory,
             decoder_settings: DecoderSettings,
@@ -35,11 +37,13 @@ class CommitManager:
     ):
         """
         Initialize commit manager.
+        :param cli: CLI manager.
         :param watchlist: Watchlist manager.
         :param ai_factory: AI manager factory.
         :param decoder_settings: Decoder settings.
         :param qdrant: Qdrant manager.
         """
+        self.cli = cli
         self.watchlist = watchlist
         self.ai_factory = ai_factory
         self.decoder_settings = decoder_settings
@@ -89,6 +93,31 @@ class CommitManager:
             else:
                 self.commit_diff(removed_files)
 
+    def _process_file_data(
+            self,
+            file_data: FileData,
+            progress: Optional[Progress] = None,
+            overall_task_id: Optional[Any] = None
+    ) -> Tuple[FileData, bool]:
+        """
+        Wrapper to call file_data.process() and handle results for ThreadPoolExecutor, with progress reporting.
+        """
+        task_id = None
+        if progress:
+            task_id = progress.add_task(f"[cyan]↳[/cyan] {format_file(file_data.file_path)}", total=None, start=True)
+
+        success = file_data.process(progress, task_id)
+
+        # After processing, update the shared CLI manager's stats
+        self.cli.update_ai_usage(file_data.ai.ai_usage_stats)
+
+        if progress and task_id is not None:
+            progress.remove_task(task_id)
+            if overall_task_id is not None:
+                progress.update(overall_task_id, advance=1)
+
+        return file_data, success
+
     def commit_diff(self, tracked_files: TrackedFiles) -> None:
         """
         Commit tracked files.
@@ -115,20 +144,41 @@ class CommitManager:
                 _success = self.qdrant.remove(file_data)
                 self.watchlist.diff_mark_resolved(file_data)
 
-        for file_data in tracked_processable:
-            match file_data.file_meta['diff']:
-                case self.watchlist.DIFF_ADDED:
-                    if self.qdrant.add(file_data):
-                        self.watchlist.diff_mark_resolved(file_data)
+        files_to_process_in_parallel = [
+            fd for fd in tracked_processable if fd.file_meta['diff'] in [self.watchlist.DIFF_ADDED, self.watchlist.DIFF_CHANGED]
+        ]
+        files_to_process_sequentially = [
+            fd for fd in tracked_processable if fd.file_meta['diff'] == self.watchlist.DIFF_REMOVED
+        ]
 
-                case self.watchlist.DIFF_CHANGED:
-                    if self.qdrant.change(file_data):
-                        self.watchlist.diff_mark_resolved(file_data)
+        processed_results = []
+        if files_to_process_in_parallel:
+            with self.cli.progress_context("Files", total=len(files_to_process_in_parallel)) as (progress, overall_task_id):
+                with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                    future_to_filedata = {
+                        executor.submit(self._process_file_data, fd, progress, overall_task_id): fd
+                        for fd in files_to_process_in_parallel
+                    }
+                    for future in concurrent.futures.as_completed(future_to_filedata):
+                        file_data = future_to_filedata[future]
+                        try:
+                            processed_results.append(future.result())
+                        except Exception as exc:
+                            logger.error(f"An exception occurred while processing {format_file(file_data.file_path)}: {exc}")
+                            processed_results.append((file_data, False))
 
-                case self.watchlist.DIFF_REMOVED:
-                    if self.qdrant.remove(file_data):
-                        self.watchlist.diff_mark_resolved(file_data)
+        for file_data, success in processed_results:
+            if not success:
+                logger.warning(f"Failed to process {format_file(file_data.file_path)}")
+                continue
 
-                case _:
-                    logger.error(f"Invalid diff option: '{file_data.file_meta['diff']}'")
-                    raise typer.Exit(code=1)
+            if file_data.file_meta['diff'] == self.watchlist.DIFF_ADDED:
+                if self.qdrant.add(file_data):
+                    self.watchlist.diff_mark_resolved(file_data)
+            elif file_data.file_meta['diff'] == self.watchlist.DIFF_CHANGED:
+                if self.qdrant.change(file_data):
+                    self.watchlist.diff_mark_resolved(file_data)
+
+        for file_data in files_to_process_sequentially:
+            if self.qdrant.remove(file_data):
+                self.watchlist.diff_mark_resolved(file_data)

@@ -79,9 +79,7 @@ class AiManager(RetryManager):
         """
         Show AI token usage.
         """
-        if any([x > 0 for x in [
-            self.ai_usage_stats[category] for category in ['chunk', 'embed', 'rerank', 'query', 'vision']
-        ]]):
+        if any(self.ai_usage_stats.values()):
             self.cli.logger.info(
                 f"Used AI API token(s): "
                 f"({self.ai_usage_stats['chunk']}) chunking, "

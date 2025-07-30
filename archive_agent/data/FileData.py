@@ -3,6 +3,7 @@
 
 import uuid
 from typing import List, Optional, Dict, Any, Callable
+from rich.progress import Progress
 
 from PIL import Image
 
@@ -223,10 +224,11 @@ class FileData:
 
         return chunk_result
 
-    def process(self) -> bool:
+    def process(self, progress: Optional[Progress] = None, task_id: Optional[Any] = None) -> bool:
         """
         Process the file: decode, split, chunk, embed, and create points.
-
+        :param progress: A rich.progress.Progress object for progress reporting.
+        :param task_id: The task ID for the progress bar.
         :return: True if successful, False otherwise.
         """
 
@@ -258,13 +260,17 @@ class FileData:
 
         is_page_based = doc_content.pages_per_line is not None
 
+        if progress and task_id:
+            progress.update(task_id, total=len(chunks))
+
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
         for chunk_index, chunk in enumerate(chunks):
-            self.ai.cli.logger.info(
-                f"Processing chunk ({chunk_index + 1}) / ({len(chunks)}) "
-                f"of {format_file(self.file_path)}"
-            )
+            if self.ai.cli.VERBOSE_CHUNK:
+                self.ai.cli.logger.info(
+                    f"Processing chunk ({chunk_index + 1}) / ({len(chunks)}) "
+                    f"of {format_file(self.file_path)}"
+                )
 
             assert chunk.reference_range != (0, 0), "Invalid chunk reference range (WTF, please report)"
 
@@ -297,5 +303,8 @@ class FileData:
             point.vector = vector
 
             self.points.append(point)
+
+            if progress and task_id:
+                progress.update(task_id, advance=1)
 
         return True
