@@ -287,6 +287,8 @@ class CliManager:
 
         result: AiResult = callback()
 
+        self.update_ai_usage({"chunk": result.total_tokens})
+
         if CliManager.VERBOSE_USAGE:
             self.logger.info(f"Used ({result.total_tokens}) AI API token(s) for chunking")
 
@@ -316,6 +318,8 @@ class CliManager:
 
         result: AiResult = callback()
 
+        self.update_ai_usage({"rerank": result.total_tokens})
+
         if CliManager.VERBOSE_USAGE:
             self.logger.info(f"Used ({result.total_tokens}) AI API token(s) for reranking")
 
@@ -341,6 +345,8 @@ class CliManager:
 
         result: AiResult = callback()
 
+        self.update_ai_usage({"embed": result.total_tokens})
+
         if CliManager.VERBOSE_USAGE:
             self.logger.info(f"Used ({result.total_tokens}) AI API token(s) for embedding")
 
@@ -363,6 +369,8 @@ class CliManager:
 
         result: AiResult = callback()
 
+        self.update_ai_usage({"query": result.total_tokens})
+
         if CliManager.VERBOSE_USAGE:
             self.logger.info(f"Used ({result.total_tokens}) AI API token(s) for query")
 
@@ -384,6 +392,8 @@ class CliManager:
             self.logger.info("✨ Awaiting AI vision…")
 
         result: AiResult = callback()
+
+        self.update_ai_usage({"vision": result.total_tokens})
 
         if CliManager.VERBOSE_VISION:
             vision_result = cast(VisionSchema, result.parsed_schema)

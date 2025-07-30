@@ -79,6 +79,24 @@ A challenge is ensuring dynamic UI elements, like the AI token usage table, upda
 
 This solution is surgically precise. It confines all UI update logic to the single printer thread, fully respecting the existing locks and queues. It ensures the display is dynamic while upholding the system's foundational guarantees of safety and concurrency.
 
+This solution is surgically precise. It confines all UI update logic to the single printer thread, fully respecting the existing locks and queues. It ensures the display is dynamic while upholding the system's foundational guarantees of safety and concurrency.
+
+### 3.5. Challenge: Accurate Real-time Statistics
+
+Providing accurate, real-time updates for cumulative statistics like AI token usage is a significant challenge. The system solves this with a dual-mechanism architecture that balances liveness with correctness. Understanding the separation of concerns is critical.
+
+1.  **Authoritative Accounting in `AiManager`**: For each file being processed, a worker thread uses a dedicated `AiManager` instance. This instance is the **source of truth** for usage statistics, meticulously tracking detailed data like `prompt_tokens`, `completion_tokens`, and `cost`. At the end of a file's processing, `CommitManager` aggregates this detailed, accurate data. This final aggregation ensures the final numbers are always correct.
+
+2.  **Live UI Updates in `CliManager`**: The `CliManager` is responsible for the live display. The core challenge is that the `CliManager`'s formatting callbacks (e.g., `format_ai_chunk`) are only passed an `AiResult` object.
+    -   **CRITICAL DESIGN CONSTRAINT**: The `AiResult` class is effectively immutable due to its instances being cached. It cannot be changed. It only provides a `total_tokens` field for a given operation and lacks the detailed breakdown.
+
+**The Safe Architectural Pattern for Live Updates**:
+The solution is to use the `CliManager` to provide live updates to the UI without interfering with the authoritative accounting happening in `AiManager`.
+
+-   **Leverage Existing Methods**: The `CliManager` already has a thread-safe `update_ai_usage(stats: Dict[str, int])` method, which uses a lock to safely update the `ai_usage_stats` dictionary that backs the UI table.
+-   **Use Context for Categorization**: The implementation adds a single line inside each `format_ai_*` method (e.g., `format_ai_chunk`). This line calls `self.update_ai_usage()`. Because the call is made from within a specific formatting method, the category is known (e.g., `'chunk'`). The `result.total_tokens` is passed for that category.
+-   **Embrace the Dual System**: This approach provides immediate, real-time feedback in the UI. It does not attempt to replicate the detailed accounting of `AiManager`, which would be complex and error-prone. The live stats are for user feedback, and the final, authoritative stats from `CommitManager` ensure ultimate correctness. This avoids over-engineering and respects the system's established separation of concerns.
+
 ---
 
 ## 4. Best Practices for Development and Verification
