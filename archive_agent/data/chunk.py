@@ -48,8 +48,8 @@ def _normalize_inline_whitespace(text: str) -> str:
 
 
 def _extract_paragraph_sentences_with_reference_ranges(
-    paragraph_doc_content: DocumentContent,
-    nlp: Language
+        paragraph_doc_content: DocumentContent,
+        nlp: Language
 ) -> List[SentenceWithRange]:
     """
     Process a single paragraph block: Normalize, sentencize, and compute ranges.
@@ -334,12 +334,12 @@ def _format_chunk(file_path: str, header: str, body: str) -> str:
 
 
 def get_chunks_with_reference_ranges(
-    sentences_with_references: List[SentenceWithRange],
-    chunk_callback: Callable[[List[str]], ChunkSchema],
-    chunk_lines_block: int,
-    file_path: str,
-    logger: Logger,
-    verbose: bool = True,
+        sentences_with_references: List[SentenceWithRange],
+        chunk_callback: Callable[[List[str]], ChunkSchema],
+        chunk_lines_block: int,
+        file_path: str,
+        logger: Logger,
+        verbose: bool = True,
 ) -> List[ChunkWithRange]:
     """
     Chunkify a list of sentences into AI-determined chunks, carrying over leftover sentences where needed,
@@ -405,6 +405,10 @@ def get_chunks_with_reference_ranges(
         for i, (r_start, r_end) in enumerate(ranges[:-1] if carry else ranges):
             r_reference_ranges = block_sentence_reference_ranges[r_start - 1:r_end - 1]
             r_range = _aggregate_ranges(r_reference_ranges)
+            if r_range == (0, 0):
+                # AI returned `chunk_start_sentences` selecting empty lines only
+                logger.warning(f"Chunk {len(chunks_with_ranges) + 1}: Discarding empty chunk")
+                continue
 
             # DEBUG
             # logger.info(f"Chunk {len(chunks_with_ranges) + 1}: sentences {r_start}:{r_end}, range {r_range}")
@@ -425,6 +429,11 @@ def get_chunks_with_reference_ranges(
     if carry:
         assert last_carry_header is not None, "Internal error: carry exists but no header was recorded"
         assert carry_reference_ranges is not None
+        carry_range = _aggregate_ranges(carry_reference_ranges)
+        if carry_range == (0, 0):
+            logger.warning(f"Chunk {len(chunks_with_ranges) + 1}: Discarding empty chunk (final)")
+            return chunks_with_ranges
+
         carry_lines = splitlines_exact(carry)
         final_chunk_line_count: int = len(carry_lines)
 
@@ -436,7 +445,6 @@ def get_chunks_with_reference_ranges(
             header=last_carry_header,
             body=carry,
         )
-        carry_range = _aggregate_ranges(carry_reference_ranges)
         chunks_with_ranges.append(ChunkWithRange(formatted_carry, carry_range))
 
     return chunks_with_ranges
