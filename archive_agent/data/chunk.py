@@ -377,7 +377,8 @@ def get_chunks_with_reference_ranges(
         block_sentence_reference_ranges = sentence_reference_ranges[idx: idx + block_len]
         idx += block_len
 
-        logger.info(f"Chunking block ({block_index + 1}) / ({len(blocks_of_sentences)}) of {format_file(file_path)}")
+        if verbose:
+            logger.info(f"Chunking block ({block_index + 1}) / ({len(blocks_of_sentences)}) of {format_file(file_path)}")
 
         if carry:
             assert carry_reference_ranges is not None
