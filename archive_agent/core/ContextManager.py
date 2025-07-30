@@ -67,6 +67,8 @@ class ContextManager:
 
         self.ai_cache = CacheManager(
             cache_path=settings_path / self.profile_manager.get_profile_name() / "ai_cache",
+            invalidate_cache=self.invalidate_cache,
+            verbose=verbose,
         )
 
         self.ai_factory = AiManagerFactory(
@@ -103,6 +105,7 @@ class ContextManager:
         )
 
         self.committer = CommitManager(
+            cli=self.cli,
             watchlist=self.watchlist,
             ai_factory=self.ai_factory,
             decoder_settings=self.decoder_settings,
@@ -140,3 +143,14 @@ class ContextManager:
             model_vision=self.config.data[self.config.AI_MODEL_VISION],
             temperature_query=self.config.data[self.config.AI_TEMPERATURE_QUERY],
         )
+
+    def usage(self):
+        """
+        Show AI token usage.
+        """
+
+        # Add base AI usage to CLI total usage stats
+        for category in ['chunk', 'embed', 'rerank', 'query', 'vision']:
+            self.cli.ai_usage_stats[category] += self.ai_base.ai_usage_stats[category]
+
+        self.cli.usage()

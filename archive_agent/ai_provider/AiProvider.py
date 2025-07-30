@@ -63,18 +63,11 @@ class AiProvider(ABC):
         cache_str = f"{cache_key_prefix}:{callback_kwargs_str}:{params_str}"
         cache_key = hashlib.sha256(cache_str.encode('utf-8')).hexdigest()
 
-        if self.invalidate_cache:
-            self.logger.info(f"Cache read bypassed (--nocache) for '{cache_key_prefix}'")
-
-        elif cache_key in self.cache:
-            # Cache read.
-            self.logger.info(f"Cache hit for '{cache_key_prefix}'")
-            ai_result: AiResult = cast(AiResult, self.cache[cache_key])
+        cached_result = self.cache.get(key=cache_key, display_key=cache_key_prefix)
+        if cached_result is not None:
+            ai_result: AiResult = cast(AiResult, cached_result)
             ai_result.total_tokens = 0  # Cached result consumed no tokens
             return ai_result
-
-        else:
-            self.logger.info(f"Cache miss for '{cache_key_prefix}'")
 
         result: AiResult = callback(**callback_kwargs)
 

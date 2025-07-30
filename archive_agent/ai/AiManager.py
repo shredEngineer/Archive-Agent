@@ -52,11 +52,13 @@ class AiManager(RetryManager):
 
         self.ai_provider = ai_provider
 
-        self.total_tokens_chunk = 0
-        self.total_tokens_embed = 0
-        self.total_tokens_rerank = 0
-        self.total_tokens_query = 0
-        self.total_tokens_vision = 0
+        self.ai_usage_stats = {
+            "chunk": 0,
+            "embed": 0,
+            "rerank": 0,
+            "query": 0,
+            "vision": 0
+        }
 
         # NOTE: This switches between `AiVisionEntity` and `AiVisionOCR` modules
         self.requested: Optional[AiVisionRequest] = None
@@ -73,20 +75,20 @@ class AiManager(RetryManager):
         if not self.ai_provider.supports_vision:
             self.cli.logger.warning(f"Image vision is DISABLED in your current configuration")
 
-    def usage(self) -> None:
+    def usage(self):
         """
-        Show usage.
+        Show AI token usage.
         """
         if any([x > 0 for x in [
-            self.total_tokens_chunk, self.total_tokens_embed, self.total_tokens_rerank, self.total_tokens_query, self.total_tokens_vision
+            self.ai_usage_stats[category] for category in ['chunk', 'embed', 'rerank', 'query', 'vision']
         ]]):
             self.cli.logger.info(
                 f"Used AI API token(s): "
-                f"({self.total_tokens_chunk}) chunking, "
-                f"({self.total_tokens_embed}) embedding, "
-                f"({self.total_tokens_rerank}) reranking, "
-                f"({self.total_tokens_query}) query, "
-                f"({self.total_tokens_vision}) vision"
+                f"({self.ai_usage_stats['chunk']}) chunking, "
+                f"({self.ai_usage_stats['embed']}) embedding, "
+                f"({self.ai_usage_stats['rerank']}) reranking, "
+                f"({self.ai_usage_stats['query']}) query, "
+                f"({self.ai_usage_stats['vision']}) vision"
             )
         else:
             self.cli.logger.info(f"No AI API tokens used")
@@ -105,7 +107,7 @@ class AiManager(RetryManager):
         for _ in range(retries):
             try:
                 result: AiResult = self.cli.format_ai_chunk(callback=lambda: self.retry(callback), line_numbered_text=line_numbered_text)
-                self.total_tokens_chunk += result.total_tokens
+                self.ai_usage_stats['chunk'] += result.total_tokens
 
                 if result.parsed_schema is None:
                     self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
@@ -152,7 +154,7 @@ class AiManager(RetryManager):
         callback = lambda: self.ai_provider.embed_callback(text)
 
         result: AiResult = self.cli.format_ai_embed(callback=lambda: self.retry(callback), text=text)
-        self.total_tokens_embed += result.total_tokens
+        self.ai_usage_stats['embed'] += result.total_tokens
         assert result.embedding is not None
         return result.embedding
 
@@ -171,7 +173,7 @@ class AiManager(RetryManager):
         for _ in range(retries):
             try:
                 result: AiResult = self.cli.format_ai_rerank(callback=lambda: self.retry(callback), indexed_chunks=indexed_chunks)
-                self.total_tokens_rerank += result.total_tokens
+                self.ai_usage_stats['rerank'] += result.total_tokens
 
                 if result.parsed_schema is None:
                     self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
@@ -217,7 +219,7 @@ class AiManager(RetryManager):
         callback = lambda: self.ai_provider.query_callback(prompt=prompt)
 
         result: AiResult = self.cli.format_ai_query(callback=lambda: self.retry(callback), prompt=prompt)
-        self.total_tokens_query += result.total_tokens
+        self.ai_usage_stats['query'] += result.total_tokens
         assert result.parsed_schema is not None
         query_result = cast(QuerySchema, result.parsed_schema)
         query_result = AiQuery.format_query_references(logger=self.cli.logger, query_result=query_result, points=points)
@@ -246,7 +248,7 @@ class AiManager(RetryManager):
         callback = lambda: self.ai_provider.vision_callback(prompt=prompt, image_base64=image_base64)
 
         result: AiResult = self.cli.format_ai_vision(callback=lambda: self.retry(callback))
-        self.total_tokens_vision += result.total_tokens
+        self.ai_usage_stats['vision'] += result.total_tokens
         assert result.parsed_schema is not None
         vision_result = cast(VisionSchema, result.parsed_schema)
 

@@ -2,6 +2,7 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import logging
+from typing import Optional, Any
 from diskcache import Cache
 from pathlib import Path
 
@@ -13,12 +14,16 @@ class CacheManager:
     Cache manager.
     """
 
-    def __init__(self, cache_path: Path) -> None:
+    def __init__(self, cache_path: Path, invalidate_cache: bool = False, verbose: bool = False) -> None:
         """
         Initialize cache manager.
         :param cache_path: Cache path.
+        :param invalidate_cache: Invalidate cache if enabled, probe cache otherwise.
+        :param verbose: Verbosity switch.
         """
         self.cache_path = cache_path
+        self.invalidate_cache = invalidate_cache
+        self.verbose = verbose
 
         existed = (self.cache_path.exists() and any(self.cache_path.iterdir()))
 
@@ -28,6 +33,27 @@ class CacheManager:
             logger.info(f"Loaded cache at {self.cache_path}")
         else:
             logger.info(f"Created cache at {self.cache_path}")
+
+    def get(self, key: str, display_key: str) -> Optional[Any]:
+        """
+        Get value from cache.
+        :param key: Key.
+        :param display_key: Display key (human-readable).
+        :return: Value.
+        """
+        if self.invalidate_cache:
+            if self.verbose:
+                logger.info(f"Cache read bypassed (--nocache) for '{display_key}'")
+            return None
+
+        if key in self.cache:
+            if self.verbose:
+                logger.info(f"Cache hit for '{display_key}'")
+            return self.cache[key]
+        else:
+            if self.verbose:
+                logger.info(f"Cache miss for '{display_key}'")
+            return None
 
     def __contains__(self, key):
         return key in self.cache
