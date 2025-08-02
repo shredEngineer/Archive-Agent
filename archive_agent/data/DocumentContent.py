@@ -43,14 +43,9 @@ class DocumentContent:
         self._text = "\n".join(lines)
 
     def validate(self):
-        # NOTE: Chunks that were added before v5.0.0 don't have the fields `page_range` and `line_range.
-        #       This is handled gracefully in `get_point_reference_info()`.
-        #       HOWEVER, since the code constructing this object is beyond v5.0.0, it MUST include one.
         if self.lines_per_line is None and self.pages_per_line is None:
             raise ValueError("Require exactly one of `pages_per_line` or `lines_per_line`")
 
-        # NOTE: Beginning with v5.0.0, source document pages or lines info is included in point payload.
-        #       Exactly one of the fields must be set.
         if self.lines_per_line is not None and self.pages_per_line is not None:
             raise ValueError("Only one of `pages_per_line` or `lines_per_line` can be set")
 
