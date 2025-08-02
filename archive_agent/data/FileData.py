@@ -1,6 +1,8 @@
 # Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 # This file is part of Archive Agent. See LICENSE for details.
 
+from archive_agent import __version__
+
 import uuid
 from typing import List, Optional, Dict, Any, Callable
 from rich.progress import Progress
@@ -293,14 +295,15 @@ class FileData:
                 'chunk_index': chunk_index,
                 'chunks_total': len(chunks),
                 'chunk_text': chunk.text,
+                'version': f"v{__version__}",  # added in v7.4.0
             }
 
             min_r, max_r = chunk.reference_range
             range_list = [min_r, max_r] if min_r != max_r else [min_r]
             if is_page_based:
-                payload['page_range'] = range_list
+                payload['page_range'] = range_list  # added in v5.0.0
             else:
-                payload['line_range'] = range_list
+                payload['line_range'] = range_list  # added in v5.0.0
 
             point = PointStruct(
                 id=str(uuid.uuid4()),

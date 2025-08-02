@@ -1,8 +1,6 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-from archive_agent import __version__
-
 import typer
 import logging
 from typing import List, Tuple, Dict
@@ -99,12 +97,6 @@ class QdrantManager:
         if len(file_data.points) == 0:
             logger.warning(f"Failed to add EMPTY file")
             return False
-
-        version_stamp = f"v{__version__}"
-        logger.info(f"Version-stamping vector(s): {version_stamp}")
-        for point in file_data.points:
-            assert point.payload is not None  # makes pyright happy
-            point.payload['version'] = version_stamp  # added in v7.4.0
 
         partial_size = 100
         num_points_added = 0
