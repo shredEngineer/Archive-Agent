@@ -29,7 +29,7 @@
 ## Natively index your documents on-device
 
 - **Includes local AI file system indexer**
-- Natively ingests [PDFs, images, Markdown, plaintext, Microsoft Word documents (experimental)](#which-files-are-processed)
+- Natively ingests [PDFs, images, Markdown, plaintext, and more…](#which-files-are-processed)
 - [Selects and tracks files using patterns](#how-files-are-selected-for-tracking) like `~/Documents/*.pdf` 
 - Transcribes images using [automatic OCR](#ocr-strategies) (experimental) and entity extraction
 - Changes are automatically synced to a local [Qdrant](https://qdrant.tech/) vector database.
@@ -271,6 +271,8 @@ At least 32 GiB RAM is recommended for smooth performance.
 - Images: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.bmp`
 
 📌 **Note:** Images in HTML documents are currently not supported.
+
+📌 **Note:** Legacy `.doc` files are currently not supported.
 
 ---
 
