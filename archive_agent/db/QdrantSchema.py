@@ -26,7 +26,15 @@ class QdrantPayload(BaseModel):
     def validate_ranges(self) -> 'QdrantPayload':
         """
         Custom validator: Ensure at most one of page_range or line_range is set (project-specific rule).
+        Also normalizes empty ranges to None for consistency.
         """
+        # Normalize empty ranges to None
+        if self.page_range is not None and len(self.page_range) == 0:
+            self.page_range = None
+        if self.line_range is not None and len(self.line_range) == 0:
+            self.line_range = None
+
+        # Ensure mutual exclusivity
         if self.page_range is not None and self.line_range is not None:
             raise ValueError("Payload cannot have both 'page_range' and 'line_range' set.")
         return self
@@ -47,5 +55,5 @@ def parse_payload(payload_dict: Optional[Dict[str, Any]]) -> QdrantPayload:
     try:
         return QdrantPayload(**payload_dict)
     except ValidationError as e:
-        # Re-raise the original ValidationError with additional context
+        # Re-raise the original ValidationError (Pydantic errors are already informative)
         raise e

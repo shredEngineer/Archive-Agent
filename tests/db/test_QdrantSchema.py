@@ -189,6 +189,38 @@ class TestQdrantPayload:
 
         assert payload.line_range == [42]
 
+    def test_empty_ranges_normalized_to_none(self):
+        """Test that empty ranges are normalized to None."""
+        payload = QdrantPayload(
+            file_path="/home/user/test.txt",
+            file_mtime=1640995200.0,
+            chunk_index=5,
+            chunks_total=10,
+            chunk_text="This is test chunk content.",
+            version="v1.0.0",
+            page_range=[],  # Empty list should become None
+            line_range=None
+        )
+
+        assert payload.page_range is None  # Should be normalized from []
+        assert payload.line_range is None
+
+    def test_empty_line_range_normalized_to_none(self):
+        """Test that empty line_range is normalized to None."""
+        payload = QdrantPayload(
+            file_path="/home/user/test.txt",
+            file_mtime=1640995200.0,
+            chunk_index=5,
+            chunks_total=10,
+            chunk_text="This is test chunk content.",
+            version="v1.0.0",
+            page_range=None,
+            line_range=[]  # Empty list should become None
+        )
+
+        assert payload.page_range is None
+        assert payload.line_range is None  # Should be normalized from []
+
 
 class TestParsePayload:
     """Test suite for parse_payload function."""
