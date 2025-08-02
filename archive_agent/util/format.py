@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from qdrant_client.http.models import ScoredPoint, PointStruct
+from archive_agent.db.QdrantSchema import parse_payload
 
 logger = logging.getLogger(__name__)
 
@@ -48,16 +49,13 @@ def get_point_page_line_info(point: ScoredPoint | PointStruct) -> Optional[str]:
     :param point: Point.
     :return: Page or line info (optional).
     """
-    assert point.payload is not None  # makes pyright happy
-
-    if 'page_range' in point.payload and point.payload['page_range']:
-        r = point.payload['page_range']
+    model = parse_payload(point.payload)
+    if model.page_range is not None and model.page_range:
+        r = model.page_range
         return f"pages {r[0]}–{r[-1]}" if len(r) > 1 else f"page {r[0]}"
-
-    elif 'line_range' in point.payload and point.payload['line_range']:
-        r = point.payload['line_range']
+    elif model.line_range is not None and model.line_range:
+        r = model.line_range
         return f"lines {r[0]}–{r[-1]}" if len(r) > 1 else f"line {r[0]}"
-
     else:
         return None
 
@@ -71,9 +69,8 @@ def get_point_reference_info(point: ScoredPoint, verbose: bool = False) -> str:
     :param verbose: Append additional chunk info
     :return: Point reference info.
     """
-    assert point.payload is not None  # makes pyright happy
-
-    chunk_info = f"chunk {point.payload['chunk_index'] + 1}/{point.payload['chunks_total']}"
+    model = parse_payload(point.payload)
+    chunk_info = f"chunk {model.chunk_index + 1}/{model.chunks_total}"
 
     page_line_info = get_point_page_line_info(point)
 
@@ -84,10 +81,10 @@ def get_point_reference_info(point: ScoredPoint, verbose: bool = False) -> str:
     else:
         origin_info = f"{chunk_info}"
 
-    reference_info = f"{format_file(point.payload['file_path'])} · {origin_info}"
+    reference_info = f"{format_file(model.file_path)} · {origin_info}"
 
     if verbose:
-        reference_info += f" · {format_time(point.payload['file_mtime'])}"
+        reference_info += f" · {format_time(model.file_mtime)}"
 
     if page_line_info is None:
         logger.warning(

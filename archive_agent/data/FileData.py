@@ -11,6 +11,7 @@ from rich.progress import Progress
 from PIL import Image
 
 from qdrant_client.models import PointStruct
+from archive_agent.db.QdrantSchema import QdrantPayload
 
 from archive_agent.ai.AiManager import AiManager
 from archive_agent.ai.chunk.AiChunk import ChunkSchema
@@ -290,21 +291,25 @@ class FileData:
 
             vector = self.ai.embed(text=chunk.text)
 
-            payload = {
-                'file_path': self.file_path,
-                'file_mtime': self.file_meta['mtime'],
-                'chunk_index': chunk_index,
-                'chunks_total': len(chunks),
-                'chunk_text': chunk.text,
-                'version': f"v{__version__}",  # added in v7.4.0
-            }
+            payload_model = QdrantPayload(
+                file_path=self.file_path,
+                file_mtime=self.file_meta['mtime'],
+                chunk_index=chunk_index,
+                chunks_total=len(chunks),
+                chunk_text=chunk.text,
+                version=f"v{__version__}",
+                page_range=None,
+                line_range=None,
+            )
 
             min_r, max_r = chunk.reference_range
             range_list = [min_r, max_r] if min_r != max_r else [min_r]
             if is_page_based:
-                payload['page_range'] = range_list  # added in v5.0.0
+                payload_model.page_range = range_list
             else:
-                payload['line_range'] = range_list  # added in v5.0.0
+                payload_model.line_range = range_list
+
+            payload = payload_model.model_dump()
 
             point = PointStruct(
                 id=str(uuid.uuid4()),

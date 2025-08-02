@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict
 from qdrant_client.http.models import ScoredPoint
 
 from archive_agent.util.format import get_point_reference_info
+from archive_agent.db.QdrantSchema import parse_payload
 
 
 class AnswerItem(BaseModel):
@@ -113,17 +114,13 @@ class AiQuery:
         :param point: Point.
         :return: Point hash (16-character hex, SHA-1).
         """
-        assert point.payload is not None  # makes pyright happy
-
-        payload = point.payload
-
-        chunk_index = str(payload['chunk_index'])
-        chunks_total = str(payload['chunks_total'])
-        file_path = str(payload['file_path'])
-        file_mtime = str(payload['file_mtime'])
-
-        line_range = str(payload.get('line_range', ''))
-        page_range = str(payload.get('page_range', ''))
+        model = parse_payload(point.payload)
+        chunk_index = str(model.chunk_index)
+        chunks_total = str(model.chunks_total)
+        file_path = str(model.file_path)
+        file_mtime = str(model.file_mtime)
+        line_range = str(model.line_range or '')
+        page_range = str(model.page_range or '')
 
         point_str = "".join([
             chunk_index,
@@ -147,10 +144,9 @@ class AiQuery:
         return "\n\n\n\n".join([
             "\n\n".join([
                 f"<<< {AiQuery.get_point_hash(point)} >>>",
-                f"{point.payload['chunk_text']}\n",
+                f"{parse_payload(point.payload).chunk_text}\n",
             ])
             for point in points
-            if point.payload is not None  # makes pyright happy
         ])
 
     @staticmethod

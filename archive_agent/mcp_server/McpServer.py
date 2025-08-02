@@ -10,6 +10,7 @@ from archive_agent.core.ContextManager import ContextManager
 from archive_agent.ai.query.AiQuery import QuerySchema
 
 from qdrant_client.models import ScoredPoint
+from archive_agent.db.QdrantSchema import parse_payload
 
 logger = logging.getLogger(__name__)
 
@@ -81,8 +82,8 @@ async def get_search_result(question: str) -> Dict[str, Any]:
     assert _context is not None  # makes pyright happy
     points: List[ScoredPoint] = _context.qdrant.search(question)
     return {
-        point.payload["file_path"]: point.score
-        for point in points if point.payload
+        parse_payload(point.payload).file_path: point.score
+        for point in points
     }
 
 

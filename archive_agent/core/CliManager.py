@@ -27,6 +27,7 @@ from archive_agent.ai.query.AiQuery import QuerySchema
 from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 
 from archive_agent.util.format import format_chunk_brief, get_point_reference_info
+from archive_agent.db.QdrantSchema import parse_payload
 
 
 class QueueHandler(Handler):
@@ -440,7 +441,7 @@ class CliManager:
             self.format_point(point)
 
             if CliManager.VERBOSE_RETRIEVAL:
-                self.format_chunk(point.payload['chunk_text'])
+                self.format_chunk(parse_payload(point.payload).chunk_text)
 
     def format_reranked_points(self, points: List[ScoredPoint]) -> None:
         """
@@ -460,7 +461,7 @@ class CliManager:
             self.format_point(point)
 
             if CliManager.VERBOSE_RERANK:
-                self.format_chunk(point.payload['chunk_text'])
+                self.format_chunk(parse_payload(point.payload).chunk_text)
 
     def format_expanded_deduped_points(self, points: List[ScoredPoint]) -> None:
         """
@@ -480,7 +481,7 @@ class CliManager:
             self.format_point(point)
 
             if CliManager.VERBOSE_RERANK:
-                self.format_chunk(point.payload['chunk_text'])
+                self.format_chunk(parse_payload(point.payload).chunk_text)
 
     def format_chunk(self, chunk: str) -> None:
         """

@@ -24,6 +24,7 @@ from archive_agent.ai.query.AiQuery import AiQuery, QuerySchema
 from archive_agent.data.FileData import FileData
 from archive_agent.core.CliManager import CliManager
 from archive_agent.util.format import format_file
+from archive_agent.db.QdrantSchema import parse_payload
 
 logger = logging.getLogger(__name__)
 
@@ -217,9 +218,8 @@ class QdrantManager:
         if len(points) > 1:  # Rerank points
 
             indexed_chunks = {
-                index: point.payload['chunk_text']
+                index: parse_payload(point.payload).chunk_text
                 for index, point in enumerate(points)
-                if point.payload is not None  # makes pyright happy
             }
 
             reranked_schema = self.ai.rerank(question=question, indexed_chunks=indexed_chunks)
@@ -273,12 +273,11 @@ class QdrantManager:
             logger.exception(f"Qdrant query failed: {e}")
             raise typer.Exit(code=1)
 
-        points = sorted(response.points, key=lambda point: (point.payload or {}).get('chunk_index', 0))  # makes pyright happy
+        points = sorted(response.points, key=lambda point: parse_payload(point.payload).chunk_index)
 
         indices_found = {
-            point.payload['chunk_index']
+            parse_payload(point.payload).chunk_index
             for point in points
-            if point.payload is not None  # makes pyright happy
         }
         indices_missing = set(chunk_indices) - indices_found
         if indices_missing:
@@ -295,19 +294,14 @@ class QdrantManager:
         points_expanded = []
 
         for point in points:
-
-            assert point.payload is not None  # makes pyright happy
-
+            model = parse_payload(point.payload)
             points_expanded.extend(
                 self._get_points(
-                    file_path=point.payload['file_path'],
+                    file_path=model.file_path,
                     chunk_indices=[
                         index for index in range(
-                            max(
-                                0,
-                                point.payload['chunk_index'] - self.expand_chunks_radius
-                            ),
-                            point.payload['chunk_index']
+                            max(0, model.chunk_index - self.expand_chunks_radius),
+                            model.chunk_index
                         )
                     ],
                 )
@@ -317,13 +311,13 @@ class QdrantManager:
 
             points_expanded.extend(
                 self._get_points(
-                    file_path=point.payload['file_path'],
+                    file_path=model.file_path,
                     chunk_indices=[
                         index for index in range(
-                            point.payload['chunk_index'] + 1,
+                            model.chunk_index + 1,
                             min(
-                                point.payload['chunks_total'],
-                                point.payload['chunk_index'] + self.expand_chunks_radius + 1
+                                model.chunks_total,
+                                model.chunk_index + self.expand_chunks_radius + 1
                             )
                         )
                     ],
@@ -342,13 +336,10 @@ class QdrantManager:
         seen = set()
         duplicates_by_file = {}
         for point in points:
-
-            assert point.payload is not None  # makes pyright happy
-
-            key = (point.payload['file_path'], point.payload['chunk_index'])
+            model = parse_payload(point.payload)
+            key = (model.file_path, model.chunk_index)
             if key in seen:
-                file_path = point.payload['file_path']
-                duplicates_by_file.setdefault(file_path, set()).add(point.payload['chunk_index'])
+                duplicates_by_file.setdefault(model.file_path, set()).add(model.chunk_index)
             else:
                 seen.add(key)
                 unique_points.append(point)
@@ -410,7 +401,7 @@ class QdrantManager:
                 with_payload=True,
             )
 
-            unique_files = len({point.payload['file_path'] for point in scroll_result[0] if point.payload is not None})
+            unique_files = len({parse_payload(point.payload).file_path for point in scroll_result[0]})
 
         except UnexpectedResponse as e:
             logger.exception(f"Qdrant count failed: {e}")
