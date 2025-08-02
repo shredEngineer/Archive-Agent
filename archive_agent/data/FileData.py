@@ -246,9 +246,13 @@ class FileData:
         doc_content.strip_lines()
 
         # Use preprocessing and NLP (spaCy) to split text into sentences, keeping track of references.
+        if self.ai.cli.VERBOSE_CHUNK:
+            self.ai.cli.logger.info(f"Extracting sentences across ({len(doc_content.lines)}) lines")
         sentences_with_reference_ranges = get_sentences_with_reference_ranges(doc_content)
 
         # Group sentences into chunks, keeping track of references.
+        if self.ai.cli.VERBOSE_CHUNK:
+            self.ai.cli.logger.info(f"Extracting chunks across ({len(sentences_with_reference_ranges)}) sentences")
         chunks = get_chunks_with_reference_ranges(
             sentences_with_references=sentences_with_reference_ranges,
             chunk_callback=self.chunk_callback,
@@ -259,6 +263,13 @@ class FileData:
         )
 
         is_page_based = doc_content.pages_per_line is not None
+
+        if is_page_based:
+            max_page = max(doc_content.pages_per_line) if doc_content.pages_per_line else 0
+            reference_total_info = f"{max_page}"
+        else:
+            max_line = max(doc_content.lines_per_line) if doc_content.lines_per_line else 0
+            reference_total_info = f"{max_line}"
 
         if progress and task_id:
             progress.update(task_id, total=len(chunks))
@@ -298,7 +309,11 @@ class FileData:
             )
 
             if self.ai.cli.VERBOSE_CHUNK:
-                self.ai.cli.logger.info(f"Reference for chunk ({chunk_index + 1}) / ({len(chunks)}): {get_point_page_line_info(point)}")
+                self.ai.cli.logger.info(
+                    f"Reference for chunk ({chunk_index + 1}) / ({len(chunks)}): "
+                    f"{get_point_page_line_info(point)} "
+                    f"of {reference_total_info}"
+                )
 
             point.vector = vector
 
