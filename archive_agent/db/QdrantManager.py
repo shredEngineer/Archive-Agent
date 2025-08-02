@@ -106,7 +106,7 @@ class QdrantManager:
         logger.info(f"Version-stamping vector(s): {version_stamp}")
         for point in file_data.points:
             assert point.payload is not None  # makes pyright happy
-            point.payload['version'] = version_stamp
+            point.payload['version'] = version_stamp  # added in v7.4.0
 
         partial_size = 100
         num_points_added = 0
