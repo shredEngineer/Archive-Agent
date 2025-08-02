@@ -93,6 +93,7 @@ class CommitManager:
             else:
                 self.commit_diff(removed_files)
 
+    # noinspection PyMethodMayBeStatic
     def _process_file_data(
             self,
             file_data: FileData,
