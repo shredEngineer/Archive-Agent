@@ -108,9 +108,6 @@ class CommitManager:
 
         success = file_data.process(progress, task_id)
 
-        # After processing, update the shared CLI manager's stats
-        self.cli.update_ai_usage(file_data.ai.ai_usage_stats)
-
         if progress and task_id is not None:
             progress.remove_task(task_id)
             if overall_task_id is not None:
