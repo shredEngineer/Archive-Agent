@@ -61,4 +61,8 @@ echo "| Archive Agent: Successfully installed |"
 echo "'---------------------------------------'"
 echo ""
 
-source ~/.bashrc
+echo ""
+echo ".---------------------------------------------------------------------."
+echo "| INFO: Please start a new shell session to start using archive-agent |"
+echo "'---------------------------------------------------------------------'"
+echo ""
