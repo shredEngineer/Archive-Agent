@@ -60,3 +60,5 @@ echo ".---------------------------------------."
 echo "| Archive Agent: Successfully installed |"
 echo "'---------------------------------------'"
 echo ""
+
+source ~/.bashrc

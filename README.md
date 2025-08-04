@@ -153,6 +153,7 @@ graph LR
 **Archive Agent** has been tested with these configurations:
 
 - **Ubuntu 24.04** (PC x64)
+- **Ubuntu 22.04** (PC x64)
 
 If you've successfully installed and tested **Archive Agent** with a different setup, please let me know and I'll add it here! 
 
