@@ -16,7 +16,6 @@ from PIL import Image
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.config.DecoderSettings import OcrStrategy, DecoderSettings
 from archive_agent.data.DocumentContent import DocumentContent
-from archive_agent.util.format import format_file
 from archive_agent.data.loader.image import ImageToTextCallback
 from archive_agent.util.text_util import splitlines_exact
 from archive_agent.util.PageTextBuilder import PageTextBuilder
@@ -64,6 +63,7 @@ def is_pdf_document(file_path: str) -> bool:
 def load_pdf_document(
         ai_factory: AiManagerFactory,
         logger: Logger,
+        verbose: bool,
         file_path: str,
         image_to_text_callback_page: Optional[ImageToTextCallback],
         image_to_text_callback_image: Optional[ImageToTextCallback],
@@ -75,6 +75,7 @@ def load_pdf_document(
     Load PDF document.
     :param ai_factory: AI manager factory.
     :param logger: Logger.
+    :param verbose: Enable verbose output.
     :param file_path: File path.
     :param image_to_text_callback_page: Optional image-to-text callback for pages (`strict` OCR strategy).
     :param image_to_text_callback_image: Optional image-to-text callback for images (`relaxed` OCR strategy).
@@ -87,6 +88,7 @@ def load_pdf_document(
 
     page_contents = get_pdf_page_contents(
         logger=logger,
+        verbose=verbose,
         doc=doc,
         decoder_settings=decoder_settings,
     )
@@ -99,6 +101,7 @@ def load_pdf_document(
         image_texts_per_page = extract_image_texts_per_page(
             ai_factory=ai_factory,
             logger=logger,
+            verbose=verbose,
             file_path=file_path,
             page_contents=page_contents,
             image_to_text_callback_page=image_to_text_callback_page,
@@ -157,6 +160,7 @@ def build_document_text_from_pages(
 def extract_image_texts_per_page(
         ai_factory: AiManagerFactory,
         logger: Logger,
+        verbose: bool,
         file_path: str,
         page_contents: List[PdfPageContent],
         image_to_text_callback_page: ImageToTextCallback,
@@ -168,6 +172,7 @@ def extract_image_texts_per_page(
     Extract text from images per page.
     :param ai_factory: AI manager factory.
     :param logger: Logger.
+    :param verbose: Enable verbose output.
     :param file_path: File path (used for logging only).
     :param page_contents: PDF page contents.
     :param image_to_text_callback_page: Optional image-to-text callback for pages (`strict` OCR strategy).
@@ -177,17 +182,13 @@ def extract_image_texts_per_page(
     :return: List of text results per page (one list of strings per page).
     """
     # Create VisionProcessor for batch processing
-    vision_processor = VisionProcessor(ai_factory, logger, file_path)
+    vision_processor = VisionProcessor(ai_factory, logger, verbose, file_path)
     vision_requests = []
 
     # Collect all vision requests across all pages
     for page_index, content in enumerate(page_contents):
         for image_index, image_bytes in enumerate(content.layout_image_bytes):
-            log_header = (
-                f"Processing image ({image_index + 1}) "
-                f"on page ({page_index + 1}) / ({len(page_contents)}) "
-                f"of {format_file(file_path)}"
-            )
+            log_header = f"Image ({image_index + 1}) on page ({page_index + 1}) / ({len(page_contents)}) "
 
             try:
                 # noinspection PyTypeChecker
@@ -196,7 +197,8 @@ def extract_image_texts_per_page(
                         logger.warning(f"{log_header}: Ignored because it's tiny ({image.width} × {image.height} px)")
                         continue
 
-                    logger.info(f"{log_header}: Converting to text")
+                    if verbose:
+                        logger.info(f"{log_header}: Queueing")
 
                     # Choose callback based on OCR strategy (preserve original logic)
                     if content.ocr_strategy == OcrStrategy.STRICT:
@@ -217,7 +219,7 @@ def extract_image_texts_per_page(
                     vision_requests.append(vision_request)
 
             except Exception as e:
-                logger.warning(f"{log_header}: Failed to extract text: {e}")
+                logger.error(f"{log_header}: Failed to extract text: {e}")
 
     image_texts_per_page: List[List[str]] = [[] for _ in range(len(page_contents))]
 
@@ -286,12 +288,14 @@ def get_pdf_page_content(page: fitz.Page) -> PdfPageContent:
 
 def get_pdf_page_contents(
         logger: Logger,
+        verbose: bool,
         doc: fitz.Document,
         decoder_settings: DecoderSettings,
 ) -> List[PdfPageContent]:
     """
     Get PDF page contents.
     :param logger: Logger.
+    :param verbose: Enable verbose output.
     :param doc: PDF document.
     :param decoder_settings: Decoder settings.
     :return: PDF page contents.
@@ -300,26 +304,31 @@ def get_pdf_page_contents(
     pages: List[Any] = [page for page in doc]
     for page_index, page in enumerate(pages):
 
-        logger.info(f"Analyzing PDF page ({page_index + 1}) / ({len(pages)}):")
+        if verbose:
+            logger.info(f"Analyzing PDF page ({page_index + 1}) / ({len(pages)}):")
         page_content: PdfPageContent = get_pdf_page_content(page)
 
         # Resolve `auto` OCR strategy
         if decoder_settings.ocr_strategy == OcrStrategy.AUTO:
             if len(page_content.text) >= decoder_settings.ocr_auto_threshold:
                 page_content.ocr_strategy = OcrStrategy.RELAXED
-                logger.info(f"- OCR strategy: 'auto' resolved to 'relaxed'")
+                if verbose:
+                    logger.info(f"- OCR strategy: 'auto' resolved to 'relaxed'")
             else:
                 page_content.ocr_strategy = OcrStrategy.STRICT
-                logger.info(f"- OCR strategy: 'auto' resolved to 'strict'")
+                if verbose:
+                    logger.info(f"- OCR strategy: 'auto' resolved to 'strict'")
         else:
             page_content.ocr_strategy = decoder_settings.ocr_strategy
-            logger.info(f"- OCR strategy: '{page_content.ocr_strategy.value}'")
+            if verbose:
+                logger.info(f"- OCR strategy: '{page_content.ocr_strategy.value}'")
 
         if page_content.ocr_strategy == OcrStrategy.STRICT:
             # Replace page content with only one full-page image.
-            logger.info(f"- IGNORING ({len(page_content.image_blocks)}) image(s)")
-            logger.info(f"- IGNORING ({len(page_content.text)}) character(s) in ({len(page_content.text_blocks)}) text block(s)")
-            logger.info(f"- Decoding full-page image (rendered at {OCR_STRATEGY_STRICT_PAGE_DPI} DPI) ")
+            if verbose:
+                logger.info(f"- IGNORING ({len(page_content.image_blocks)}) image(s)")
+                logger.info(f"- IGNORING ({len(page_content.text)}) character(s) in ({len(page_content.text_blocks)}) text block(s)")
+                logger.info(f"- Decoding full-page image (rendered at {OCR_STRATEGY_STRICT_PAGE_DPI} DPI) ")
             page_content = PdfPageContent(
                 text="",
                 layout_image_bytes=[page.get_pixmap(dpi=OCR_STRATEGY_STRICT_PAGE_DPI).tobytes()],
@@ -328,8 +337,9 @@ def get_pdf_page_contents(
 
         elif page_content.ocr_strategy == OcrStrategy.RELAXED:
             # Keep page content as-is.
-            logger.info(f"- Decoding ({len(page_content.image_blocks)}) image(s)")
-            logger.info(f"- Decoding ({len(page_content.text)}) character(s) in ({len(page_content.text_blocks)}) text block(s)")
+            if verbose:
+                logger.info(f"- Decoding ({len(page_content.image_blocks)}) image(s)")
+                logger.info(f"- Decoding ({len(page_content.text)}) character(s) in ({len(page_content.text_blocks)}) text block(s)")
 
             num_background_images: int = len(page_content.image_objects) - len(page_content.image_blocks)
             if num_background_images > 0:

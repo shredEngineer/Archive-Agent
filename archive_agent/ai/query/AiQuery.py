@@ -174,7 +174,7 @@ class AiQuery:
             if len(hash_str) == 16 and all(c in "0123456789abcdefABCDEF" for c in hash_str):
                 return hash_str
 
-            logger.critical(f"Invalid reference format: '{ref}'")
+            logger.critical(f"⚠️ Invalid reference format: '{ref}'")
             return ref
 
         for answer in query_result.answer_list:

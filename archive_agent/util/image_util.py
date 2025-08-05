@@ -12,6 +12,7 @@ from PIL import Image
 def image_resize_safe(
     image: Image.Image,
     logger: Logger,
+    verbose: bool,
     # OpenAI highest resolution specs
     max_w: int = 768,
     max_h: int = 2000,
@@ -21,6 +22,7 @@ def image_resize_safe(
     Resize image to safe dimensions or data size, if required.
     :param image: Image data.
     :param logger: Logger.
+    :param verbose: Enable verbose output.
     :param max_w: Maximum width.
     :param max_h: Maximum height.
     :param max_bytes: Maximum data size (in bytes).
@@ -30,13 +32,15 @@ def image_resize_safe(
     image_copy.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
 
     if image_copy.width != image.width or image_copy.height != image.height:
-        logger.info(
-            f"Resized image "
-            f"from ({image.width} × {image.height} px) "
-            f"to ({image_copy.width} × {image_copy.height} px)"
-        )
+        if verbose:
+            logger.info(
+                f"Resized image "
+                f"from ({image.width} × {image.height} px) "
+                f"to ({image_copy.width} × {image_copy.height} px)"
+            )
     else:
-        logger.info(f"Image size: ({image_copy.width} × {image_copy.height} px)")
+        if verbose:
+            logger.info(f"Image size: ({image_copy.width} × {image_copy.height} px)")
 
     for quality in range(100, 0, -5):
         image_bytes = io.BytesIO()
@@ -46,7 +50,7 @@ def image_resize_safe(
             return Image.open(image_bytes)
         logger.warning(f"Reducing image quality to ({quality} %)")
 
-    logger.warning(f"Failed to resize image: Too huge")
+    logger.critical(f"⚠️ Failed to resize image: Too huge")
     return None
 
 

@@ -5,6 +5,7 @@ import concurrent.futures
 from dataclasses import dataclass
 from typing import List, Union, Optional, Callable, Any
 import io
+from logging import Logger
 
 from PIL import Image
 from rich.progress import Progress
@@ -35,15 +36,17 @@ class VisionProcessor:
     Handles both PDF and Binary document vision requests.
     """
 
-    def __init__(self, ai_factory: AiManagerFactory, logger, file_path: str):
+    def __init__(self, ai_factory: AiManagerFactory, logger: Logger, verbose: bool, file_path: str):
         """
         Initialize vision processor.
         :param ai_factory: AI manager factory for creating worker instances.
         :param logger: Logger instance from ai.cli hierarchy.
+        :param verbose: Enable verbose output.
         :param file_path: File path for logging context.
         """
         self.ai_factory = ai_factory
         self.logger = logger
+        self.verbose = verbose
         self.file_path = file_path
 
     def process_vision_requests_parallel(
@@ -65,7 +68,8 @@ class VisionProcessor:
         def process_vision_request(request_data: tuple) -> tuple:
             request_index, request = request_data
             try:
-                self.logger.info(request.log_header)
+                if self.verbose:
+                    self.logger.info(request.log_header)
 
                 # Create dedicated AI manager for this vision request
                 ai_worker = self.ai_factory.get_ai()

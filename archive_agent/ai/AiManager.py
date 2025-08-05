@@ -238,7 +238,7 @@ class AiManager(RetryManager):
         elif self.requested == AiVisionRequest.OCR:
             prompt = AiVisionOCR.get_prompt_vision()
         else:
-            self.cli.logger.critical("BUG DETECTED: Unrequested call to `AiManager.vision()` — falling back to OCR")
+            self.cli.logger.critical("⚠️ BUG DETECTED: Unrequested call to `AiManager.vision()` — falling back to OCR")
             prompt = AiVisionOCR.get_prompt_vision()
 
         self.requested = None

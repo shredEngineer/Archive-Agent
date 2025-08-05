@@ -116,6 +116,7 @@ class FileData:
             return lambda progress, task_id: load_binary_document(
                 ai_factory=self.ai_factory,
                 logger=self.logger,
+                verbose=self.ai.cli.VERBOSE_LOADER,
                 file_path=self.file_path,
                 image_to_text_callback=self.image_to_text_callback_image,
                 progress=progress,
@@ -126,6 +127,7 @@ class FileData:
             return lambda progress, task_id: load_pdf_document(
                 ai_factory=self.ai_factory,
                 logger=self.logger,
+                verbose=self.ai.cli.VERBOSE_LOADER,
                 file_path=self.file_path,
                 image_to_text_callback_page=self.image_to_text_callback_page,
                 image_to_text_callback_image=self.image_to_text_callback_image,
@@ -156,7 +158,7 @@ class FileData:
             self.logger.info(f"Converted image from '{image.mode}' to 'RGB'")
             image = image.convert("RGB")
 
-        image_possibly_resized = image_resize_safe(image=image, logger=self.logger)
+        image_possibly_resized = image_resize_safe(image=image, logger=self.logger, verbose=self.ai.cli.VERBOSE_VISION)
         if image_possibly_resized is None:
             self.logger.warning(f"Failed to resize {format_file(self.file_path)}")
             return None
@@ -178,7 +180,8 @@ class FileData:
         :param image: PIL Image object.
         :return: OCR text or None if failed.
         """
-        self.logger.info("Requesting vision feature: OCR")
+        if self.ai.cli.VERBOSE_VISION:
+            self.logger.info("Requesting vision feature: OCR")
         ai.request_ocr()
         vision_result = self.image_to_text(ai=ai, image=image)
         if vision_result is not None:
@@ -193,7 +196,8 @@ class FileData:
         :param image: PIL Image object.
         :return: Entity text or None if failed.
         """
-        self.logger.info("Requesting vision feature: Entity Extraction")
+        if self.ai.cli.VERBOSE_VISION:
+            self.logger.info("Requesting vision feature: Entity Extraction")
         ai.request_entity()
         vision_result = self.image_to_text(ai=ai, image=image)
         if vision_result is not None:
@@ -208,7 +212,8 @@ class FileData:
         :param image: PIL Image object.
         :return: Combined text or None if any part failed.
         """
-        self.logger.info("Requesting vision features: OCR, Entity Extraction")
+        if self.ai.cli.VERBOSE_VISION:
+            self.logger.info("Requesting vision features: OCR, Entity Extraction")
 
         ai.request_ocr()
         vision_result_ocr = self.image_to_text(ai=ai, image=image)
@@ -237,7 +242,7 @@ class FileData:
             try:
                 return self.decoder_func(progress, task_id)
             except Exception as e:
-                self.logger.warning(f"Failed to process {format_file(self.file_path)}: {e}")
+                self.logger.error(f"Failed to process {format_file(self.file_path)}: {e}")
                 return None
 
         self.logger.warning(f"Cannot process {format_file(self.file_path)}")

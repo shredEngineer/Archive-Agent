@@ -44,7 +44,7 @@ def load_image(
     try:
         image = Image.open(file_path).convert("RGB")
     except (FileNotFoundError, UnidentifiedImageError) as e:
-        logger.warning(f"Failed to load {format_file(file_path)}: {e}")
+        logger.error(f"Failed to load {format_file(file_path)}: {e}")
         return None
 
     if image_to_text_callback is None:

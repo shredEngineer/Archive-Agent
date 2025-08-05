@@ -47,12 +47,12 @@ def load_plaintext(
     try:
         matches = from_path(file_path)
     except IOError as e:
-        logger.warning(f"Failed to read {format_file(file_path)}: {e}")
+        logger.error(f"Failed to read {format_file(file_path)}: {e}")
         return None
 
     best_match = matches.best()
     if best_match is None:
-        logger.warning(f"Failed to decode {format_file(file_path)}: Best match is None")
+        logger.error(f"Failed to decode {format_file(file_path)}: Best match is None")
         return None
 
     text = str(best_match)
@@ -101,7 +101,7 @@ def load_ascii_document(
         return LineTextBuilder(text=text).getDocumentContent()
 
     except Exception as e:
-        logger.warning(f"Failed to convert {format_file(file_path)} via Pandoc: {e}")
+        logger.error(f"Failed to convert {format_file(file_path)} via Pandoc: {e}")
         return None
 
     finally:
@@ -109,7 +109,7 @@ def load_ascii_document(
             if tmp_path is not None:
                 os.remove(tmp_path)
         except Exception as e:
-            logger.debug(f"Failed to delete temporary file {tmp_path}: {e}")
+            logger.error(f"Failed to delete temporary file {tmp_path}: {e}")
 
 
 def is_binary_document(file_path: str) -> bool:
@@ -125,6 +125,7 @@ def is_binary_document(file_path: str) -> bool:
 def load_binary_document(
         ai_factory: AiManagerFactory,
         logger: Logger,
+        verbose: bool,
         file_path: str,
         image_to_text_callback: Optional[ImageToTextCallback],
         progress: Optional[Progress] = None,
@@ -134,6 +135,7 @@ def load_binary_document(
     Load binary document (using Pandoc).
     :param ai_factory: AI manager factory.
     :param logger: Logger.
+    :param verbose: Enable verbose output.
     :param file_path: File path.
     :param image_to_text_callback: Optional image-to-text callback.
     :param progress: A rich.progress.Progress object for progress reporting.
@@ -146,7 +148,7 @@ def load_binary_document(
         text = pypandoc.convert_file(file_path, to="plain", format=file_ext.lstrip("."), extra_args=["--wrap=preserve"])
         text = text.encode("utf-8", errors="replace").decode("utf-8")
     except Exception as e:
-        logger.warning(f"Failed to convert {format_file(file_path)} via Pandoc: {e}")
+        logger.error(f"Failed to convert {format_file(file_path)} via Pandoc: {e}")
         return None
 
     # Stage 1: Text extraction (unchanged)
@@ -156,7 +158,7 @@ def load_binary_document(
     images = load_binary_document_images(logger=logger, file_path=file_path)
 
     # Stage 3: Vision processing (new function, same logic)
-    image_texts = extract_binary_image_texts(ai_factory, logger, images, image_to_text_callback, progress, task_id)
+    image_texts = extract_binary_image_texts(ai_factory, logger, verbose, images, image_to_text_callback, progress, task_id)
 
     # Stage 4: Assembly (new function)
     return build_binary_document_with_images(builder, image_texts)
@@ -165,6 +167,7 @@ def load_binary_document(
 def extract_binary_image_texts(
         ai_factory: AiManagerFactory,
         logger: Logger,
+        verbose: bool,
         images: List[Image.Image],
         image_to_text_callback: Optional[ImageToTextCallback],
         progress: Optional[Progress] = None,
@@ -174,6 +177,7 @@ def extract_binary_image_texts(
     Extract text from binary document images with parallel processing.
     :param ai_factory: AI manager factory.
     :param logger: Logger.
+    :param verbose: Enable verbose output.
     :param images: List of PIL Images.
     :param image_to_text_callback: Optional image-to-text callback.
     :param progress: A rich.progress.Progress object for progress reporting.
@@ -191,12 +195,15 @@ def extract_binary_image_texts(
         return image_texts
 
     # Create VisionProcessor for batch processing
-    vision_processor = VisionProcessor(ai_factory, logger, "binary_document")
+    vision_processor = VisionProcessor(ai_factory, logger, verbose, "binary_document")
     vision_requests = []
 
     # Collect all vision requests
     for image_index, image in enumerate(images):
-        log_header = f"Converting document image ({image_index + 1}) / ({len(images)})..."
+        log_header = f"Image ({image_index + 1}) / ({len(images)})"
+
+        if verbose:
+            logger.info(f"{log_header}: Queueing")
 
         # Formatter lambda with consistent bracket logic for binary docs
         formatter = lambda vision_result: f"[{vision_result}]" if vision_result is not None else "[Unprocessable Image]"
@@ -205,7 +212,7 @@ def extract_binary_image_texts(
             image_data=image,
             callback=image_to_text_callback,
             formatter=formatter,
-            log_header=log_header,
+            log_header=f"{log_header}: Converting to text",
             image_index=image_index,
             page_index=0  # Binary docs are single-page
         )
@@ -264,6 +271,6 @@ def load_binary_document_images(
                         image.load()  # Prevent lazy I/O; load into memory NOW.
                         images.append(image)
     except Exception as e:
-        logger.warning(f"Failed to extract image(s) from {format_file(file_path)}: {e}")
+        logger.error(f"Failed to extract image(s) from {format_file(file_path)}: {e}")
 
     return images

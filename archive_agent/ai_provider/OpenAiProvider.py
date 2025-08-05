@@ -280,7 +280,7 @@ class OpenAiProvider(AiProvider):
             if openai_incomplete_details is not None:
                 openai_incomplete_details_reason = getattr(openai_incomplete_details, 'reason', None)
                 if openai_incomplete_details_reason == 'content_filter':
-                    self.logger.critical(f"Vision content filter triggered by OpenAI\n{formatted_response}")
+                    self.logger.critical(f"⚠️ Vision content filter triggered by OpenAI\n{formatted_response}")
                     return AiResult(
                         total_tokens=response.usage.total_tokens if response.usage else 0,
                         output_text="",
@@ -296,7 +296,7 @@ class OpenAiProvider(AiProvider):
 
         openai_refusal = getattr(response, 'refusal', None)
         if openai_refusal is not None:
-            self.logger.critical(f"Vision refusal triggered by OpenAI\n{formatted_response}")
+            self.logger.critical(f"⚠️ Vision refusal triggered by OpenAI\n{formatted_response}")
             return AiResult(
                 total_tokens=response.usage.total_tokens if response.usage else 0,
                 output_text="",

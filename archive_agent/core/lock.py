@@ -23,7 +23,7 @@ def file_lock(lock_name):
                 try:
                     fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 except BlockingIOError:
-                    logger.critical(f"Lock is currently held by another process. Waiting for release: {lock_path}")
+                    logger.critical(f"⚠️ Lock is currently held by another process. Waiting for release: {lock_path}")
                     fcntl.flock(lock_file, fcntl.LOCK_EX)  # Wait until the lock is released
                 result = func(*args, **kwargs)
                 logger.debug(f"Releasing lock: {lock_path}")

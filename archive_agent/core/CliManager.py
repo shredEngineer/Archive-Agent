@@ -87,6 +87,7 @@ class CliManager:
     CLI manager.
     """
 
+    VERBOSE_LOADER: bool = False  # enabled by --verbose flag
     VERBOSE_CHUNK: bool = False  # enabled by --verbose flag
     VERBOSE_RERANK: bool = False  # enabled by --verbose flag
     VERBOSE_EMBED: bool = False  # enabled by --verbose flag
@@ -100,6 +101,7 @@ class CliManager:
         Initialize CLI manager.
         :param verbose: Verbosity switch.
         """
+        CliManager.VERBOSE_LOADER = verbose
         CliManager.VERBOSE_CHUNK = verbose
         CliManager.VERBOSE_RERANK = verbose
         CliManager.VERBOSE_EMBED = verbose

@@ -281,7 +281,7 @@ class QdrantManager:
         }
         indices_missing = set(chunk_indices) - indices_found
         if indices_missing:
-            logger.critical(f"Missing chunk(s) for {format_file(file_path)}: {sorted(indices_missing)}")
+            logger.critical(f"⚠️ Missing chunk(s) for {format_file(file_path)}: {sorted(indices_missing)}")
 
         return points
 
