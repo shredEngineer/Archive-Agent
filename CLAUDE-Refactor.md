@@ -1,6 +1,3 @@
-# 1
-refactor CliManager: Add filename prefix to logger messages, so messages from different FileData can be distinguished. Also include that prefix in the header of each rich.Panel for the same reason.
-
 # 2
 refactor CommitManager: Outsource processing stuff into archive_agent/core/IngestionManager.py, so CommitManager isn't concerned with the actual implementation of parallel processing.
 

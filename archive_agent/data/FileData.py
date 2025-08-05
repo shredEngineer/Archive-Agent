@@ -20,7 +20,7 @@ from archive_agent.ai.vision.AiVisionOCR import AiVisionOCR
 from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 from archive_agent.config.DecoderSettings import DecoderSettings
 from archive_agent.data.DocumentContent import DocumentContent
-from archive_agent.util.format import format_file, get_point_page_line_info
+from archive_agent.util.format import format_file, get_point_page_line_info, format_filename_short
 from archive_agent.data.loader.pdf import is_pdf_document, load_pdf_document
 from archive_agent.data.loader.image import is_image, load_image
 from archive_agent.data.loader.text import is_plaintext, load_plaintext
@@ -57,6 +57,8 @@ class FileData:
         self.file_path = file_path
         self.file_meta = file_meta
 
+        self.logger = ai.cli.get_prefixed_logger(prefix=format_filename_short(self.file_path))
+
         self.points: List[PointStruct] = []
 
         self.image_to_text_callback_combined = self.image_to_text_combined if self.ai.ai_provider.supports_vision else None
@@ -84,33 +86,33 @@ class FileData:
         """
         if is_image(self.file_path):
             return lambda: load_image(
-                logger=self.ai.cli.logger,
+                logger=self.logger,
                 file_path=self.file_path,
                 image_to_text_callback=self.image_to_text_callback_image,
             )
 
         elif is_plaintext(self.file_path):
             return lambda: load_plaintext(
-                logger=self.ai.cli.logger,
+                logger=self.logger,
                 file_path=self.file_path,
             )
 
         elif is_ascii_document(self.file_path):
             return lambda: load_ascii_document(
-                logger=self.ai.cli.logger,
+                logger=self.logger,
                 file_path=self.file_path,
             )
 
         elif is_binary_document(self.file_path):
             return lambda: load_binary_document(
-                logger=self.ai.cli.logger,
+                logger=self.logger,
                 file_path=self.file_path,
                 image_to_text_callback=self.image_to_text_callback_image,
             )
 
         elif is_pdf_document(self.file_path):
             return lambda: load_pdf_document(
-                logger=self.ai.cli.logger,
+                logger=self.logger,
                 file_path=self.file_path,
                 image_to_text_callback_page=self.image_to_text_callback_page,
                 image_to_text_callback_image=self.image_to_text_callback_image,
@@ -135,12 +137,12 @@ class FileData:
         :return: VisionSchema result or None if failed.
         """
         if image.mode != "RGB":
-            self.ai.cli.logger.info(f"Converted image from '{image.mode}' to 'RGB'")
+            self.logger.info(f"Converted image from '{image.mode}' to 'RGB'")
             image = image.convert("RGB")
 
-        image_possibly_resized = image_resize_safe(image=image, logger=self.ai.cli.logger)
+        image_possibly_resized = image_resize_safe(image=image, logger=self.logger)
         if image_possibly_resized is None:
-            self.ai.cli.logger.warning(f"Failed to resize {format_file(self.file_path)}")
+            self.logger.warning(f"Failed to resize {format_file(self.file_path)}")
             return None
 
         image_base64 = image_to_base64(image_possibly_resized)
@@ -148,7 +150,7 @@ class FileData:
         vision_result = self.ai.vision(image_base64)
 
         if vision_result.is_rejected:
-            self.ai.cli.logger.critical(f"⚠️ Image rejected: \"{vision_result.rejection_reason}\"")
+            self.logger.critical(f"⚠️ Image rejected: \"{vision_result.rejection_reason}\"")
             return None
 
         return vision_result
@@ -160,7 +162,7 @@ class FileData:
         :param image: PIL Image object.
         :return: OCR text or None if failed.
         """
-        self.ai.cli.logger.info("Requesting vision feature: OCR")
+        self.logger.info("Requesting vision feature: OCR")
         self.ai.request_ocr()
         vision_result = self.image_to_text(image)
         if vision_result is not None:
@@ -175,7 +177,7 @@ class FileData:
         :param image: PIL Image object.
         :return: Entity text or None if failed.
         """
-        self.ai.cli.logger.info("Requesting vision feature: Entity Extraction")
+        self.logger.info("Requesting vision feature: Entity Extraction")
         self.ai.request_entity()
         vision_result = self.image_to_text(image)
         if vision_result is not None:
@@ -189,7 +191,7 @@ class FileData:
         :param image: PIL Image object.
         :return: Combined text or None if any part failed.
         """
-        self.ai.cli.logger.info("Requesting vision features: OCR, Entity Extraction")
+        self.logger.info("Requesting vision features: OCR, Entity Extraction")
 
         self.ai.request_ocr()
         vision_result_ocr = self.image_to_text(image)
@@ -216,10 +218,10 @@ class FileData:
             try:
                 return self.decoder_func()
             except Exception as e:
-                self.ai.cli.logger.warning(f"Failed to process {format_file(self.file_path)}: {e}")
+                self.logger.warning(f"Failed to process {format_file(self.file_path)}: {e}")
                 return None
 
-        self.ai.cli.logger.warning(f"Cannot process {format_file(self.file_path)}")
+        self.logger.warning(f"Cannot process {format_file(self.file_path)}")
         return None
 
     def chunk_callback(self, block_of_sentences: List[str]) -> ChunkSchema:
@@ -247,7 +249,7 @@ class FileData:
 
         # Decoder may fail, e.g. on I/O error, exhausted AI attempts, …
         if doc_content is None:
-            self.ai.cli.logger.warning(f"Failed to process {format_file(self.file_path)}")
+            self.logger.warning(f"Failed to process {format_file(self.file_path)}")
             return False
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -256,18 +258,18 @@ class FileData:
 
         # Use preprocessing and NLP (spaCy) to split text into sentences, keeping track of references.
         if self.ai.cli.VERBOSE_CHUNK:
-            self.ai.cli.logger.info(f"Extracting sentences across ({len(doc_content.lines)}) lines")
+            self.logger.info(f"Extracting sentences across ({len(doc_content.lines)}) lines")
         sentences_with_reference_ranges = get_sentences_with_reference_ranges(doc_content)
 
         # Group sentences into chunks, keeping track of references.
         if self.ai.cli.VERBOSE_CHUNK:
-            self.ai.cli.logger.info(f"Extracting chunks across ({len(sentences_with_reference_ranges)}) sentences")
+            self.logger.info(f"Extracting chunks across ({len(sentences_with_reference_ranges)}) sentences")
         chunks = get_chunks_with_reference_ranges(
             sentences_with_references=sentences_with_reference_ranges,
             chunk_callback=self.chunk_callback,
             chunk_lines_block=self.chunk_lines_block,
             file_path=self.file_path,
-            logger=self.ai.cli.logger,
+            logger=self.logger,
             verbose=self.ai.cli.VERBOSE_CHUNK,
         )
 
@@ -287,7 +289,7 @@ class FileData:
 
         for chunk_index, chunk in enumerate(chunks):
             if self.ai.cli.VERBOSE_CHUNK:
-                self.ai.cli.logger.info(
+                self.logger.info(
                     f"Processing chunk ({chunk_index + 1}) / ({len(chunks)}) "
                     f"of {format_file(self.file_path)}"
                 )
@@ -323,7 +325,7 @@ class FileData:
             )
 
             if self.ai.cli.VERBOSE_CHUNK:
-                self.ai.cli.logger.info(
+                self.logger.info(
                     f"Reference for chunk ({chunk_index + 1}) / ({len(chunks)}): "
                     f"{get_point_page_line_info(point)} "
                     f"of {reference_total_info}"

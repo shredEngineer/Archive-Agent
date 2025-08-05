@@ -1,9 +1,12 @@
+# TODO: Implement prefixes for Panels, similar to `get_prefixed_logger()`.
+
 # archive_agent/core/CliManager.py
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import json
 import logging
+from logging import Logger
 import queue
 import threading
 from contextlib import contextmanager
@@ -25,6 +28,7 @@ from archive_agent.ai.AiResult import AiResult
 
 from archive_agent.ai.query.AiQuery import QuerySchema
 from archive_agent.ai.vision.AiVisionSchema import VisionSchema
+from archive_agent.util.PrefixedLogger import PrefixedLogger
 
 from archive_agent.util.format import format_chunk_brief, get_point_reference_info
 from archive_agent.db.QdrantSchema import parse_payload
@@ -117,6 +121,14 @@ class CliManager:
             "vision": 0
         }
         self.lock = threading.Lock()
+
+    def get_prefixed_logger(self, prefix: str) -> Logger:
+        """
+        Get prefixed logger.
+        :param prefix: Prefix.
+        :return logger: Logger.
+        """
+        return PrefixedLogger(prefix, self.logger)
 
     @contextmanager
     def live_context(self, live: Live, get_renderable: Callable[[], RenderableType]) -> Any:
