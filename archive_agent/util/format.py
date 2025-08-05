@@ -25,6 +25,30 @@ def format_time(timestamp: float) -> str:
     return dt.strftime('%Y-%m-%d %H:%M:%S')
 
 
+def format_filename_short(file_path: str, max_length: int = 48) -> str:
+    """
+    Format filename for display, shortening if necessary.
+    Strips the path and replaces middle part with ... if length exceeds max_length.
+    :param file_path: Full file path.
+    :param max_length: Maximum length for display.
+    :return: Shortened filename for display.
+    """
+    filename = os.path.basename(file_path)
+    if len(filename) <= max_length:
+        return filename
+
+    # If still too long, truncate in the middle
+    if max_length < 5:  # Need at least 5 chars for "a...b"
+        return filename[:max_length]
+
+    # Calculate how many chars to show on each side
+    side_chars = (max_length - 3) // 2  # 3 for "..."
+    left_chars = side_chars
+    right_chars = max_length - 3 - left_chars
+
+    return f"{filename[:left_chars]}...{filename[-right_chars:]}"
+
+
 def format_file(file_path: str | pathlib.Path) -> str:
     """
     Format file path as file:// URI, escaping special characters like spaces.
