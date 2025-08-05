@@ -17,6 +17,8 @@ Archive Agent is an intelligent file indexer with powerful AI search (RAG engine
 
 ### Important Modules
 - `archive_agent/data/FileData.py` - File processing and payload creation
+- `archive_agent/data/processor/VisionProcessor.py` - Parallel vision processing
+- `archive_agent/data/processor/EmbedProcessor.py` - Parallel chunk embedding
 - `archive_agent/db/QdrantManager.py` - Vector database operations  
 - `archive_agent/db/QdrantSchema.py` - Qdrant payload schema (Pydantic models)
 - `archive_agent/core/ContextManager.py` - Application context initialization
@@ -57,6 +59,25 @@ This tests the concurrent processing and live display system.
 4. Real-time updates without glitches
 
 **Note**: If there are files that have been removed from the watchlist, the script will pause for a confirmation prompt. This is expected behavior. The core concurrency and logging test is successful if the live display runs without errors up to that point.
+
+### Parallel Processing Verification Strategy
+When developing or modifying parallel processing components:
+
+**Development Workflow**:
+1. Run `./audit.sh` after each change for type checking and formatting
+2. Manual runtime testing with `./archive-agent.sh update --verbose --nocache`
+3. Visual verification of multithreading display (progress bars, logging, UI stability)
+4. Regression testing to ensure identical processing results
+
+**Rollback Strategy**:
+- Git commits after each working milestone
+- Maintain ability to revert to working state at any point
+- Test suite validation before proceeding to next phase
+
+**Critical Testing Requirements**:
+- All parallel operations must pass identical behavior tests
+- Progress tracking must work without serializing worker threads
+- Error isolation must not break entire batch processing
 
 ## Development Best Practices
 
@@ -177,13 +198,132 @@ Providing accurate, real-time updates for cumulative statistics like AI token us
 
 **Key Requirements**:
 - **Module Constants**: Every parallel processing class must have `MAX_WORKERS = 8` at module top
-- **Class Location**: All parallel processing classes belong in `archive_agent/data/` 
+- **Class Location**: All parallel processing classes belong in `archive_agent/data/processor/` 
 - **Logger Hierarchy**: Use instance loggers from `ai.cli` - never module-level loggers
 - **Worker Limits**: Always use `min(MAX_WORKERS, len(items))` pattern
 - **Variable Naming**: Use `future_to_[item_type]` convention for executor mappings
 - **Error Handling**: Per-item exception handling that doesn't stop batch processing
 - **Resource Isolation**: Create dedicated AI managers per worker thread
 - **Result Collection**: Maintain original order when required using `results_dict` pattern
+
+#### Thread Safety Pattern for AI Callbacks
+
+**CRITICAL**: Callbacks requiring AI access must accept the AiManager as a parameter rather than being bound to a shared instance. This pattern ensures:
+- **Worker Isolation**: Each parallel worker gets dedicated AI instance
+- **No Resource Contention**: Workers don't compete for shared AI state
+- **Cache Separation**: Each worker maintains independent AI cache
+- **Thread Safety**: No race conditions on AI manager state
+
+**Implementation Pattern**:
+```python
+# Correct: AI-dependent callback accepts AiManager parameter
+def process_item(ai: AiManager, item_data) -> Result:
+    return ai.some_operation(item_data)
+
+# In parallel processor:
+ai_worker = self.ai_factory.get_ai()  # Dedicated instance
+result = callback(ai_worker, item)
+```
+
+#### Nested Progress Architecture
+
+Archive Agent uses a three-level progress tracking system with smart phase detection:
+
+**Key Features**:
+- **Smart Phase Detection**: PDF/Binary files get 3 phases (Vision+Chunking+Embedding), others get 2 (Chunking+Embedding)
+- **Dynamic Progress Totals**: Sub-tasks set `total=len(requests)` when request counts are known (not when created)
+- **File-Level Updates**: File progress advances as phases complete (1/3, 2/3, 3/3)
+- **Meaningful Progress**: Shows actual work completed (sentences/images/chunks processed)
+- **Real-time Updates**: Progress tracking works correctly with parallel processing without serializing worker threads
+- **Clean Task Management**: Sub-tasks are removed after completion, preventing UI clutter
+
+## Parallel Processing Architecture
+
+Archive Agent implements comprehensive parallel processing across major operations using a unified multithreading architecture.
+
+### Parallelized Operations
+- **Vision Processing**: Cross-page parallel OCR and entity extraction via `VisionProcessor` (in `data/processor/`)
+  - Essential for STRICT OCR mode where each PDF page becomes a full-page image
+  - Processes multiple images simultaneously across different documents
+  - Supports both PDF image bytes and Binary PIL Images with unified interface
+- **Chunk Embedding**: Parallel vector embedding via `EmbedProcessor` (in `data/processor/`)
+  - Processes multiple text chunks simultaneously using ThreadPoolExecutor
+  - Real-time progress updates instead of waiting at 0% for most of runtime
+  - Each worker gets isolated AiManager instance for thread safety
+- **File Processing**: Concurrent file processing across multiple documents in `IngestionManager` (in `core/`)
+
+### Sequential Operations with Progress Tracking
+- **Smart Chunking**: Sequential processing due to "carry" mechanism dependencies
+  - Text chunks can overflow from one block to the next, creating strict sequential dependencies
+  - Block N+1 depends on results of Block N for proper chunk boundaries
+  - Comprehensive progress tracking based on sentences processed (not blocks processed)
+  - Maintains semantic coherence and prevents chunk fragmentation
+  - Infrastructure exists for future parallelization opportunities (ChunkProcessor pattern ready)
+
+### Key Architectural Insights
+
+#### Factory Pattern for Thread Safety
+All parallel operations use `AiManagerFactory` to provide worker AI instances:
+- Each parallel worker gets dedicated AI instance via `ai_factory.get_ai()`
+- Workers don't compete for shared AI state or cache
+- No race conditions on AI manager state
+- Cache separation maintains independence between workers
+
+#### Callback Injection Pattern
+**CRITICAL**: AI-dependent operations must receive AiManager as first parameter:
+```python
+# Correct pattern for thread-safe callbacks
+def image_to_text_callback(ai: AiManager, image: Image.Image) -> Optional[str]:
+    return ai.vision_operation(image)
+
+# In parallel processor:
+ai_worker = self.ai_factory.get_ai()  # Dedicated instance per worker
+result = callback(ai_worker, item_data)
+```
+
+This pattern ensures worker isolation and prevents shared state corruption.
+
+#### Multi-Stage Loader Architecture
+Both PDF and Binary document loaders use consistent multi-stage patterns:
+1. **Content Extraction**: Text/image extraction from source
+2. **Vision Processing**: Parallel AI vision operations (if applicable)
+3. **Assembly**: Final document construction with processed content
+
+This architecture enables surgical integration of parallel processing without breaking existing functionality.
+
+#### Critical Implementation Principles
+- **Zero Behavioral Changes**: All parallelization maintains byte-for-byte identical output
+- **Preserve Error Handling**: Existing error recovery patterns must be maintained
+- **Per-item Error Isolation**: Individual failures don't stop batch processing
+- **Order Preservation**: Results maintain original sequence when required using `results_dict` pattern
+- **Resource Management**: Appropriate concurrency limits prevent resource exhaustion
+- **Surgical Integration**: Only replace core processing loops, preserve all filtering/formatting logic
+- **System Brittleness**: The system is verified to work but extremely brittle - extreme caution required
+
+#### VisionProcessor Architecture Details
+The `VisionProcessor` implements a sophisticated parallel vision processing system:
+
+**VisionRequest dataclass components**:
+- `image_data: Union[bytes, Image.Image]` - Supports both PDF bytes and PIL Images
+- `callback: ImageToTextCallback` - The actual vision callback to execute
+- `formatter: Callable[[Optional[str]], str]` - Lambda for conditional formatting
+- `log_header: str` - Pre-built log message for progress tracking
+- `image_index: int` - For logging context and error reporting
+- `page_index: int` - Page context for clean reassembly (PDF only)
+
+**Key Design Patterns**:
+- **Front-loaded Processing**: Collects ALL requests across ALL pages/images before parallel execution
+- **Formatter Pattern**: Lambda functions preserve existing conditional formatting logic
+- **Dual Format Support**: Automatically converts PDF bytes to PIL Images as needed
+- **Clean Reassembly**: Results mapped back to original structure using context indices
+
+#### OCR Strategy Formatting Preservation
+VisionProcessor maintains exact formatting behavior for different OCR strategies:
+- **STRICT strategy failures**: `"[Unprocessable page]"`
+- **RELAXED strategy failures**: `"[Unprocessable image]"`  
+- **RELAXED strategy success**: `"[{image_text}]"` (brackets added)
+- **STRICT strategy success**: `"{image_text}"` (no brackets)
+- **Binary documents**: `"[{image_text}]"` (always brackets) or `"[Unprocessable Image]"`
 
 ### AI Provider Integration
 - Support multiple providers: OpenAI, Ollama, LM Studio
