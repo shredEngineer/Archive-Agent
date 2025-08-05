@@ -358,6 +358,8 @@ def get_chunks_with_reference_ranges(
     :param file_path: Path to the originating file (used for logging and labeling).
     :param logger: Logger.
     :param verbose: Enable to show additional information.
+    :param progress: A rich.progress.Progress object for progress reporting.
+    :param task_id: The task ID for the progress bar.
     :return: List of ChunkWithRange objects containing the formatted chunk and its reference range.
     """
     sentences = [s.text for s in sentences_with_references]

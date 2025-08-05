@@ -62,7 +62,7 @@ class FileData:
         self.file_path = file_path
         self.file_meta = file_meta
         self.logger = self.ai.cli.get_prefixed_logger(prefix=format_filename_short(self.file_path))
-        
+
         # Processing components
         self.chunk_processor = EmbedProcessor(ai_factory, self.logger, file_path)
         self.points: List[PointStruct] = []
@@ -260,10 +260,10 @@ class FileData:
         """
         Process the file through the complete RAG pipeline:
         Phase 1: Document decoding and vision processing (PDF/Binary only)
-        Phase 2: Sentence extraction and AI chunking 
+        Phase 2: Sentence extraction and AI chunking
         Phase 3: Reference range analysis and setup
         Phase 4: Parallel embedding and vector point creation
-        
+
         :param progress: A rich.progress.Progress object for progress reporting.
         :param task_id: The task ID for the progress bar.
         :return: True if successful, False otherwise.
