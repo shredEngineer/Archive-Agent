@@ -11,9 +11,11 @@ from rich.progress import Progress
 from PIL import Image
 
 from qdrant_client.models import PointStruct
+
+from archive_agent.data.ChunkEmbeddingProcessor import ChunkEmbeddingProcessor
 from archive_agent.db.QdrantSchema import QdrantPayload
 
-from archive_agent.ai.AiManager import AiManager
+from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.ai.chunk.AiChunk import ChunkSchema
 from archive_agent.ai.vision.AiVisionEntity import AiVisionEntity
 from archive_agent.ai.vision.AiVisionOCR import AiVisionOCR
@@ -37,27 +39,29 @@ class FileData:
 
     def __init__(
             self,
-            ai: AiManager,
+            ai_factory: AiManagerFactory,
             decoder_settings: DecoderSettings,
             file_path: str,
             file_meta: Dict[str, Any],
     ):
         """
         Initialize file data.
-        :param ai: AI manager instance.
+        :param ai_factory: AI manager factory for creating instances.
         :param decoder_settings: Decoder settings.
         :param file_path: Path to the file.
         :param file_meta: File metadata.
         """
-        self.ai = ai
+        self.ai_factory = ai_factory
+        self.ai = ai_factory.get_ai()  # Primary AI instance for vision, chunking, config
         self.decoder_settings = decoder_settings
 
-        self.chunk_lines_block = ai.chunk_lines_block
+        self.chunk_lines_block = self.ai.chunk_lines_block
 
         self.file_path = file_path
         self.file_meta = file_meta
 
-        self.logger = ai.cli.get_prefixed_logger(prefix=format_filename_short(self.file_path))
+        self.logger = self.ai.cli.get_prefixed_logger(prefix=format_filename_short(self.file_path))
+        self.chunk_processor = ChunkEmbeddingProcessor(ai_factory, self.logger, file_path)
 
         self.points: List[PointStruct] = []
 
@@ -287,16 +291,19 @@ class FileData:
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-        for chunk_index, chunk in enumerate(chunks):
-            if self.ai.cli.VERBOSE_CHUNK:
-                self.logger.info(
-                    f"Processing chunk ({chunk_index + 1}) / ({len(chunks)}) "
-                    f"of {format_file(self.file_path)}"
-                )
+        # Process chunks in parallel for embedding
+        embedding_results = self.chunk_processor.process_chunks_parallel(
+            chunks=chunks,
+            verbose=self.ai.cli.VERBOSE_CHUNK,
+            progress=progress,
+            task_id=task_id
+        )
 
-            assert chunk.reference_range != (0, 0), "Invalid chunk reference range (WTF, please report)"
-
-            vector = self.ai.embed(text=chunk.text)
+        # Process results and create points
+        for chunk_index, (chunk, vector) in enumerate(embedding_results):
+            if vector is None:
+                self.logger.warning(f"Failed to embed chunk ({chunk_index + 1}) / ({len(chunks)}) of {format_file(self.file_path)}")
+                continue
 
             payload_model = QdrantPayload(
                 file_path=self.file_path,
@@ -331,11 +338,6 @@ class FileData:
                     f"of {reference_total_info}"
                 )
 
-            point.vector = vector
-
             self.points.append(point)
-
-            if progress and task_id:
-                progress.update(task_id, advance=1)
 
         return True

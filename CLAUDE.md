@@ -93,6 +93,20 @@ The implementation must satisfy these four critical requirements:
 3. **Clean Live Display**: The live display must show a stable status block, with verbose logs appearing as a persistent, scrolling history above it without interleaving or glitching
 4. **Real-time Updates**: The status block (progress bars, tables) must update smoothly
 
+#### CRITICAL: Logger Thread Safety Requirements
+**ABSOLUTELY FORBIDDEN**: Module-level loggers (`logger = logging.getLogger(__name__)`)
+
+**REQUIRED**: All loggers must derive from `ai.cli.logger` hierarchy to ensure thread safety:
+- **Correct**: `self.logger = ai.cli.get_prefixed_logger(prefix=...)`
+- **Correct**: `self.logger = self.ai.cli.logger` 
+- **FORBIDDEN**: `logger = logging.getLogger(__name__)`
+- **FORBIDDEN**: `import logging; logging.getLogger(...)`
+
+**Rationale**: The decoupled logging architecture requires all log messages to flow through the centralized `ai.cli` logger system. Module-level loggers bypass this system and will cause:
+- Thread serialization (defeating parallelization)
+- Log message loss during live display
+- UI corruption and race conditions
+
 #### Core Problem: Concurrency vs. `rich.Live`
 The fundamental challenge is that `rich.Live` uses an internal lock to manage screen updates. If multiple worker threads attempt to log or print directly to the console, they will contend for this lock. This forces the threads to execute one by one, serializing their execution and defeating the purpose of multithreading for concurrent tasks.
 
@@ -158,6 +172,18 @@ Providing accurate, real-time updates for cumulative statistics like AI token us
 
 #### Deadlock Prevention
 **CRITICAL**: After the `progress_context` exits, the printer thread may still be active. Be extremely cautious when implementing methods that are called *after* the live display is finished. If such a method acquires a lock that is *also* used by the printer thread's `get_renderable` function (like the `ai_usage_stats` lock), it **must not** attempt to send output to the printer thread's queue (e.g., via `_print`). Doing so will cause a deadlock: the main thread will hold the lock and wait for the queue, while the printer thread holds the queue and waits for the lock. In these specific cases, print directly to the console (e.g., `self.console.print(...)`) to bypass the printer thread entirely.
+
+#### Unified Multithreading Style Guide
+
+**Key Requirements**:
+- **Module Constants**: Every parallel processing class must have `MAX_WORKERS = 8` at module top
+- **Class Location**: All parallel processing classes belong in `archive_agent/data/` 
+- **Logger Hierarchy**: Use instance loggers from `ai.cli` - never module-level loggers
+- **Worker Limits**: Always use `min(MAX_WORKERS, len(items))` pattern
+- **Variable Naming**: Use `future_to_[item_type]` convention for executor mappings
+- **Error Handling**: Per-item exception handling that doesn't stop batch processing
+- **Resource Isolation**: Create dedicated AI managers per worker thread
+- **Result Collection**: Maintain original order when required using `results_dict` pattern
 
 ### AI Provider Integration
 - Support multiple providers: OpenAI, Ollama, LM Studio

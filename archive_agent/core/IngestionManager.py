@@ -2,7 +2,6 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import concurrent.futures
-import logging
 from typing import List, Tuple, Optional, Any
 
 from rich.progress import Progress
@@ -10,8 +9,6 @@ from rich.progress import Progress
 from archive_agent.core.CliManager import CliManager
 from archive_agent.data.FileData import FileData
 from archive_agent.util.format import format_file
-
-logger = logging.getLogger(__name__)
 
 MAX_WORKERS = 8
 
@@ -54,11 +51,12 @@ class IngestionManager:
                     try:
                         processed_results.append(future.result())
                     except Exception as exc:
-                        logger.error(f"An exception occurred while processing {format_file(file_data.file_path)}: {exc}")
+                        self.cli.logger.error(f"An exception occurred while processing {format_file(file_data.file_path)}: {exc}")
                         processed_results.append((file_data, False))
 
         return processed_results
 
+    # noinspection PyMethodMayBeStatic
     def _process_file_data(
             self,
             file_data: FileData,

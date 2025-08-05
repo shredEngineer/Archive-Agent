@@ -97,10 +97,10 @@ class CommitManager:
         """
         tracked_file_data = []
 
-        # Populate list of file data objects, each with its own AI manager instance from the AI factory.
+        # Populate list of file data objects, each with AI factory for parallel processing.
         for file_path, file_meta in tracked_files.items():
             file_data = FileData(
-                ai=self.ai_factory.get_ai(),
+                ai_factory=self.ai_factory,
                 decoder_settings=self.decoder_settings,
                 file_path=file_path,
                 file_meta=file_meta,
