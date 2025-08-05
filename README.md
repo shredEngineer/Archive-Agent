@@ -29,6 +29,7 @@
 ## Natively index your documents on-device
 
 - **Includes local AI file system indexer**
+- **Parallel processing** for vision, embedding, and file operations
 - Natively ingests [PDFs, images, Markdown, plaintext, and more…](#which-files-are-processed)
 - [Selects and tracks files using patterns](#how-files-are-selected-for-tracking) like `~/Documents/*.pdf` 
 - Transcribes images using [automatic OCR](#ocr-strategies) (experimental) and entity extraction
@@ -289,6 +290,11 @@ Ultimately, **Archive Agent** decodes everything to text like this:
   - The vision model will reject unintelligible images.
   - *Entity extraction* extracts structured information from images.
   - Structured information is formatted as image description.
+
+**Archive Agent** processes files with optimized performance:
+- Vision operations are parallelized across images and pages.
+- Embedding operations are parallelized across text chunks.
+- Smart chunking uses sequential processing due to carry mechanism dependencies.
 
 See [Archive Agent settings](#archive-agent-settings): `image_ocr`, `image_entity_extract`
 
