@@ -3,7 +3,9 @@
 
 from logging import Logger
 import os
-from typing import Set, Optional, List
+from typing import Set, Optional, List, Any
+
+from rich.progress import Progress
 
 import io
 from PIL import Image
@@ -14,6 +16,7 @@ from charset_normalizer import from_path
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.util.format import format_file
 from archive_agent.data.loader.image import ImageToTextCallback
+from archive_agent.data.VisionProcessor import VisionProcessor, VisionRequest
 from archive_agent.data.loader.image import is_image
 from archive_agent.util.text_util import utf8_tempfile, splitlines_exact
 from archive_agent.util.LineTextBuilder import LineTextBuilder
@@ -124,6 +127,8 @@ def load_binary_document(
         logger: Logger,
         file_path: str,
         image_to_text_callback: Optional[ImageToTextCallback],
+        progress: Optional[Progress] = None,
+        task_id: Optional[Any] = None,
 ) -> Optional[DocumentContent]:
     """
     Load binary document (using Pandoc).
@@ -131,6 +136,8 @@ def load_binary_document(
     :param logger: Logger.
     :param file_path: File path.
     :param image_to_text_callback: Optional image-to-text callback.
+    :param progress: A rich.progress.Progress object for progress reporting.
+    :param task_id: The task ID for the progress bar.
     :return: Document content if successful, None otherwise.
     """
     file_ext = os.path.splitext(file_path)[1].lower()
@@ -149,7 +156,7 @@ def load_binary_document(
     images = load_binary_document_images(logger=logger, file_path=file_path)
 
     # Stage 3: Vision processing (new function, same logic)
-    image_texts = extract_binary_image_texts(ai_factory, logger, images, image_to_text_callback)
+    image_texts = extract_binary_image_texts(ai_factory, logger, images, image_to_text_callback, progress, task_id)
 
     # Stage 4: Assembly (new function)
     return build_binary_document_with_images(builder, image_texts)
@@ -159,14 +166,18 @@ def extract_binary_image_texts(
         ai_factory: AiManagerFactory,
         logger: Logger,
         images: List[Image.Image],
-        image_to_text_callback: Optional[ImageToTextCallback]
+        image_to_text_callback: Optional[ImageToTextCallback],
+        progress: Optional[Progress] = None,
+        task_id: Optional[Any] = None,
 ) -> List[str]:
     """
-    Extract text from binary document images (currently sequential).
+    Extract text from binary document images with parallel processing.
     :param ai_factory: AI manager factory.
     :param logger: Logger.
     :param images: List of PIL Images.
     :param image_to_text_callback: Optional image-to-text callback.
+    :param progress: A rich.progress.Progress object for progress reporting.
+    :param task_id: The task ID for the progress bar.
     :return: List of formatted image texts.
     """
     image_texts = []
@@ -179,26 +190,38 @@ def extract_binary_image_texts(
         logger.warning(f"IGNORING ({len(images)}) document image(s)")
         return image_texts
 
+    # Create VisionProcessor for batch processing
+    vision_processor = VisionProcessor(ai_factory, logger, "binary_document")
+    vision_requests = []
+
+    # Collect all vision requests
     for image_index, image in enumerate(images):
-        logger.info(f"Converting document image ({image_index + 1}) / ({len(images)})...")
+        log_header = f"Converting document image ({image_index + 1}) / ({len(images)})..."
 
-        ai = ai_factory.get_ai()
-        image_text = image_to_text_callback(ai, image)
+        # Formatter lambda with consistent bracket logic for binary docs
+        formatter = lambda vision_result: f"[{vision_result}]" if vision_result is not None else "[Unprocessable Image]"
 
-        if image_text is None:
-            image_texts.append("[Unprocessable Image]")
-            logger.warning(
-                f"Image ({image_index + 1}) / ({len(images)}): "
-                f"Unprocessable image"
-            )
-            continue
+        vision_request = VisionRequest(
+            image_data=image,
+            callback=image_to_text_callback,
+            formatter=formatter,
+            log_header=log_header,
+            image_index=image_index,
+            page_index=0  # Binary docs are single-page
+        )
+        vision_requests.append(vision_request)
 
-        assert len(splitlines_exact(image_text)) == 1, f"Text from image must be single line:\n'{image_text}'"
+    if not vision_requests:
+        return image_texts
 
-        # NOTE: The brackets indicate that the text maps to an image.
-        image_texts.append(f"[{image_text}]")
+    # Update progress total now that we know the number of vision requests
+    if progress and task_id:
+        progress.update(task_id, total=len(vision_requests))
 
-    return image_texts
+    # Process all requests in parallel
+    vision_results = vision_processor.process_vision_requests_parallel(vision_requests, progress, task_id)
+
+    return vision_results
 
 
 def build_binary_document_with_images(

@@ -115,6 +115,8 @@ class FileData:
                 logger=self.logger,
                 file_path=self.file_path,
                 image_to_text_callback=self.image_to_text_callback_image,
+                progress=progress,
+                task_id=task_id,
             )
 
         elif is_pdf_document(self.file_path):
@@ -266,9 +268,12 @@ class FileData:
         # NOTE: DocumentContent is an array of text lines, mapped to page or line numbers.
         doc_content: Optional[DocumentContent] = self.decode(progress, vision_task_id)
 
-        # Clean up vision task if it was created
+        # Clean up vision task if it was created and update file progress
         if progress and vision_task_id is not None:
             progress.remove_task(vision_task_id)
+            # Update file-level progress: Vision phase complete
+            if task_id is not None:
+                progress.update(task_id, advance=1)
 
         # Decoder may fail, e.g. on I/O error, exhausted AI attempts, …
         if doc_content is None:
@@ -362,8 +367,11 @@ class FileData:
 
             self.points.append(point)
 
-        # Clean up embedding task
+        # Clean up embedding task and update file progress
         if progress and embedding_task_id is not None:
             progress.remove_task(embedding_task_id)
+            # Update file-level progress: Embedding phase complete
+            if task_id is not None:
+                progress.update(task_id, advance=1)
 
         return True

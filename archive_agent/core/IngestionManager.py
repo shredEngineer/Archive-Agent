@@ -68,7 +68,12 @@ class IngestionManager:
         """
         task_id = None
         if progress:
-            task_id = progress.add_task(f"[cyan]↳[/cyan] {format_file(file_data.file_path)}", total=None, start=True)
+            # Determine total phases: Vision (if supported) + Embedding
+            from archive_agent.data.loader.pdf import is_pdf_document
+            from archive_agent.data.loader.text import is_binary_document
+            has_vision = is_pdf_document(file_data.file_path) or is_binary_document(file_data.file_path)
+            total_phases = 2 if has_vision else 1
+            task_id = progress.add_task(f"[cyan]↳[/cyan] {format_file(file_data.file_path)}", total=total_phases, start=True)
 
         success = file_data.process(progress, task_id)
 
