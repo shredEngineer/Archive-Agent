@@ -292,6 +292,7 @@ Ultimately, **Archive Agent** decodes everything to text like this:
   - Structured information is formatted as image description.
 
 **Archive Agent** processes files with optimized performance:
+- Files are processed in parallel.
 - Vision operations are parallelized across images and pages.
 - Embedding operations are parallelized across text chunks.
 - Smart chunking uses sequential processing due to carry mechanism dependencies.
