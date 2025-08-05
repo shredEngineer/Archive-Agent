@@ -20,7 +20,7 @@ from archive_agent.util.format import format_file
 from archive_agent.data.loader.image import ImageToTextCallback
 from archive_agent.util.text_util import splitlines_exact
 from archive_agent.util.PageTextBuilder import PageTextBuilder
-from archive_agent.data.VisionProcessor import VisionProcessor, VisionRequest
+from archive_agent.data.processor.VisionProcessor import VisionProcessor, VisionRequest
 
 
 TINY_IMAGE_WIDTH_THRESHOLD: int = 32

@@ -3,7 +3,9 @@
 
 from logging import Logger
 import re
-from typing import List, Tuple, Optional, Callable
+from typing import List, Tuple, Optional, Callable, Any
+
+from rich.progress import Progress
 from dataclasses import dataclass
 
 import spacy
@@ -343,6 +345,8 @@ def get_chunks_with_reference_ranges(
         file_path: str,
         logger: Logger,
         verbose: bool = True,
+        progress: Optional[Progress] = None,
+        task_id: Optional[Any] = None,
 ) -> List[ChunkWithRange]:
     """
     Chunkify a list of sentences into AI-determined chunks, carrying over leftover sentences where needed,
@@ -368,6 +372,10 @@ def get_chunks_with_reference_ranges(
         )
 
     blocks_of_sentences = _group_blocks_of_sentences(sentences, chunk_lines_block)
+
+    # Set progress total based on total sentences (more meaningful than block count)
+    if progress and task_id:
+        progress.update(task_id, total=len(sentences_with_references))
 
     chunks_with_ranges: List[ChunkWithRange] = []
     carry: Optional[str] = None
@@ -430,6 +438,10 @@ def get_chunks_with_reference_ranges(
         if carry:
             carry_reference_ranges = block_sentence_reference_ranges[ranges[-1][0] - 1:ranges[-1][1] - 1]
             last_carry_header = chunk_headers[-1]
+
+        # Update progress after processing each block (advance by number of sentences processed)
+        if progress and task_id:
+            progress.update(task_id, advance=block_len)
 
     if carry:
         assert last_carry_header is not None, "Internal error: carry exists but no header was recorded"

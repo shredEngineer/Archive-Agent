@@ -12,7 +12,7 @@ from PIL import Image
 
 from qdrant_client.models import PointStruct
 
-from archive_agent.data.ChunkEmbeddingProcessor import ChunkEmbeddingProcessor
+from archive_agent.data.processor.EmbedProcessor import EmbedProcessor
 from archive_agent.db.QdrantSchema import QdrantPayload
 
 from archive_agent.ai.AiManager import AiManager
@@ -52,26 +52,28 @@ class FileData:
         :param file_path: Path to the file.
         :param file_meta: File metadata.
         """
+        # Core dependencies and configuration
         self.ai_factory = ai_factory
         self.ai = ai_factory.get_ai()  # Primary AI instance for vision, chunking, config
         self.decoder_settings = decoder_settings
-
         self.chunk_lines_block = self.ai.chunk_lines_block
 
+        # File metadata and logging
         self.file_path = file_path
         self.file_meta = file_meta
-
         self.logger = self.ai.cli.get_prefixed_logger(prefix=format_filename_short(self.file_path))
-        self.chunk_processor = ChunkEmbeddingProcessor(ai_factory, self.logger, file_path)
-
+        
+        # Processing components
+        self.chunk_processor = EmbedProcessor(ai_factory, self.logger, file_path)
         self.points: List[PointStruct] = []
 
+        # Vision callback configuration based on AI provider capabilities
         self.image_to_text_callback_combined = self.image_to_text_combined if self.ai.ai_provider.supports_vision else None
         self.image_to_text_callback_entity = self.image_to_text_entity if self.ai.ai_provider.supports_vision else None
         self.image_to_text_callback_ocr = self.image_to_text_ocr if self.ai.ai_provider.supports_vision else None
-
         self.image_to_text_callback_page = self.image_to_text_callback_ocr
 
+        # Select appropriate vision callback based on decoder settings
         if self.decoder_settings.image_ocr and self.decoder_settings.image_entity_extract:
             self.image_to_text_callback_image = self.image_to_text_callback_combined
         elif self.decoder_settings.image_ocr:
@@ -81,6 +83,7 @@ class FileData:
         else:
             self.image_to_text_callback_image = None
 
+        # Determine decoder function based on file type
         self.decoder_func: Optional[DecoderCallable] = self.get_decoder_func()
 
     def get_decoder_func(self) -> Optional[DecoderCallable]:
@@ -141,6 +144,7 @@ class FileData:
         """
         return self.decoder_func is not None
 
+    # IMAGE PROCESSING AND VISION CALLBACKS
     def image_to_text(self, ai: AiManager, image: Image.Image) -> Optional[VisionSchema]:
         """
         Convert image to RGB if needed, resize, and process with AI vision.
@@ -239,6 +243,7 @@ class FileData:
         self.logger.warning(f"Cannot process {format_file(self.file_path)}")
         return None
 
+    # AI CHUNKING CALLBACK
     # noinspection PyMethodMayBeStatic
     def chunk_callback(self, ai: AiManager, block_of_sentences: List[str]) -> ChunkSchema:
         """
@@ -253,12 +258,18 @@ class FileData:
 
     def process(self, progress: Optional[Progress] = None, task_id: Optional[Any] = None) -> bool:
         """
-        Process the file: decode, split, chunk, embed, and create points.
+        Process the file through the complete RAG pipeline:
+        Phase 1: Document decoding and vision processing (PDF/Binary only)
+        Phase 2: Sentence extraction and AI chunking 
+        Phase 3: Reference range analysis and setup
+        Phase 4: Parallel embedding and vector point creation
+        
         :param progress: A rich.progress.Progress object for progress reporting.
         :param task_id: The task ID for the progress bar.
         :return: True if successful, False otherwise.
         """
 
+        # PHASE 1: Document Decoding and Vision Processing
         # Create vision processing sub-task for file types that support vision
         vision_task_id = None
         if progress and (is_pdf_document(self.file_path) or is_binary_document(self.file_path)):
@@ -280,14 +291,18 @@ class FileData:
             self.logger.warning(f"Failed to process {format_file(self.file_path)}")
             return False
 
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
+        # PHASE 2: Sentence Extraction and AI Chunking
         doc_content.strip_lines()
 
         # Use preprocessing and NLP (spaCy) to split text into sentences, keeping track of references.
         if self.ai.cli.VERBOSE_CHUNK:
             self.logger.info(f"Extracting sentences across ({len(doc_content.lines)}) lines")
         sentences_with_reference_ranges = get_sentences_with_reference_ranges(doc_content)
+
+        # Create chunking sub-task
+        chunking_task_id = None
+        if progress:
+            chunking_task_id = progress.add_task("[yellow]Chunking[/yellow]", total=None)
 
         # Group sentences into chunks, keeping track of references.
         if self.ai.cli.VERBOSE_CHUNK:
@@ -300,8 +315,18 @@ class FileData:
             file_path=self.file_path,
             logger=self.logger,
             verbose=self.ai.cli.VERBOSE_CHUNK,
+            progress=progress,
+            task_id=chunking_task_id,
         )
 
+        # Clean up chunking task and update file progress
+        if progress and chunking_task_id is not None:
+            progress.remove_task(chunking_task_id)
+            # Update file-level progress: Chunking phase complete
+            if task_id is not None:
+                progress.update(task_id, advance=1)
+
+        # PHASE 3: Reference Range Analysis and Point Creation Setup
         is_page_based = doc_content.pages_per_line is not None
 
         if is_page_based:
@@ -316,8 +341,7 @@ class FileData:
         if progress:
             embedding_task_id = progress.add_task("[green]Embedding[/green]", total=len(chunks))
 
-        # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
+        # PHASE 4: Parallel Embedding and Vector Point Creation
         # Process chunks in parallel for embedding
         embedding_results = self.chunk_processor.process_chunks_parallel(
             chunks=chunks,

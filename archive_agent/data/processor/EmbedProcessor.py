@@ -12,7 +12,7 @@ from archive_agent.util.format import format_file
 MAX_WORKERS = 8
 
 
-class ChunkEmbeddingProcessor:
+class EmbedProcessor:
     """
     Handles parallel processing of chunk embeddings.
     """
