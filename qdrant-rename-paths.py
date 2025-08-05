@@ -29,7 +29,7 @@ Safety:
 
 import sys
 import logging
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 # Set up minimal logging to avoid spam
 logging.basicConfig(level=logging.WARNING)
@@ -66,7 +66,7 @@ def colored_text(text: str, color: str) -> str:
     return f"{color}{text}{Colors.END}"
 
 
-def get_user_input(prompt: str, valid_responses: List[str] = None) -> str:
+def get_user_input(prompt: str, valid_responses: Optional[List[str]] = None) -> str:
     """Get user input with optional validation."""
     while True:
         response = input(prompt).strip().lower()
@@ -79,8 +79,7 @@ def step1_get_source_prefix_and_find_points(qdrant) -> Tuple[str, List, List[str
     """Step 1: Get source path prefix and find matching points."""
     matching_points = []
     sorted_paths = []
-    source_prefix = ""  # Initialize to satisfy type checker
-    
+
     while True:
         # Get source path prefix
         print(colored_text("Step 1: Source Path Prefix", Colors.BOLD))
