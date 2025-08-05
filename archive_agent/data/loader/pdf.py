@@ -18,6 +18,7 @@ from archive_agent.util.format import format_file
 from archive_agent.data.loader.image import ImageToTextCallback
 from archive_agent.util.text_util import splitlines_exact
 from archive_agent.util.PageTextBuilder import PageTextBuilder
+from archive_agent.data.VisionProcessor import VisionProcessor, VisionRequest
 
 
 TINY_IMAGE_WIDTH_THRESHOLD: int = 32
@@ -163,11 +164,12 @@ def extract_image_texts_per_page(
     :param image_to_text_callback_image: Optional image-to-text callback for images (`relaxed` OCR strategy).
     :return: List of text results per page (one list of strings per page).
     """
-    image_texts_per_page: List[List[str]] = []
+    # Create VisionProcessor for batch processing
+    vision_processor = VisionProcessor(ai_factory, logger, file_path)
+    vision_requests = []
 
+    # Collect all vision requests across all pages
     for page_index, content in enumerate(page_contents):
-        image_texts: List[str] = []
-
         for image_index, image_bytes in enumerate(content.layout_image_bytes):
             log_header = (
                 f"Processing image ({image_index + 1}) "
@@ -184,32 +186,41 @@ def extract_image_texts_per_page(
 
                     logger.info(f"{log_header}: Converting to text")
 
-                    ai = ai_factory.get_ai()
+                    # Choose callback based on OCR strategy (preserve original logic)
                     if content.ocr_strategy == OcrStrategy.STRICT:
-                        image_text = image_to_text_callback_page(ai, image)
+                        callback = image_to_text_callback_page
+                        formatter = lambda result: "[Unprocessable page]" if result is None else result
                     else:
-                        image_text = image_to_text_callback_image(ai, image)
+                        callback = image_to_text_callback_image
+                        formatter = lambda result: "[Unprocessable image]" if result is None else f"[{result}]"
 
-                    if image_text is None:
-                        if content.ocr_strategy == OcrStrategy.STRICT:
-                            image_texts.append(f"[Unprocessable page]")
-                        else:
-                            image_texts.append(f"[Unprocessable image]")
-                        logger.warning(f"{log_header}: Unprocessable image")
-                        continue
-
-                    assert len(splitlines_exact(image_text)) == 1, f"Text from image must be single line:\n'{image_text}'"
-
-                    if content.ocr_strategy == OcrStrategy.RELAXED:
-                        # Add brackets around image text for `relaxed` OCR strategy (separate from "actual" text)
-                        image_text = f"[{image_text}]"
-
-                    image_texts.append(image_text)
+                    vision_request = VisionRequest(
+                        image_data=image_bytes,
+                        callback=callback,
+                        formatter=formatter,
+                        log_header=f"{log_header}: Converting to text",
+                        image_index=image_index,
+                        page_index=page_index
+                    )
+                    vision_requests.append(vision_request)
 
             except Exception as e:
                 logger.warning(f"{log_header}: Failed to extract text: {e}")
 
-        image_texts_per_page.append(image_texts)
+    image_texts_per_page: List[List[str]] = [[] for _ in range(len(page_contents))]
+
+    if not vision_requests:
+        return image_texts_per_page
+
+    # Process all requests in parallel
+    vision_results = vision_processor.process_vision_requests_parallel(vision_requests)
+
+    # Reassemble results into per-page structure
+    for request_index, formatted_result in enumerate(vision_results):
+        request = vision_requests[request_index]
+        page_index = request.page_index
+
+        image_texts_per_page[page_index].append(formatted_result)
 
     return image_texts_per_page
 

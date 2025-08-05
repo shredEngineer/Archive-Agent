@@ -145,6 +145,7 @@ def create_mock_ai_factory() -> Mock:
     return mock_factory
 
 
+# noinspection PyUnusedLocal
 def dummy_chunk_callback(ai: AiManager, block_of_sentences: List[str]) -> ChunkSchema:
     """
     Simulate AI chunking with a fixed, single-chunk output.
