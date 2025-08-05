@@ -33,7 +33,7 @@ from archive_agent.util.image_util import image_resize_safe, image_to_base64
 from archive_agent.data.chunk import get_chunks_with_reference_ranges, get_sentences_with_reference_ranges
 
 
-DecoderCallable = Callable[[], Optional[DocumentContent]]
+DecoderCallable = Callable[[Optional[Progress], Optional[Any]], Optional[DocumentContent]]
 
 
 class FileData:
@@ -90,7 +90,7 @@ class FileData:
         :return: Decoder function or None if unsupported.
         """
         if is_image(self.file_path):
-            return lambda: load_image(
+            return lambda progress, task_id: load_image(
                 ai=self.ai,
                 logger=self.logger,
                 file_path=self.file_path,
@@ -98,19 +98,19 @@ class FileData:
             )
 
         elif is_plaintext(self.file_path):
-            return lambda: load_plaintext(
+            return lambda progress, task_id: load_plaintext(
                 logger=self.logger,
                 file_path=self.file_path,
             )
 
         elif is_ascii_document(self.file_path):
-            return lambda: load_ascii_document(
+            return lambda progress, task_id: load_ascii_document(
                 logger=self.logger,
                 file_path=self.file_path,
             )
 
         elif is_binary_document(self.file_path):
-            return lambda: load_binary_document(
+            return lambda progress, task_id: load_binary_document(
                 ai_factory=self.ai_factory,
                 logger=self.logger,
                 file_path=self.file_path,
@@ -118,13 +118,15 @@ class FileData:
             )
 
         elif is_pdf_document(self.file_path):
-            return lambda: load_pdf_document(
+            return lambda progress, task_id: load_pdf_document(
                 ai_factory=self.ai_factory,
                 logger=self.logger,
                 file_path=self.file_path,
                 image_to_text_callback_page=self.image_to_text_callback_page,
                 image_to_text_callback_image=self.image_to_text_callback_image,
                 decoder_settings=self.decoder_settings,
+                progress=progress,
+                task_id=task_id,
             )
 
         return None
@@ -217,15 +219,17 @@ class FileData:
         # Join with a single space
         return text_ocr + " " + text_entity
 
-    def decode(self) -> Optional[DocumentContent]:
+    def decode(self, progress: Optional[Progress] = None, task_id: Optional[Any] = None) -> Optional[DocumentContent]:
         """
         Decode the file using the determined decoder function.
 
+        :param progress: A rich.progress.Progress object for progress reporting.
+        :param task_id: The task ID for the progress bar.
         :return: DocumentContent or None if failed or unsupported.
         """
         if self.decoder_func is not None:
             try:
-                return self.decoder_func()
+                return self.decoder_func(progress, task_id)
             except Exception as e:
                 self.logger.warning(f"Failed to process {format_file(self.file_path)}: {e}")
                 return None
@@ -253,9 +257,18 @@ class FileData:
         :return: True if successful, False otherwise.
         """
 
+        # Create vision processing sub-task for file types that support vision
+        vision_task_id = None
+        if progress and (is_pdf_document(self.file_path) or is_binary_document(self.file_path)):
+            vision_task_id = progress.add_task("[cyan]Vision Processing[/cyan]", total=None)
+
         # Call the loader function assigned to this file data.
         # NOTE: DocumentContent is an array of text lines, mapped to page or line numbers.
-        doc_content: Optional[DocumentContent] = self.decode()
+        doc_content: Optional[DocumentContent] = self.decode(progress, vision_task_id)
+
+        # Clean up vision task if it was created
+        if progress and vision_task_id is not None:
+            progress.remove_task(vision_task_id)
 
         # Decoder may fail, e.g. on I/O error, exhausted AI attempts, …
         if doc_content is None:
@@ -293,8 +306,10 @@ class FileData:
             max_line = max(doc_content.lines_per_line) if doc_content.lines_per_line else 0
             reference_total_info = f"{max_line}"
 
-        if progress and task_id:
-            progress.update(task_id, total=len(chunks))
+        # Create embedding sub-task
+        embedding_task_id = None
+        if progress:
+            embedding_task_id = progress.add_task("[green]Embedding[/green]", total=len(chunks))
 
         # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
@@ -303,7 +318,7 @@ class FileData:
             chunks=chunks,
             verbose=self.ai.cli.VERBOSE_CHUNK,
             progress=progress,
-            task_id=task_id
+            task_id=embedding_task_id
         )
 
         # Process results and create points
@@ -346,5 +361,9 @@ class FileData:
                 )
 
             self.points.append(point)
+
+        # Clean up embedding task
+        if progress and embedding_task_id is not None:
+            progress.remove_task(embedding_task_id)
 
         return True

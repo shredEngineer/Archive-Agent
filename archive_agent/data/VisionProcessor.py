@@ -3,10 +3,11 @@
 
 import concurrent.futures
 from dataclasses import dataclass
-from typing import List, Union, Optional, Callable
+from typing import List, Union, Optional, Callable, Any
 import io
 
 from PIL import Image
+from rich.progress import Progress
 
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.data.loader.image import ImageToTextCallback
@@ -45,10 +46,17 @@ class VisionProcessor:
         self.logger = logger
         self.file_path = file_path
 
-    def process_vision_requests_parallel(self, requests: List[VisionRequest]) -> List[str]:
+    def process_vision_requests_parallel(
+            self,
+            requests: List[VisionRequest],
+            progress: Optional[Progress] = None,
+            task_id: Optional[Any] = None
+    ) -> List[str]:
         """
         Process vision requests in parallel with progress tracking.
         :param requests: List of VisionRequest objects to process.
+        :param progress: A rich.progress.Progress object for progress reporting.
+        :param task_id: The task ID for the progress bar.
         :return: List of formatted result strings in same order as requests.
         """
         if not requests:
@@ -75,12 +83,22 @@ class VisionProcessor:
 
                 # Apply formatter to get final result
                 _formatted_result = request.formatter(vision_result)
+
+                # Update progress after successful vision processing
+                if progress and task_id:
+                    progress.update(task_id, advance=1)
+
                 return request_index, _formatted_result
 
             except Exception as e:
                 self.logger.error(f"Failed to process vision request ({request.image_index + 1}): {e}")
                 # Apply formatter to None for error case
                 _formatted_result = request.formatter(None)
+
+                # Update progress even on failure
+                if progress and task_id:
+                    progress.update(task_id, advance=1)
+
                 return request_index, _formatted_result
 
         # Use ThreadPoolExecutor for parallel vision processing
