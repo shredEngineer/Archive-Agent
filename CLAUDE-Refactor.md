@@ -64,37 +64,122 @@ Plan to proceed in a multi-step fashion, as outlined below. Reflect deeply on th
 - ✅ Manual runtime testing verified working
 - ✅ Multithreading architecture preserves all 4 core requirements
 
-## Phase 2: PDF/Binary Document Vision Parallelization (PLANNED)
+## Phase 2: Vision Parallelization
 
-### Objectives
-Split the loaders to parallelize AI vision calls for images within documents.
+### Architecture Discovery
+After deep analysis, we discovered that:
+- **PDF Loader already has perfect multi-stage architecture**: `get_pdf_page_contents()` → `extract_image_texts_per_page()` → `build_document_text_from_pages()`
+- **Binary Document Loader has inline processing**: Vision happens during document building with immediate injection
+- **No complex position mapping needed**: Existing data structures already encode positioning
 
-**2.1 Make loader.prepare() gather and return AI vision requests**
-- PDF Loader: Extract all images from `extract_image_texts_per_page()` into vision request list
-- Binary Document Loader: Extract all images from `load_binary_document_images()` into vision request list
-- Return structured vision requests with context (page numbers, image indices, etc.)
+### Phase 2A: Binary Document Loader Refactoring ✅ COMPLETED
 
-**2.2 Execute AI vision requests in parallel**
-- Create dedicated vision processing class in `archive_agent/data/`
-- Use `ThreadPoolExecutor` with `MAX_WORKERS = 8` pattern
-- Each vision worker gets isolated AiManager instance
-- Maintain context for proper result assembly
+#### Objectives
+- Refactor binary document loader to match PDF's multi-stage pattern
+- Maintain 100% backward compatibility with existing callback interface
+- Prepare foundation for VisionProcessor integration
 
-**2.3 Feed AI vision results back into loader.process()**
-- Match vision results back to original context (page/image location)
-- Handle vision failures gracefully (placeholder text)
-- Preserve existing error handling patterns
+#### Files Modified
+- `archive_agent/data/loader/text.py` ✏️ MODIFIED
 
-**2.4 Make loader.format() compile and return the final text**
-- Assemble final document text combining layout text and vision results
-- Maintain existing text formatting and line mapping
-- Preserve page/line reference tracking
+#### Implementation Completed
+1. **Extracted image processing into `extract_binary_image_texts()` function**:
+   - Moved existing inline processing logic into dedicated function
+   - Preserves all logging, error handling, and callback behavior
+   - Returns list of formatted image texts with brackets and error placeholders
+   - Handles disabled vision configuration with appropriate warnings
 
-### Implementation Challenges
-- **Context Preservation**: Vision requests must retain page/image context for reassembly
-- **Error Handling**: Vision failures must not break document processing
-- **Text Assembly**: Final text must maintain exact same format as current sequential approach
-- **Progress Tracking**: Vision processing should show fine-grained progress
+2. **Created `build_binary_document_with_images()` assembly function**:
+   - Handles final document assembly with image texts appended
+   - Maintains identical spacing, brackets, and line structure
+   - Uses existing `LineTextBuilder.push()` operations exactly as before
+
+3. **Refactored `load_binary_document()` to multi-stage pattern**:
+   - **Stage 1**: Text extraction via Pandoc (unchanged)
+   - **Stage 2**: Image extraction from ZIP archive (unchanged) 
+   - **Stage 3**: Vision processing via new function (same logic)
+   - **Stage 4**: Assembly via new function (same result)
+
+#### Critical Requirements Met
+- **Zero behavioral changes**: Same input/output, error handling, formatting
+- **Same callback interface**: `image_to_text_callback` used exactly as before
+- **Identical text assembly**: Same brackets, spacing, line structure
+- **Perfect test compatibility**: All 59 tests pass unchanged
+
+#### Testing Status
+- ✅ All unit tests pass (`./audit.sh`)
+- ✅ Type checking clean
+- ✅ Code formatting compliant
+- ✅ Identical behavior verified
+
+### Phase 2B: VisionProcessor Implementation ⏳ NEXT
+
+#### Objectives
+- Create unified VisionProcessor for both PDF and Binary loaders
+- Implement parallel vision processing with MAX_WORKERS = 8
+- Follow unified multithreading style guide
+- Support both PDF image bytes and Binary PIL Images
+
+#### Files to Add
+- `archive_agent/data/VisionProcessor.py` ➕ NEW
+
+#### VisionProcessor Architecture Design
+- **VisionRequest class**: Contains image data, callback, formatter lambda, and context
+- **VisionProcessor class**: Handles parallel execution with ThreadPoolExecutor
+- **Thread Safety**: Uses AiManagerFactory for worker isolation, ai.cli logger hierarchy
+- **Unified Interface**: Supports both PDF bytes and Binary PIL Images
+- **Formatter Pattern**: Lambda functions preserve existing conditional formatting logic
+- **Error Handling**: Per-vision failures don't stop batch processing
+- **Ordered Results**: Maintains request order for deterministic reassembly
+
+#### Integration Strategy
+- **PDF Loader**: Replace internals of `extract_image_texts_per_page()` with VisionProcessor
+- **Binary Loader**: Replace internals of `extract_binary_image_texts()` with VisionProcessor  
+- **Callback Selection**: PDF chooses based on `ocr_strategy`, Binary uses provided callback
+- **Formatting Logic**: Preserve existing conditional formatting via lambda formatters
+
+### Phase 2C: PDF Loader Vision Parallelization ⏳ PLANNED
+
+#### Objectives
+- Integrate VisionProcessor into PDF loader's existing multi-stage architecture
+- Maintain identical output format: `List[List[str]]` (per-page image texts)
+- Preserve all existing OCR strategy logic and error handling
+
+#### Files to Modify
+- `archive_agent/data/loader/pdf.py` ✏️ MODIFY (internal `extract_image_texts_per_page()` only)
+
+#### Implementation Plan
+1. **Collect vision requests with context from page contents**
+2. **Choose callbacks based on existing `ocr_strategy` logic** 
+3. **Create formatter lambdas preserving conditional bracket logic**
+4. **Process all requests in parallel via VisionProcessor**
+5. **Reassemble results into per-page structure** maintaining original format
+
+#### Key Formatting Logic to Preserve
+- **STRICT strategy failures**: `"[Unprocessable page]"`
+- **RELAXED strategy failures**: `"[Unprocessable image]"`
+- **RELAXED strategy success**: `"[{image_text}]"` (brackets added)
+- **STRICT strategy success**: `"{image_text}"` (no brackets)
+
+### Phase 2D: Binary Loader Vision Parallelization ⏳ PLANNED
+
+#### Objectives
+- Integrate VisionProcessor into binary loader's new multi-stage architecture
+- Maintain identical output format: `List[str]` (formatted image texts)
+- Preserve all existing error handling and bracket formatting
+
+#### Files to Modify  
+- `archive_agent/data/loader/text.py` ✏️ MODIFY (internal `extract_binary_image_texts()` only)
+
+#### Implementation Plan
+1. **Replace sequential loop with VisionProcessor batch processing**
+2. **Create formatter lambda with consistent bracket logic**
+3. **Handle disabled vision configuration appropriately**
+4. **Maintain identical logging and error messages**
+
+#### Key Formatting Logic to Preserve
+- **Success cases**: `"[{image_text}]"` (always brackets for binary docs)
+- **Failure cases**: `"[Unprocessable Image]"` (consistent placeholder)
 
 ## Phase 3: Future Enhancements (CONCEPTUAL)
 
@@ -117,6 +202,16 @@ Split the loaders to parallelize AI vision calls for images within documents.
 - **Maintain identical output formats** - document text assembly must be byte-for-byte identical
 - **Respect multithreading architecture** - follow decoupled logging and thread safety requirements
 
+### Unified Multithreading Style Guide
+- **Module Constants**: Every parallel processing class must have `MAX_WORKERS = 8` at module top
+- **Class Location**: All parallel processing classes belong in `archive_agent/data/` 
+- **Logger Hierarchy**: Use instance loggers from `ai.cli` - never module-level loggers
+- **Worker Limits**: Always use `min(MAX_WORKERS, len(items))` pattern
+- **Variable Naming**: Use `future_to_[item_type]` convention for executor mappings
+- **Error Handling**: Per-item exception handling that doesn't stop batch processing
+- **Resource Isolation**: Create dedicated AI managers per worker thread
+- **Result Collection**: Maintain original order when required using `results_dict` pattern
+
 ### Verification Strategy
 - Run `./audit.sh` after each change for type checking and formatting
 - Manual runtime testing with `./archive-agent.sh update --verbose --nocache`
@@ -130,11 +225,32 @@ Split the loaders to parallelize AI vision calls for images within documents.
 
 ---
 
-**Phase 1 Status: COMPLETED ✅**
-- All objectives achieved
-- Architecture verified and tested
-- Ready for production use
-- Foundation established for Phase 2 implementation
+## Current Status Summary
+
+**Phase 1: COMPLETED ✅**
+- Chunk embedding parallelization implemented and tested
+- ChunkEmbeddingProcessor class created with unified multithreading style
+- Real-time progress tracking working
+- Thread safety verified with AiManagerFactory pattern
+
+**Phase 2A: COMPLETED ✅**
+- Binary document loader successfully refactored to multi-stage pattern
+- Foundation prepared for VisionProcessor integration
+- Zero behavioral changes achieved, all tests pass
+- Architecture now matches PDF loader's multi-stage structure
+
+**Phase 2B: READY TO START ⏳**
+- VisionProcessor implementation with unified parallel vision processing
+- Support for both PDF bytes and Binary PIL Images
+- Unified multithreading style with MAX_WORKERS = 8
+
+**Next Steps:**
+1. Create `VisionProcessor.py` with unified parallel vision processing
+2. Integrate VisionProcessor into PDF loader (`extract_image_texts_per_page()` internals)
+3. Integrate VisionProcessor into Binary loader (`extract_binary_image_texts()` internals)
+4. Verify identical output and performance improvements
+
+The architecture is well-designed and Phase 2A foundation is complete. Both loaders now have identical multi-stage structures ready for VisionProcessor integration!
 
 # 4
 Update the README to reflect the concurrency features.

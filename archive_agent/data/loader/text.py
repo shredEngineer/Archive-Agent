@@ -139,41 +139,79 @@ def load_binary_document(
         logger.warning(f"Failed to convert {format_file(file_path)} via Pandoc: {e}")
         return None
 
+    # Stage 1: Text extraction (unchanged)
     builder = LineTextBuilder(text=text)
 
-    # Append image texts at the end of the document
+    # Stage 2: Image extraction (unchanged)
     images = load_binary_document_images(logger=logger, file_path=file_path)
-    if images:
 
-        if image_to_text_callback is None:
-            logger.warning(f"Image vision is DISABLED in your current configuration")
-            logger.warning(f"IGNORING ({len(images)}) document image(s)")
+    # Stage 3: Vision processing (new function, same logic)
+    image_texts = extract_binary_image_texts(logger, images, image_to_text_callback)
 
-        else:
-            for image_index, image in enumerate(images):
-                logger.info(f"Converting document image ({image_index + 1}) / ({len(images)})...")
+    # Stage 4: Assembly (new function)
+    return build_binary_document_with_images(builder, image_texts)
 
-                image_text = image_to_text_callback(image)
 
-                if image_text is None:
-                    # NOTE: The brackets indicate that the text maps to an image.
-                    builder.push()
-                    builder.push(f"[Unprocessable Image]")
-                    builder.push()
-                    logger.warning(
-                        f"Image ({image_index + 1}) / ({len(images)}): "
-                        f"Unprocessable image"
-                    )
-                    continue
+def extract_binary_image_texts(
+        logger: Logger,
+        images: List[Image.Image],
+        image_to_text_callback: Optional[ImageToTextCallback]
+) -> List[str]:
+    """
+    Extract text from binary document images (currently sequential).
+    :param logger: Logger.
+    :param images: List of PIL Images.
+    :param image_to_text_callback: Optional image-to-text callback.
+    :return: List of formatted image texts.
+    """
+    image_texts = []
 
-                assert len(splitlines_exact(image_text)) == 1, f"Text from image must be single line:\n'{image_text}'"
+    if not images:
+        return image_texts
 
-                # NOTE: The brackets indicate that the text maps to an image.
-                builder.push()
-                builder.push(f"[{image_text}]")
-                builder.push()
+    if image_to_text_callback is None:
+        logger.warning(f"Image vision is DISABLED in your current configuration")
+        logger.warning(f"IGNORING ({len(images)}) document image(s)")
+        return image_texts
 
-    return builder.getDocumentContent()
+    for image_index, image in enumerate(images):
+        logger.info(f"Converting document image ({image_index + 1}) / ({len(images)})...")
+
+        image_text = image_to_text_callback(image)
+
+        if image_text is None:
+            image_texts.append("[Unprocessable Image]")
+            logger.warning(
+                f"Image ({image_index + 1}) / ({len(images)}): "
+                f"Unprocessable image"
+            )
+            continue
+
+        assert len(splitlines_exact(image_text)) == 1, f"Text from image must be single line:\n'{image_text}'"
+
+        # NOTE: The brackets indicate that the text maps to an image.
+        image_texts.append(f"[{image_text}]")
+
+    return image_texts
+
+
+def build_binary_document_with_images(
+        base_builder: LineTextBuilder,
+        image_texts: List[str]
+) -> Optional[DocumentContent]:
+    """
+    Assemble final document with image texts appended.
+    :param base_builder: Base document builder with text content.
+    :param image_texts: List of formatted image texts.
+    :return: Document content.
+    """
+    # Append image texts to builder
+    for image_text in image_texts:
+        base_builder.push()
+        base_builder.push(image_text)  # Already formatted
+        base_builder.push()
+
+    return base_builder.getDocumentContent()
 
 
 def load_binary_document_images(
