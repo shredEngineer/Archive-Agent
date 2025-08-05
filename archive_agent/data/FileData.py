@@ -15,6 +15,7 @@ from qdrant_client.models import PointStruct
 from archive_agent.data.ChunkEmbeddingProcessor import ChunkEmbeddingProcessor
 from archive_agent.db.QdrantSchema import QdrantPayload
 
+from archive_agent.ai.AiManager import AiManager
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.ai.chunk.AiChunk import ChunkSchema
 from archive_agent.ai.vision.AiVisionEntity import AiVisionEntity
@@ -90,6 +91,7 @@ class FileData:
         """
         if is_image(self.file_path):
             return lambda: load_image(
+                ai=self.ai,
                 logger=self.logger,
                 file_path=self.file_path,
                 image_to_text_callback=self.image_to_text_callback_image,
@@ -109,6 +111,7 @@ class FileData:
 
         elif is_binary_document(self.file_path):
             return lambda: load_binary_document(
+                ai_factory=self.ai_factory,
                 logger=self.logger,
                 file_path=self.file_path,
                 image_to_text_callback=self.image_to_text_callback_image,
@@ -116,6 +119,7 @@ class FileData:
 
         elif is_pdf_document(self.file_path):
             return lambda: load_pdf_document(
+                ai_factory=self.ai_factory,
                 logger=self.logger,
                 file_path=self.file_path,
                 image_to_text_callback_page=self.image_to_text_callback_page,
@@ -133,10 +137,10 @@ class FileData:
         """
         return self.decoder_func is not None
 
-    def image_to_text(self, image: Image.Image) -> Optional[VisionSchema]:
+    def image_to_text(self, ai: AiManager, image: Image.Image) -> Optional[VisionSchema]:
         """
         Convert image to RGB if needed, resize, and process with AI vision.
-
+        :param ai: AI manager.
         :param image: PIL Image object.
         :return: VisionSchema result or None if failed.
         """
@@ -151,7 +155,7 @@ class FileData:
 
         image_base64 = image_to_base64(image_possibly_resized)
 
-        vision_result = self.ai.vision(image_base64)
+        vision_result = ai.vision(image_base64)
 
         if vision_result.is_rejected:
             self.logger.critical(f"⚠️ Image rejected: \"{vision_result.rejection_reason}\"")
@@ -159,52 +163,53 @@ class FileData:
 
         return vision_result
 
-    def image_to_text_ocr(self, image: Image.Image) -> Optional[str]:
+    def image_to_text_ocr(self, ai: AiManager, image: Image.Image) -> Optional[str]:
         """
         Request vision with OCR on the image and format the result.
-
+        :param ai: AI manager.
         :param image: PIL Image object.
         :return: OCR text or None if failed.
         """
         self.logger.info("Requesting vision feature: OCR")
-        self.ai.request_ocr()
-        vision_result = self.image_to_text(image)
+        ai.request_ocr()
+        vision_result = self.image_to_text(ai=ai, image=image)
         if vision_result is not None:
             return AiVisionOCR.format_vision_answer(vision_result=vision_result)
         else:
             return None
 
-    def image_to_text_entity(self, image: Image.Image) -> Optional[str]:
+    def image_to_text_entity(self, ai: AiManager, image: Image.Image) -> Optional[str]:
         """
         Request vision with entity extraction on the image and format the result.
-
+        :param ai: AI manager.
         :param image: PIL Image object.
         :return: Entity text or None if failed.
         """
         self.logger.info("Requesting vision feature: Entity Extraction")
-        self.ai.request_entity()
-        vision_result = self.image_to_text(image)
+        ai.request_entity()
+        vision_result = self.image_to_text(ai=ai, image=image)
         if vision_result is not None:
             return AiVisionEntity.format_vision_answer(vision_result=vision_result)
         else:
             return None
 
-    def image_to_text_combined(self, image: Image.Image) -> Optional[str]:
+    def image_to_text_combined(self, ai: AiManager, image: Image.Image) -> Optional[str]:
         """
         Request vision with OCR and entity extraction on the image, format and join the results.
+        :param ai: AI manager.
         :param image: PIL Image object.
         :return: Combined text or None if any part failed.
         """
         self.logger.info("Requesting vision features: OCR, Entity Extraction")
 
-        self.ai.request_ocr()
-        vision_result_ocr = self.image_to_text(image)
+        ai.request_ocr()
+        vision_result_ocr = self.image_to_text(ai=ai, image=image)
         if vision_result_ocr is None:
             return None
         text_ocr = AiVisionOCR.format_vision_answer(vision_result=vision_result_ocr)
 
-        self.ai.request_entity()
-        vision_result_entity = self.image_to_text(image)
+        ai.request_entity()
+        vision_result_entity = self.image_to_text(ai=ai, image=image)
         if vision_result_entity is None:
             return None
         text_entity = AiVisionEntity.format_vision_answer(vision_result=vision_result_entity)
@@ -228,14 +233,15 @@ class FileData:
         self.logger.warning(f"Cannot process {format_file(self.file_path)}")
         return None
 
-    def chunk_callback(self, block_of_sentences: List[str]) -> ChunkSchema:
+    # noinspection PyMethodMayBeStatic
+    def chunk_callback(self, ai: AiManager, block_of_sentences: List[str]) -> ChunkSchema:
         """
         Callback for chunking a block of sentences using AI.
-
+        :param ai: AI manager.
         :param block_of_sentences: List of sentences to chunk.
         :return: ChunkSchema result.
         """
-        chunk_result = self.ai.chunk(block_of_sentences)
+        chunk_result = ai.chunk(block_of_sentences)
 
         return chunk_result
 
@@ -269,6 +275,7 @@ class FileData:
         if self.ai.cli.VERBOSE_CHUNK:
             self.logger.info(f"Extracting chunks across ({len(sentences_with_reference_ranges)}) sentences")
         chunks = get_chunks_with_reference_ranges(
+            ai_factory=self.ai_factory,
             sentences_with_references=sentences_with_reference_ranges,
             chunk_callback=self.chunk_callback,
             chunk_lines_block=self.chunk_lines_block,

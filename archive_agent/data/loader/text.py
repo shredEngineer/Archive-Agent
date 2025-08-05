@@ -11,6 +11,7 @@ import zipfile
 import pypandoc
 from charset_normalizer import from_path
 
+from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.util.format import format_file
 from archive_agent.data.loader.image import ImageToTextCallback
 from archive_agent.data.loader.image import is_image
@@ -119,12 +120,14 @@ def is_binary_document(file_path: str) -> bool:
 
 
 def load_binary_document(
+        ai_factory: AiManagerFactory,
         logger: Logger,
         file_path: str,
         image_to_text_callback: Optional[ImageToTextCallback],
 ) -> Optional[DocumentContent]:
     """
     Load binary document (using Pandoc).
+    :param ai_factory: AI manager factory.
     :param logger: Logger.
     :param file_path: File path.
     :param image_to_text_callback: Optional image-to-text callback.
@@ -146,19 +149,21 @@ def load_binary_document(
     images = load_binary_document_images(logger=logger, file_path=file_path)
 
     # Stage 3: Vision processing (new function, same logic)
-    image_texts = extract_binary_image_texts(logger, images, image_to_text_callback)
+    image_texts = extract_binary_image_texts(ai_factory, logger, images, image_to_text_callback)
 
     # Stage 4: Assembly (new function)
     return build_binary_document_with_images(builder, image_texts)
 
 
 def extract_binary_image_texts(
+        ai_factory: AiManagerFactory,
         logger: Logger,
         images: List[Image.Image],
         image_to_text_callback: Optional[ImageToTextCallback]
 ) -> List[str]:
     """
     Extract text from binary document images (currently sequential).
+    :param ai_factory: AI manager factory.
     :param logger: Logger.
     :param images: List of PIL Images.
     :param image_to_text_callback: Optional image-to-text callback.
@@ -177,7 +182,8 @@ def extract_binary_image_texts(
     for image_index, image in enumerate(images):
         logger.info(f"Converting document image ({image_index + 1}) / ({len(images)})...")
 
-        image_text = image_to_text_callback(image)
+        ai = ai_factory.get_ai()
+        image_text = image_to_text_callback(ai, image)
 
         if image_text is None:
             image_texts.append("[Unprocessable Image]")

@@ -12,6 +12,8 @@ from spacy.language import Language
 from spacy.tokens import Doc
 import bisect
 
+from archive_agent.ai.AiManager import AiManager
+from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.ai.chunk.AiChunk import ChunkSchema
 from archive_agent.data.DocumentContent import DocumentContent, ReferenceList
 from archive_agent.util.format import format_file
@@ -334,8 +336,9 @@ def _format_chunk(file_path: str, header: str, body: str) -> str:
 
 
 def get_chunks_with_reference_ranges(
+        ai_factory: AiManagerFactory,
         sentences_with_references: List[SentenceWithRange],
-        chunk_callback: Callable[[List[str]], ChunkSchema],
+        chunk_callback: Callable[[AiManager, List[str]], ChunkSchema],
         chunk_lines_block: int,
         file_path: str,
         logger: Logger,
@@ -344,7 +347,7 @@ def get_chunks_with_reference_ranges(
     """
     Chunkify a list of sentences into AI-determined chunks, carrying over leftover sentences where needed,
     and annotate each chunk with the corresponding (min, max) line reference range.
-
+    :param ai_factory: AI manager factory.
     :param sentences_with_references: List of sentences with their reference ranges.
     :param chunk_callback: Chunk callback.
     :param chunk_lines_block: Number of sentences per block to be chunked.
@@ -396,7 +399,8 @@ def get_chunks_with_reference_ranges(
         range_stop = block_sentence_reference_ranges[-1] if block_sentence_reference_ranges else (0, 0)
         logger.debug(f"Chunking block {block_index + 1}: {len(block_of_sentences)} sentences, range {range_start} to {range_stop}")
 
-        chunk_result: ChunkSchema = chunk_callback(block_of_sentences)
+        ai = ai_factory.get_ai()
+        chunk_result: ChunkSchema = chunk_callback(ai, block_of_sentences)
         chunk_start_lines = chunk_result.get_chunk_start_lines()
         chunk_headers = chunk_result.get_chunk_headers()
         ranges = _chunk_start_to_ranges(start_lines=chunk_start_lines, total_lines=len(block_of_sentences))

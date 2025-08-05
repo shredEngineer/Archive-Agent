@@ -4,7 +4,10 @@
 
 import logging
 from typing import List
+from unittest.mock import Mock
 
+from archive_agent.ai.AiManagerFactory import AiManagerFactory
+from archive_agent.ai.AiManager import AiManager
 from archive_agent.data.DocumentContent import DocumentContent
 from archive_agent.data.chunk import get_sentences_with_reference_ranges, get_chunks_with_reference_ranges, SentenceWithRange
 from archive_agent.ai.chunk.AiChunk import ChunkSchema, ChunkItem
@@ -133,7 +136,16 @@ def test_split_sentences_empty_or_blanks():
     assert result_blanks == []
 
 
-def dummy_chunk_callback(block_of_sentences: List[str]) -> ChunkSchema:
+# Mock factory that returns a mock AI manager - the actual AI instance isn't used in our tests
+def create_mock_ai_factory() -> Mock:
+    """Create a mock AiManagerFactory that returns a mock AiManager."""
+    mock_ai = Mock(spec=AiManager)
+    mock_factory = Mock(spec=AiManagerFactory)
+    mock_factory.get_ai.return_value = mock_ai
+    return mock_factory
+
+
+def dummy_chunk_callback(ai: AiManager, block_of_sentences: List[str]) -> ChunkSchema:
     """
     Simulate AI chunking with a fixed, single-chunk output.
     Input: List of sentences.
@@ -157,7 +169,14 @@ def test_generate_chunks_with_ranges_basic_no_carry():
     chunk_lines_block = 2
     file_path = "test.txt"
 
-    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path, logger)
+    result = get_chunks_with_reference_ranges(
+        create_mock_ai_factory(),
+        sentences_with_ranges,
+        dummy_chunk_callback,
+        chunk_lines_block,
+        file_path,
+        logger,
+    )
 
     assert len(result) == 1
     assert result[0].reference_range == (1, 2)
@@ -180,7 +199,14 @@ def test_generate_chunks_with_ranges_with_carry():
     chunk_lines_block = 2
     file_path = "test.txt"
 
-    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path, logger)
+    result = get_chunks_with_reference_ranges(
+        create_mock_ai_factory(),
+        sentences_with_ranges,
+        dummy_chunk_callback,
+        chunk_lines_block,
+        file_path,
+        logger,
+    )
 
     assert len(result) == 1
     assert result[0].reference_range == (1, 3)
@@ -203,7 +229,14 @@ def test_generate_chunks_with_ranges_ignores_zeros_in_agg():
     chunk_lines_block = 3
     file_path = "test.txt"
 
-    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path, logger)
+    result = get_chunks_with_reference_ranges(
+        create_mock_ai_factory(),
+        sentences_with_ranges,
+        dummy_chunk_callback,
+        chunk_lines_block,
+        file_path,
+        logger,
+    )
 
     assert len(result) == 1
     assert result[0].reference_range == (1, 2)
@@ -222,6 +255,13 @@ def test_generate_chunks_with_ranges_empty():
     chunk_lines_block = 1
     file_path = "test.txt"
 
-    result = get_chunks_with_reference_ranges(sentences_with_ranges, dummy_chunk_callback, chunk_lines_block, file_path, logger)
+    result = get_chunks_with_reference_ranges(
+        create_mock_ai_factory(),
+        sentences_with_ranges,
+        dummy_chunk_callback,
+        chunk_lines_block,
+        file_path,
+        logger,
+    )
 
     assert result == []

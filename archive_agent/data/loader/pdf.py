@@ -11,6 +11,7 @@ import fitz
 
 from PIL import Image
 
+from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.config.DecoderSettings import OcrStrategy, DecoderSettings
 from archive_agent.data.DocumentContent import DocumentContent
 from archive_agent.util.format import format_file
@@ -58,6 +59,7 @@ def is_pdf_document(file_path: str) -> bool:
 
 
 def load_pdf_document(
+        ai_factory: AiManagerFactory,
         logger: Logger,
         file_path: str,
         image_to_text_callback_page: Optional[ImageToTextCallback],
@@ -66,6 +68,7 @@ def load_pdf_document(
 ) -> Optional[DocumentContent]:
     """
     Load PDF document.
+    :param ai_factory: AI manager factory.
     :param logger: Logger.
     :param file_path: File path.
     :param image_to_text_callback_page: Optional image-to-text callback for pages (`strict` OCR strategy).
@@ -87,6 +90,7 @@ def load_pdf_document(
         logger.warning(f"Image vision is DISABLED in your current configuration")
     else:
         image_texts_per_page = extract_image_texts_per_page(
+            ai_factory=ai_factory,
             logger=logger,
             file_path=file_path,
             page_contents=page_contents,
@@ -142,6 +146,7 @@ def build_document_text_from_pages(
 
 
 def extract_image_texts_per_page(
+        ai_factory: AiManagerFactory,
         logger: Logger,
         file_path: str,
         page_contents: List[PdfPageContent],
@@ -150,6 +155,7 @@ def extract_image_texts_per_page(
 ) -> List[List[str]]:
     """
     Extract text from images per page.
+    :param ai_factory: AI manager factory.
     :param logger: Logger.
     :param file_path: File path (used for logging only).
     :param page_contents: PDF page contents.
@@ -178,10 +184,11 @@ def extract_image_texts_per_page(
 
                     logger.info(f"{log_header}: Converting to text")
 
+                    ai = ai_factory.get_ai()
                     if content.ocr_strategy == OcrStrategy.STRICT:
-                        image_text = image_to_text_callback_page(image)
+                        image_text = image_to_text_callback_page(ai, image)
                     else:
-                        image_text = image_to_text_callback_image(image)
+                        image_text = image_to_text_callback_image(ai, image)
 
                     if image_text is None:
                         if content.ocr_strategy == OcrStrategy.STRICT:

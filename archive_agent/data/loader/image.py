@@ -6,6 +6,7 @@ from typing import Set, Optional, Callable
 
 from PIL import Image, UnidentifiedImageError
 
+from archive_agent.ai.AiManager import AiManager
 from archive_agent.data.DocumentContent import DocumentContent
 
 from archive_agent.util.format import format_file
@@ -13,7 +14,7 @@ from archive_agent.util.text_util import splitlines_exact
 from archive_agent.util.PageTextBuilder import PageTextBuilder
 
 
-ImageToTextCallback = Callable[[Image.Image], Optional[str]]
+ImageToTextCallback = Callable[[AiManager, Image.Image], Optional[str]]
 
 
 def is_image(file_path: str) -> bool:
@@ -27,12 +28,14 @@ def is_image(file_path: str) -> bool:
 
 
 def load_image(
+        ai: AiManager,
         logger: Logger,
         file_path: str,
         image_to_text_callback: Optional[ImageToTextCallback],
 ) -> Optional[DocumentContent]:
     """
     Load image as text.
+    :param ai: AI manager.
     :param logger: Logger.
     :param file_path: File path.
     :param image_to_text_callback: Optional image-to-text callback.
@@ -48,7 +51,7 @@ def load_image(
         logger.warning(f"Image vision is DISABLED in your current configuration")
         return None
 
-    image_text = image_to_text_callback(image)
+    image_text = image_to_text_callback(ai, image)
     if image_text is None:
         return None
 
