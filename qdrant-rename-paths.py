@@ -97,7 +97,7 @@ def step1_get_source_prefix_and_find_points(qdrant) -> Tuple[str, List, List[str
             scroll_result = qdrant.qdrant.scroll(
                 collection_name=qdrant.collection,
                 scroll_filter=Filter(must=[]),  # Get all points
-                limit=10000,  # Large limit to get all points
+                limit=1_000_000_000,  # Large limit to get all points
                 with_payload=True,
             )
             

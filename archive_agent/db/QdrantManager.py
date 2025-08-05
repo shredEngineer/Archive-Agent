@@ -397,7 +397,7 @@ class QdrantManager:
                     must=[
                     ]
                 ),
-                limit=1000,  # Adjust limit as needed
+                limit=1_000_000_000,  # Large limit to get all points
                 with_payload=True,
             )
 
