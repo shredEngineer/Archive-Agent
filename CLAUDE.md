@@ -20,7 +20,8 @@ Archive Agent is an intelligent file indexer with powerful AI search (RAG engine
 - `archive_agent/db/QdrantManager.py` - Vector database operations  
 - `archive_agent/db/QdrantSchema.py` - Qdrant payload schema (Pydantic models)
 - `archive_agent/core/ContextManager.py` - Application context initialization
-- `archive_agent/core/CommitManager.py` - Commit logic and parallel processing
+- `archive_agent/core/CommitManager.py` - Commit orchestration and database operations
+- `archive_agent/core/IngestionManager.py` - Parallel file processing and progress tracking
 - `archive_agent/core/CliManager.py` - CLI display and logging with multithreading
 - `archive_agent/ai/AiManager.py` - AI API interactions and prompts
 - `archive_agent/__main__.py` - CLI command definitions
@@ -123,7 +124,7 @@ Responsibilities:
 4. Internally wraps the entire operation within the `live_context` manager, so that safe, concurrent logging is handled automatically
 5. Yields the necessary `rich.Progress` handles back to the caller
 
-**Decoupling Callers**: Callers like `CommitManager` use the `progress_context` in a simple `with` block. Inside this block, they use the yielded handles to report progress. This allows the caller to be completely ignorant of the underlying `rich` objects or the multithreaded logging complexity.
+**Decoupling Callers**: Callers like `IngestionManager` use the `progress_context` in a simple `with` block. Inside this block, they use the yielded handles to report progress. This allows the caller to be completely ignorant of the underlying `rich` objects or the multithreaded logging complexity.
 
 #### Challenge: Dynamic UI Updates
 A challenge is ensuring dynamic UI elements, like the AI token usage table, update in real-time. While worker threads correctly update the underlying statistics (protected by a `threading.Lock`), the `Live` object, if initialized with static content, will not reflect these changes.
@@ -144,7 +145,7 @@ This solution is surgically precise. It confines all UI update logic to the sing
 #### Challenge: Accurate Real-time Statistics
 Providing accurate, real-time updates for cumulative statistics like AI token usage is a significant challenge. The system solves this with a dual-mechanism architecture that balances liveness with correctness. Understanding the separation of concerns is critical.
 
-1. **Authoritative Accounting in `AiManager`**: For each file being processed, a worker thread uses a dedicated `AiManager` instance. This instance is the **source of truth** for usage statistics, meticulously tracking detailed data like `prompt_tokens`, `completion_tokens`, and `cost`. At the end of a file's processing, `CommitManager` aggregates this detailed, accurate data. This final aggregation ensures the final numbers are always correct.
+1. **Authoritative Accounting in `AiManager`**: For each file being processed, a worker thread uses a dedicated `AiManager` instance. This instance is the **source of truth** for usage statistics, meticulously tracking detailed data like `prompt_tokens`, `completion_tokens`, and `cost`. At the end of a file's processing, `IngestionManager` returns the results to `CommitManager` which aggregates this detailed, accurate data. This final aggregation ensures the final numbers are always correct.
 
 2. **Live UI Updates in `CliManager`**: The `CliManager` is responsible for the live display. The core challenge is that the `CliManager`'s formatting callbacks (e.g., `format_ai_chunk`) are only passed an `AiResult` object.
    - **CRITICAL DESIGN CONSTRAINT**: The `AiResult` class is effectively immutable due to its instances being cached. It cannot be changed. It only provides a `total_tokens` field for a given operation and lacks the detailed breakdown.

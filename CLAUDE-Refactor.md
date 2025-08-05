@@ -1,6 +1,3 @@
-# 2
-refactor CommitManager: Outsource processing stuff into archive_agent/core/IngestionManager.py, so CommitManager isn't concerned with the actual implementation of parallel processing.
-
 # 3
 Currently, CommitData handles a list of FileData concurrently. However...
 - Each FileData first calls the loader for the file type, which in turn may call image-to-text-callbacks for any images.
@@ -15,7 +12,7 @@ Plan to proceed in a multi-step fashion, as outlined below. Reflect deeply on th
 
 (1) FileData
 - 1.1 FileData.process() is already multithreaded. DONE
-- 1.2 Make FileData accept an AiFactor so it can spawn AiManagers for the chunks itself, see next item.
+- 1.2 Make FileData accept an AiFactory so it can spawn AiManagers for the chunks itself, see next item.
 - 1.3 Parallelize chunking loop.
 
 (2) Split the loaders. Split load_() functions into loader.prepare(), loader.process(), loader.format().
