@@ -139,6 +139,7 @@ graph LR
   * [Qdrant database](#qdrant-database)
   * [Developer's guide](#developers-guide)
     * [Important modules](#important-modules)
+    * [Qdrant Path Renaming Tool](#qdrant-path-renaming-tool)
     * [Code testing and analysis](#code-testing-and-analysis)
   * [Known issues](#known-issues)
   * [Licensed under GNU GPL v3.0](#licensed-under-gnu-gpl-v30)
@@ -810,6 +811,10 @@ This interactive tool is useful when:
 - Preserves all embedding data and metadata
 
 💡 **Good to know:** This tool modifies the Qdrant database directly, so ensure you have backups if working with critical data.
+
+📌 **Note:**
+- This tool will **not** update the tracked files. You need to update your watchlist (see [Archive Agent settings](#archive-agent-settings)) using manual search and replace.
+- This tool will **not** rename the `file://`-prefixed names contained in the chunk context headers. Feel free to patch the script if needed.
 
 ### Code testing and analysis
 
