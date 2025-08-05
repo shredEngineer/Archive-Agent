@@ -1,7 +1,7 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import logging
+from logging import Logger
 from typing import Set, Optional, Callable
 
 from PIL import Image, UnidentifiedImageError
@@ -11,8 +11,6 @@ from archive_agent.data.DocumentContent import DocumentContent
 from archive_agent.util.format import format_file
 from archive_agent.util.text_util import splitlines_exact
 from archive_agent.util.PageTextBuilder import PageTextBuilder
-
-logger = logging.getLogger(__name__)
 
 
 ImageToTextCallback = Callable[[Image.Image], Optional[str]]
@@ -29,11 +27,13 @@ def is_image(file_path: str) -> bool:
 
 
 def load_image(
+        logger: Logger,
         file_path: str,
         image_to_text_callback: Optional[ImageToTextCallback],
 ) -> Optional[DocumentContent]:
     """
     Load image as text.
+    :param logger: Logger.
     :param file_path: File path.
     :param image_to_text_callback: Optional image-to-text callback.
     :return: Document content if successful, None otherwise.

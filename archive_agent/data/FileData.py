@@ -84,28 +84,33 @@ class FileData:
         """
         if is_image(self.file_path):
             return lambda: load_image(
+                logger=self.ai.cli.logger,
                 file_path=self.file_path,
                 image_to_text_callback=self.image_to_text_callback_image,
             )
 
         elif is_plaintext(self.file_path):
             return lambda: load_plaintext(
+                logger=self.ai.cli.logger,
                 file_path=self.file_path,
             )
 
         elif is_ascii_document(self.file_path):
             return lambda: load_ascii_document(
+                logger=self.ai.cli.logger,
                 file_path=self.file_path,
             )
 
         elif is_binary_document(self.file_path):
             return lambda: load_binary_document(
+                logger=self.ai.cli.logger,
                 file_path=self.file_path,
                 image_to_text_callback=self.image_to_text_callback_image,
             )
 
         elif is_pdf_document(self.file_path):
             return lambda: load_pdf_document(
+                logger=self.ai.cli.logger,
                 file_path=self.file_path,
                 image_to_text_callback_page=self.image_to_text_callback_page,
                 image_to_text_callback_image=self.image_to_text_callback_image,

@@ -1,7 +1,7 @@
 # Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 # This file is part of Archive Agent. See LICENSE for details.
 
-import logging
+from logging import Logger
 import io
 from dataclasses import dataclass, field
 from typing import Optional, List, Set, Any, Dict, Tuple
@@ -17,8 +17,6 @@ from archive_agent.util.format import format_file
 from archive_agent.data.loader.image import ImageToTextCallback
 from archive_agent.util.text_util import splitlines_exact
 from archive_agent.util.PageTextBuilder import PageTextBuilder
-
-logger = logging.getLogger(__name__)
 
 
 TINY_IMAGE_WIDTH_THRESHOLD: int = 32
@@ -60,6 +58,7 @@ def is_pdf_document(file_path: str) -> bool:
 
 
 def load_pdf_document(
+        logger: Logger,
         file_path: str,
         image_to_text_callback_page: Optional[ImageToTextCallback],
         image_to_text_callback_image: Optional[ImageToTextCallback],
@@ -67,6 +66,7 @@ def load_pdf_document(
 ) -> Optional[DocumentContent]:
     """
     Load PDF document.
+    :param logger: Logger.
     :param file_path: File path.
     :param image_to_text_callback_page: Optional image-to-text callback for pages (`strict` OCR strategy).
     :param image_to_text_callback_image: Optional image-to-text callback for images (`relaxed` OCR strategy).
@@ -76,6 +76,7 @@ def load_pdf_document(
     doc: fitz.Document = fitz.open(file_path)
 
     page_contents = get_pdf_page_contents(
+        logger=logger,
         doc=doc,
         decoder_settings=decoder_settings,
     )
@@ -86,6 +87,7 @@ def load_pdf_document(
         logger.warning(f"Image vision is DISABLED in your current configuration")
     else:
         image_texts_per_page = extract_image_texts_per_page(
+            logger=logger,
             file_path=file_path,
             page_contents=page_contents,
             image_to_text_callback_page=image_to_text_callback_page,
@@ -140,6 +142,7 @@ def build_document_text_from_pages(
 
 
 def extract_image_texts_per_page(
+        logger: Logger,
         file_path: str,
         page_contents: List[PdfPageContent],
         image_to_text_callback_page: ImageToTextCallback,
@@ -147,6 +150,7 @@ def extract_image_texts_per_page(
 ) -> List[List[str]]:
     """
     Extract text from images per page.
+    :param logger: Logger.
     :param file_path: File path (used for logging only).
     :param page_contents: PDF page contents.
     :param image_to_text_callback_page: Optional image-to-text callback for pages (`strict` OCR strategy).
@@ -247,11 +251,13 @@ def get_pdf_page_content(page: fitz.Page) -> PdfPageContent:
 
 
 def get_pdf_page_contents(
+        logger: Logger,
         doc: fitz.Document,
         decoder_settings: DecoderSettings,
 ) -> List[PdfPageContent]:
     """
     Get PDF page contents.
+    :param logger: Logger.
     :param doc: PDF document.
     :param decoder_settings: Decoder settings.
     :return: PDF page contents.

@@ -1,7 +1,7 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import logging
+from logging import Logger
 import os
 from typing import Set, Optional, List
 
@@ -19,8 +19,6 @@ from archive_agent.util.LineTextBuilder import LineTextBuilder
 
 from archive_agent.data.DocumentContent import DocumentContent
 
-logger = logging.getLogger(__name__)
-
 
 def is_plaintext(file_path: str) -> bool:
     """
@@ -32,9 +30,13 @@ def is_plaintext(file_path: str) -> bool:
     return any(file_path.lower().endswith(ext) for ext in extensions)
 
 
-def load_plaintext(file_path: str) -> Optional[DocumentContent]:
+def load_plaintext(
+        logger: Logger,
+        file_path: str,
+) -> Optional[DocumentContent]:
     """
     Load plaintext.
+    :param logger: Logger.
     :param file_path: File path.
     :return: Document content if successful, None otherwise.
     """
@@ -64,15 +66,19 @@ def is_ascii_document(file_path: str) -> bool:
     return any(file_path.lower().endswith(ext) for ext in extensions)
 
 
-def load_ascii_document(file_path: str) -> Optional[DocumentContent]:
+def load_ascii_document(
+        logger: Logger,
+        file_path: str,
+) -> Optional[DocumentContent]:
     """
     Load ASCII document (using Pandoc).
+    :param logger: Logger.
     :param file_path: File path.
     :return: Document content if successful, None otherwise.
     """
     file_ext = os.path.splitext(file_path)[1].lower()
 
-    raw_text_doc = load_plaintext(file_path)
+    raw_text_doc = load_plaintext(logger=logger, file_path=file_path)
     if raw_text_doc is None:
         return None
 
@@ -113,11 +119,13 @@ def is_binary_document(file_path: str) -> bool:
 
 
 def load_binary_document(
+        logger: Logger,
         file_path: str,
         image_to_text_callback: Optional[ImageToTextCallback],
 ) -> Optional[DocumentContent]:
     """
     Load binary document (using Pandoc).
+    :param logger: Logger.
     :param file_path: File path.
     :param image_to_text_callback: Optional image-to-text callback.
     :return: Document content if successful, None otherwise.
@@ -134,7 +142,7 @@ def load_binary_document(
     builder = LineTextBuilder(text=text)
 
     # Append image texts at the end of the document
-    images = load_binary_document_images(file_path)
+    images = load_binary_document_images(logger=logger, file_path=file_path)
     if images:
 
         if image_to_text_callback is None:
@@ -168,9 +176,13 @@ def load_binary_document(
     return builder.getDocumentContent()
 
 
-def load_binary_document_images(file_path: str) -> List[Image.Image]:
+def load_binary_document_images(
+        logger: Logger,
+        file_path: str,
+) -> List[Image.Image]:
     """
     Extract images from binary document.
+    :param logger: Logger.
     :param file_path: File path.
     :return: Images.
     """
