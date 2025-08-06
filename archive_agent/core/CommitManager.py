@@ -91,7 +91,7 @@ class CommitManager:
                 f"from the Qdrant database. "
             )
             confirm = typer.confirm(
-                f"Are you sure?"
+                f"👉 Delete files from the Qdrant database?"
             )
             if not confirm:
                 logger.warning(f"({len(removed_files)}) untracked file(s) remain in the Qdrant database")
