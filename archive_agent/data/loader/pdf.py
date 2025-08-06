@@ -4,55 +4,33 @@
 from logging import Logger
 import io
 import threading
-from dataclasses import dataclass, field
-from typing import Optional, List, Set, Any, Dict, Tuple
+from typing import Optional, List, Set, Any
 
 from rich.progress import Progress
-
-# noinspection PyPackageRequirements
-import fitz
 
 from PIL import Image
 
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.config.DecoderSettings import OcrStrategy, DecoderSettings
 from archive_agent.data.DocumentContent import DocumentContent
+from archive_agent.data.loader.PdfDocument import PdfDocument, PdfPage, PdfPageContent
 from archive_agent.data.loader.image import ImageToTextCallback
 from archive_agent.util.text_util import splitlines_exact
 from archive_agent.util.PageTextBuilder import PageTextBuilder
 from archive_agent.data.processor.VisionProcessor import VisionProcessor, VisionRequest
+from archive_agent.data.loader.backend.pdf_pymupdf import create_pdf_document
 
 
 TINY_IMAGE_WIDTH_THRESHOLD: int = 32
 TINY_IMAGE_HEIGHT_THRESHOLD: int = 32
 
-OCR_STRATEGY_STRICT_PAGE_DPI: int = 300
+OCR_STRATEGY_STRICT_PAGE_DPI: int = 150
 
+
+# TODO: Remove this once PyMuPDF backend has been replaced.
 # Module-level lock for PyMuPDF operations to prevent threading issues
 # PyMuPDF does not support multithreading - this ensures only one PDF analyzing phase runs at a time
 _PDF_ANALYZING_LOCK = threading.Lock()
-
-
-LayoutBlock = Dict[str, Any]
-ImageObject = Tuple[Any, ...]
-
-
-@dataclass
-class PdfPageContent:
-    """
-    PDF page content.
-    """
-    text: str = ""
-
-    layout_image_bytes: List[bytes] = field(default_factory=list)
-
-    text_blocks: List[LayoutBlock] = field(default_factory=list)
-    image_blocks: List[LayoutBlock] = field(default_factory=list)
-    vector_blocks: List[LayoutBlock] = field(default_factory=list)
-    other_blocks: List[LayoutBlock] = field(default_factory=list)
-    image_objects: List[ImageObject] = field(default_factory=list)
-
-    ocr_strategy: OcrStrategy = field(default=OcrStrategy.AUTO)
 
 
 def is_pdf_document(file_path: str) -> bool:
@@ -91,7 +69,7 @@ def load_pdf_document(
     :param vision_task_id: The vision task ID for progress reporting.
     :return: Document content if successful, None otherwise.
     """
-    doc: fitz.Document = fitz.open(file_path)
+    doc: PdfDocument = create_pdf_document(file_path)
 
     # Use module-level lock to serialize PyMuPDF analyzing operations across all threads
     # This allows vision/chunking/embedding phases to run in parallel while
@@ -264,53 +242,10 @@ def extract_image_texts_per_page(
     return image_texts_per_page
 
 
-def get_pdf_page_content(page: fitz.Page) -> PdfPageContent:
-    """
-    Get PDF page content.
-    :param page: PDF page.
-    :return: PDF page content.
-    """
-    text: str = page.get_text("text").strip()  # type: ignore
-
-    image_objects: List[ImageObject] = page.get_images(full=True)
-
-    blocks: List[LayoutBlock] = page.get_text("dict")["blocks"]  # type: ignore
-
-    text_blocks: List[LayoutBlock] = []
-    image_blocks: List[LayoutBlock] = []
-    vector_blocks: List[LayoutBlock] = []
-    other_blocks: List[LayoutBlock] = []
-    layout_image_bytes: List[bytes] = []
-
-    for block in blocks:
-        block_type = block.get("type", "other")
-        if block_type == 0:
-            text_blocks.append(block)
-        elif block_type == 1:
-            image_blocks.append(block)
-            img = block.get("image")
-            if img:
-                layout_image_bytes.append(img)
-        elif block_type == 2:
-            vector_blocks.append(block)
-        else:
-            other_blocks.append(block)
-
-    return PdfPageContent(
-        text=text,
-        layout_image_bytes=layout_image_bytes,
-        text_blocks=text_blocks,
-        image_blocks=image_blocks,
-        vector_blocks=vector_blocks,
-        other_blocks=other_blocks,
-        image_objects=image_objects,
-    )
-
-
 def get_pdf_page_contents(
         logger: Logger,
         verbose: bool,
-        doc: fitz.Document,
+        doc: PdfDocument,
         decoder_settings: DecoderSettings,
         progress: Optional[Progress] = None,
 ) -> List[PdfPageContent]:
@@ -324,7 +259,7 @@ def get_pdf_page_contents(
     :return: PDF page contents.
     """
     page_contents: List[PdfPageContent] = []
-    pages: List[Any] = [page for page in doc]
+    pages: List[PdfPage] = [page for page in doc]
 
     # Create PDF analyzing sub-task if progress tracking is enabled
     analyzing_task_id = None
@@ -335,7 +270,7 @@ def get_pdf_page_contents(
 
         if verbose:
             logger.info(f"Analyzing PDF page ({page_index + 1}) / ({len(pages)}):")
-        page_content: PdfPageContent = get_pdf_page_content(page)
+        page_content: PdfPageContent = page.get_content()
 
         # Resolve `auto` OCR strategy
         if decoder_settings.ocr_strategy == OcrStrategy.AUTO:
@@ -355,27 +290,26 @@ def get_pdf_page_contents(
         if page_content.ocr_strategy == OcrStrategy.STRICT:
             # Replace page content with only one full-page image.
             if verbose:
-                logger.info(f"- IGNORING ({len(page_content.image_blocks)}) image(s)")
-                logger.info(f"- IGNORING ({len(page_content.text)}) character(s) in ({len(page_content.text_blocks)}) text block(s)")
-                logger.info(f"- Decoding full-page image (rendered at {OCR_STRATEGY_STRICT_PAGE_DPI} DPI) ")
+                logger.info(f"- IGNORING ({page_content.image_block_count}) image(s)")
+                logger.info(f"- IGNORING ({len(page_content.text)}) character(s) in ({page_content.text_block_count}) text block(s)")
+                logger.info(f"- Decoding full-page image ({OCR_STRATEGY_STRICT_PAGE_DPI} DPI) ")
             page_content = PdfPageContent(
                 text="",
-                layout_image_bytes=[page.get_pixmap(dpi=OCR_STRATEGY_STRICT_PAGE_DPI).tobytes()],
+                layout_image_bytes=[page.get_full_page_pixmap(dpi=OCR_STRATEGY_STRICT_PAGE_DPI)],
                 ocr_strategy=OcrStrategy.STRICT,
             )
 
         elif page_content.ocr_strategy == OcrStrategy.RELAXED:
             # Keep page content as-is.
             if verbose:
-                logger.info(f"- Decoding ({len(page_content.image_blocks)}) image(s)")
-                logger.info(f"- Decoding ({len(page_content.text)}) character(s) in ({len(page_content.text_blocks)}) text block(s)")
+                logger.info(f"- Decoding ({page_content.image_block_count}) image(s)")
+                logger.info(f"- Decoding ({len(page_content.text)}) character(s) in ({page_content.text_block_count}) text block(s)")
 
-            num_background_images: int = len(page_content.image_objects) - len(page_content.image_blocks)
-            if num_background_images > 0:
-                logger.warning(f"- IGNORING ({num_background_images}) background image(s)")
+            if page_content.background_image_count > 0:
+                logger.warning(f"- IGNORING ({page_content.background_image_count}) background image(s)")
 
-            if page_content.vector_blocks:
-                logger.warning(f"- IGNORING ({len(page_content.vector_blocks)}) vector diagram(s)")
+            if page_content.vector_block_count > 0:
+                logger.warning(f"- IGNORING ({page_content.vector_block_count}) vector diagram(s)")
 
         else:
             raise ValueError(f"Invalid or unhandled OCR strategy: '{page_content.ocr_strategy.value}'")

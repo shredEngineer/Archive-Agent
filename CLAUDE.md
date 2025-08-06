@@ -17,6 +17,9 @@ Archive Agent is an intelligent file indexer with powerful AI search (RAG engine
 
 ### Important Modules
 - `archive_agent/data/FileData.py` - File processing and payload creation
+- `archive_agent/data/loader/pdf.py` - PDF processing with business logic (OCR strategy resolution)
+- `archive_agent/data/loader/PdfDocument.py` - Clean PDF abstraction interfaces (PdfDocument, PdfPage, PdfPageContent)
+- `archive_agent/data/loader/backend/pdf_pymupdf.py` - PyMuPDF implementation backend (fully isolated)
 - `archive_agent/data/processor/VisionProcessor.py` - Parallel vision processing
 - `archive_agent/data/processor/EmbedProcessor.py` - Parallel chunk embedding
 - `archive_agent/db/QdrantManager.py` - Vector database operations  
@@ -310,14 +313,16 @@ This pattern ensures worker isolation and prevents shared state corruption.
 Both PDF and Binary document loaders use consistent multi-stage patterns:
 
 **PDF Document Processing**:
-1. **Document Opening**: PyMuPDF document initialization
-2. **PDF Analyzing**: Page-by-page layout analysis and OCR strategy determination
-   - Extracts text blocks, image blocks, and vector content from each page
+1. **Document Opening**: PDF backend initialization via clean abstraction layer
+2. **PDF Content Extraction**: Page-by-page content extraction via `page.get_content()`
+   - Extracts text, image bytes, and block counts through streamlined interface
+   - Clean separation: PDF backend handles raw data, main code handles business logic
+3. **OCR Strategy Resolution**: Archive Agent business logic determines processing approach
    - Resolves AUTO OCR strategy to STRICT or RELAXED based on text content thresholds
-   - For STRICT mode: Replaces page content with full-page rendered image
-   - For RELAXED mode: Preserves layout structure with embedded images
-3. **Vision Processing**: Parallel AI vision operations for image-to-text conversion
-4. **Assembly**: Final document construction with processed content and page mapping
+   - For STRICT mode: Uses `page.get_full_page_pixmap()` helper for full-page rendering
+   - For RELAXED mode: Uses existing extracted image bytes from layout
+4. **Vision Processing**: Parallel AI vision operations for image-to-text conversion
+5. **Assembly**: Final document construction with processed content and page mapping
 
 **Binary Document Processing**:
 1. **Content Extraction**: Pandoc-based text extraction from source document
@@ -342,20 +347,32 @@ This architecture enables surgical integration of parallel processing without br
 
 > "PyMuPDF does not support running on multiple threads - doing so may cause incorrect behaviour or even crash Python itself."
 
-**Architectural Solution: Surgical Synchronization**
+**Architectural Solution: Abstraction Layer + Surgical Synchronization**
 
-Archive Agent implements a precise synchronization approach that maximizes parallelism while respecting library constraints:
+Archive Agent implements a two-tier approach that both isolates PyMuPDF dependencies and maximizes parallelism while respecting library constraints:
+
+**PDF Abstraction Architecture**:
+- **Interface Definition**: Clean abstract classes in `archive_agent/data/loader/PdfDocument.py`
+  - `PdfDocument` - Document-level operations (iteration)
+  - `PdfPage` - Page-level operations (text, images, rendering)  
+  - `PdfPageContent` - Data container for page content
+- **PyMuPDF Backend**: Implementation in `archive_agent/data/loader/backend/pdf_pymupdf.py`
+- **Business Logic Layer**: OCR strategy resolution in `archive_agent/data/loader/pdf.py`
+- **Clean Separation**: PyMuPDF completely isolated from main code
+- **Pluggable Architecture**: Alternative PDF backends (pypdf, pdfplumber) can replace PyMuPDF
+- **Streamlined Interface**: Object-oriented design with helper methods
 
 **Synchronized Operations**:
 - **PDF Analyzing Phase Only**: `get_pdf_page_contents()` function calls are serialized using `_PDF_ANALYZING_LOCK`
 - **All Other Operations**: Vision processing, chunking, and embedding run in full parallel
 
 **Implementation Details**:
-- Module-level `threading.Lock()` in `archive_agent/data/loader/pdf.py`
-- Lock acquired only during PyMuPDF operations (page analysis, OCR strategy determination)
+- Module-level `threading.Lock()` in `archive_agent/data/loader/pdf.py` (temporary, marked for removal)
+- Lock acquired only during PyMuPDF backend operations (page content extraction)
 - Lock released immediately after analyzing phase completes
 - All subsequent phases (vision, chunking, embedding) execute in parallel across all files
 - Verbose logging shows lock acquisition/release for debugging
+- **Future**: Lock removal planned when PyMuPDF backend is replaced with thread-safe alternative
 
 **Processing Flow per PDF**:
 1. **File Processing**: Fully parallel (`ThreadPoolExecutor` with `MAX_WORKERS=8`)
@@ -371,6 +388,34 @@ Archive Agent implements a precise synchronization approach that maximizes paral
 - **Mixed Workloads**: Non-PDF files maintain full parallelization throughout all phases
 
 **Key Insight**: Surgical synchronization isolates the threading constraint to the smallest possible scope, maximizing overall system throughput by preserving parallelism everywhere else.
+
+#### Streamlined PDF Interface Design
+
+The PDF abstraction layer implements a clean, object-oriented interface that eliminates PyMuPDF-specific structures from the main codebase:
+
+**Interface Principles**:
+- **Separation of Concerns**: PDF interfaces handle raw data extraction only, business logic stays in main code
+- **Object-Oriented Design**: Pages know how to represent themselves (`page.get_content()` vs external functions)
+- **Helper Methods**: Common operations like full-page rendering have dedicated methods
+- **Minimal Surface Area**: Only essential operations exposed, unused methods eliminated
+
+**PdfPage Interface** (4 core methods):
+- `get_text()` - Extract text content
+- `get_image_bytes()` - Extract embedded image bytes  
+- `get_counts()` - Block counts for logging statistics
+- `get_pixmap(dpi)` - Render page at specified DPI
+- `get_content()` - Convenience method combining above operations
+- `get_full_page_pixmap(dpi)` - Helper for STRICT OCR mode
+
+**PdfDocument Interface** (minimal):
+- `__iter__()` - Iterate over pages (only required operation)
+- Eliminated unused methods: `get_page_count()`, `close()` (never called in codebase)
+
+**Benefits**:
+- **Pluggable Architecture**: Any PDF library can implement the interface (pypdf, pdfplumber, etc.)
+- **Type Safety**: Clean type contracts without PyMuPDF-specific types leaking
+- **Maintainability**: PyMuPDF complexity isolated to single backend module
+- **Performance**: Interface designed around actual usage patterns, not library capabilities
 
 #### VisionProcessor Architecture Details
 The `VisionProcessor` implements a sophisticated parallel vision processing system:
