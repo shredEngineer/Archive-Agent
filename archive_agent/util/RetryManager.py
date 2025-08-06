@@ -14,6 +14,10 @@ from openai import OpenAIError
 
 from ollama import RequestError, ResponseError
 
+from qdrant_client.http.api_client import ResponseHandlingException
+from qdrant_client.http.exceptions import UnexpectedResponse
+from httpx import ReadTimeout, TimeoutException
+
 logger = logging.getLogger(__name__)
 
 
@@ -109,6 +113,12 @@ class RetryManager:
                     RequestError, ResponseError,
 
                     # TODO: Handle errors of any newly introduced AI providers
+
+                    # Qdrant
+                    ResponseHandlingException,
+                    UnexpectedResponse,
+                    ReadTimeout,
+                    TimeoutException,
 
                     # low-level
                     requests.exceptions.RequestException,
