@@ -44,7 +44,7 @@ class QdrantManager:
         delay_min=1.0,
         delay_max=10.0,
         backoff_exponent=2,
-        retries=3,
+        retries=10,
     )
 
     def __init__(

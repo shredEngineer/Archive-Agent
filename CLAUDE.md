@@ -494,6 +494,127 @@ sudo ./manage-qdrant.sh update  # Updates Qdrant Docker image
 - No telemetry or external data transmission
 - File access controlled by pattern-based permissions
 
+## Retry Logic Architecture
+
+Archive Agent implements a comprehensive multi-layered retry system to handle transient failures across AI operations, database interactions, and network requests.
+
+### RetryManager (Core Retry Infrastructure)
+
+**Location**: `archive_agent/util/RetryManager.py`
+
+The `RetryManager` class provides the foundational retry mechanism with exponential backoff:
+
+**Key Features**:
+- **Exponential Backoff**: Configurable delay scaling with `backoff_exponent` multiplier
+- **Exception Filtering**: Only retries specific recoverable exception types
+- **Pre-delay Support**: Optional fixed delay before first attempt
+- **Comprehensive Logging**: Detailed attempt tracking with stack trace capture
+- **Graceful Degradation**: Clean exit on non-recoverable exceptions
+
+**Configuration Parameters**:
+- `predelay`: Fixed delay before first attempt (seconds)
+- `delay_min`: Starting backoff delay (defaults to 1.0s if 0)
+- `delay_max`: Maximum backoff cap (seconds)
+- `backoff_exponent`: Exponential multiplier for delay scaling
+- `retries`: Maximum attempt count
+
+**Supported Exception Types**:
+- `AiProviderError` (custom AI provider errors)
+- `OpenAIError` (OpenAI API errors)
+- `RequestError`, `ResponseError` (Ollama errors)
+- `ResponseHandlingException`, `UnexpectedResponse` (Qdrant errors)
+- `ReadTimeout`, `TimeoutException` (HTTP timeouts)
+- `requests.exceptions.RequestException` (general request errors)
+
+**Usage Pattern**: Create RetryManager instance with configuration parameters, then call retry() method with target function and arguments.
+
+### AiManager Dual Retry Strategy
+
+**Location**: `archive_agent/ai/AiManager.py`
+
+The `AiManager` implements a sophisticated dual-layer retry system by inheriting from `RetryManager`:
+
+**Inheritance Configuration**: AiManager inherits from RetryManager with 10 retries, 60-second max delay, and exponential backoff of 2.
+
+**Dual Retry Architecture**:
+
+1. **Low-Level Network Retries**: Inherited `self.retry()` method handles:
+   - Network timeouts and connection failures
+   - AI provider API errors (OpenAI, Ollama)
+   - Transient service interruptions
+
+2. **High-Level Semantic Retries**: Manual retry loops for business logic failures:
+   - Schema parsing validation errors
+   - AI response format issues
+   - Cache management on failed attempts
+
+**Operations with Dual Retry Logic**:
+
+**Chunking Operations**: Uses dual retry with high-level loop for schema validation failures and inherited low-level retry for network issues. Cache invalidation occurs on parsing failures.
+
+**Reranking Operations**: Same dual-layer pattern as chunking with 10 high-level retries for schema validation and cache invalidation on parsing failures.
+
+**Single-Layer Operations**:
+- `embed()`: Only low-level retries (embedding vectors don't need schema validation)
+- `query()`: Only low-level retries (query results are always valid)
+- `vision()`: Only low-level retries (vision results are pre-validated)
+
+**Critical Design Insight**: The dual retry strategy separates concerns:
+- **Network layer**: Handles transient connectivity and API issues
+- **Semantic layer**: Handles AI model inconsistencies and response format problems
+
+### QdrantManager Database Retry Integration
+
+**Location**: `archive_agent/db/QdrantManager.py`
+
+All Qdrant database operations use a dedicated `RetryManager` instance:
+
+**Configuration**: Uses class-level QDRANT_RETRY_KWARGS with 10 retries, 1-10 second delay range, and exponential backoff of 2.
+
+**Protected Operations**:
+- Collection existence checks and creation
+- Vector upsert operations (batch processing)
+- Point deletion and counting
+- Similarity queries and scrolling
+- All database read/write operations
+
+**Usage Pattern**: All Qdrant operations wrapped in retry_manager.retry() calls with function and keyword arguments.
+
+**Database-Specific Considerations**:
+- Standardized retry count (10) for consistency across all operations
+- Shorter maximum delay (10s) compared to AI operations for better responsiveness
+- Focuses on connection and timeout issues rather than semantic failures
+
+
+### Retry Strategy Guidelines
+
+**When to Use Each Pattern**:
+
+1. **RetryManager Direct**: Simple operations with network/API dependencies
+   - Database connections
+   - HTTP requests
+   - File I/O operations
+
+2. **AiManager Dual Retry**: AI operations requiring response validation
+   - Text chunking with schema requirements
+   - Reranking with structured output
+   - Operations where AI responses need post-processing
+
+3. **Single-Layer Retry**: Operations with guaranteed valid responses
+   - Embedding generation (vectors are always valid)
+   - Query operations (results don't need validation)
+
+**Retry Configuration Best Practices**:
+- **Standardized Retry Count**: All operations use 10 retries for consistency
+- **AI Operations**: 60s max delay due to potential model processing time
+- **Database Operations**: 10s max delay for better responsiveness
+- **Network Operations**: Exponential backoff with operation-appropriate delay caps
+
+**Thread Safety Considerations**:
+- Each `AiManager` instance (one per worker thread) has independent retry state
+- Retry managers don't share state between parallel operations
+- Cache invalidation is thread-safe within individual AI instances
+
 ---
 
 This guide should be updated whenever significant architectural changes are made to the codebase. Keep it current and comprehensive for future development sessions.

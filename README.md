@@ -29,7 +29,6 @@
 ## Natively index your documents on-device
 
 - **Includes local AI file system indexer**
-- **Optimized parallel processing** for vision, embedding, and file operations
 - Natively ingests [PDFs, images, Markdown, plaintext, and more…](#which-files-are-processed)
 - [Selects and tracks files using patterns](#how-files-are-selected-for-tracking) like `~/Documents/*.pdf` 
 - Transcribes images using [automatic OCR](#ocr-strategies) (experimental) and entity extraction
@@ -39,12 +38,22 @@
 
 ## Your AI, Your Choice
 
-- **[OpenAI](https://platform.openai.com/docs/overview) or compatible API ¹ for best performance**
-- **[Ollama](https://ollama.com/) and [LM Studio](https://lmstudio.ai/) for best privacy (local LLM)**
-- **Integrates with your workflow** via a built-in [MCP](https://modelcontextprotocol.io/introduction) server.
+- **Supports many AI providers and MCP** 
+- [OpenAI](https://platform.openai.com/docs/overview) or compatible API ¹ for best performance
+- [Ollama](https://ollama.com/) and [LM Studio](https://lmstudio.ai/) for best privacy (local LLM)
+- Integrates with your workflow** via a built-in [MCP](https://modelcontextprotocol.io/introduction) server.
 
-<small>**¹** Includes [xAI / Grok](https://x.ai/api) and [Claude](https://docs.anthropic.com/en/api/openai-sdk) OpenAI compatible APIs.  
+<small>**¹** Includes [xAI / Grok](https://x.ai/api) and [Claude](https://docs.anthropic.com/en/api/openai-sdk) OpenAI compatible APIs.
 Simply adjust the URL [settings](#archive-agent-settings) and overwrite `OPENAI_API_KEY`.</small>
+
+---
+
+## Scalable and Stable
+
+- **Fully resumable parallel processing**
+- Processes multiple files at once using optimized multi-threading.  
+- Uses AI cache and generous request retry logic for all network requests.
+- Leverages AI structured output with high-quality prompts and schemas.
 
 ---
 
@@ -140,6 +149,7 @@ graph LR
   * [Qdrant database](#qdrant-database)
   * [Developer's guide](#developers-guide)
     * [Important modules](#important-modules)
+    * [Network and Retry Handling](#network-and-retry-handling)
     * [Qdrant Path Renaming Tool](#qdrant-path-renaming-tool)
     * [Code testing and analysis](#code-testing-and-analysis)
   * [Known issues](#known-issues)
@@ -805,6 +815,17 @@ To get started, check out these epic modules:
 - The AI provider registry is located in [`archive_agent/ai_provider/ai_provider_registry.py`](archive_agent/ai_provider/ai_provider_registry.py)
 
 If you miss something or spot bad patterns, feel free to contribute and refactor!
+
+### Network and Retry Handling
+
+Archive Agent implements comprehensive retry logic with exponential backoff to handle transient failures:
+
+- **AI Provider Operations**: 10 retries with exponential backoff (max 60s delay) for network timeouts and API errors.
+- **Database Operations**: 10 retries with exponential backoff (max 10s delay) for Qdrant connection issues  .
+- **Schema Validation**: Additional 10 linear retry attempts for AI response parsing failures with cache invalidation.
+- **Dual-Layer Strategy**: Network-level retries handle infrastructure failures, while schema-level retries handle AI response quality issues.
+
+This robust retry system ensures reliable operation even with unstable network conditions or intermittent service issues.
 
 ### Qdrant Path Renaming Tool
 

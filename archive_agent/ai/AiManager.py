@@ -31,6 +31,16 @@ class AiManager(RetryManager):
     AI manager.
     """
 
+    RETRY_MANAGER_KWARGS = dict(
+        predelay=0,
+        delay_min=0,
+        delay_max=60,
+        backoff_exponent=2,
+        retries=10,
+    )
+
+    SCHEMA_RETRY_ATTEMPTS = 10
+
     def __init__(
             self,
             cli: CliManager,
@@ -63,14 +73,7 @@ class AiManager(RetryManager):
         # NOTE: This switches between `AiVisionEntity` and `AiVisionOCR` modules
         self.requested: Optional[AiVisionRequest] = None
 
-        RetryManager.__init__(
-            self,
-            predelay=0,
-            delay_min=0,
-            delay_max=60,
-            backoff_exponent=2,
-            retries=10,
-        )
+        RetryManager.__init__(self, **AiManager.RETRY_MANAGER_KWARGS)
 
         if not self.ai_provider.supports_vision:
             self.cli.logger.warning(f"Image vision is DISABLED in your current configuration")
@@ -91,18 +94,17 @@ class AiManager(RetryManager):
         else:
             self.cli.logger.info(f"No AI API tokens used")
 
-    def chunk(self, sentences: List[str], retries: int = 10) -> ChunkSchema:
+    def chunk(self, sentences: List[str]) -> ChunkSchema:
         """
         Get chunks of sentences.
         :param sentences: Sentences.
-        :param retries: Number of retries.
         :return: ChunkSchema.
         """
         line_numbered_text = "\n".join(prepend_line_numbers(sentences))
         prompt = AiChunk.get_prompt_chunk(line_numbered_text=line_numbered_text, chunk_words_target=self.chunk_words_target)
         callback = lambda: self.ai_provider.chunk_callback(prompt=prompt)
 
-        for _ in range(retries):
+        for _ in range(AiManager.SCHEMA_RETRY_ATTEMPTS):
             try:
                 result: AiResult = self.cli.format_ai_chunk(callback=lambda: self.retry(callback), line_numbered_text=line_numbered_text)
                 self.ai_usage_stats['chunk'] += result.total_tokens
@@ -156,19 +158,18 @@ class AiManager(RetryManager):
         assert result.embedding is not None
         return result.embedding
 
-    def rerank(self, question: str, indexed_chunks: Dict[int, str], retries: int = 10) -> RerankSchema:
+    def rerank(self, question: str, indexed_chunks: Dict[int, str]) -> RerankSchema:
         """
         Get reranked chunks based on relevance to question.
         :param question: Question.
         :param indexed_chunks: Indexed chunks.
-        :param retries: Number of retries.
         :return: RerankSchema.
         """
         indexed_chunks_json_text = json.dumps(indexed_chunks, ensure_ascii=False, indent=2)
         prompt = AiRerank.get_prompt_rerank(question=question, indexed_chunks_json_text=indexed_chunks_json_text)
         callback = lambda: self.ai_provider.rerank_callback(prompt=prompt)
 
-        for _ in range(retries):
+        for _ in range(AiManager.SCHEMA_RETRY_ATTEMPTS):
             try:
                 result: AiResult = self.cli.format_ai_rerank(callback=lambda: self.retry(callback), indexed_chunks=indexed_chunks)
                 self.ai_usage_stats['rerank'] += result.total_tokens
