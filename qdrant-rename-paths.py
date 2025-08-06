@@ -25,6 +25,11 @@ Safety:
 - Shows preview of changes before execution
 - Allows aborting at any step
 - Validates path prefixes before processing
+
+Limitations:
+- This tool will NOT update the tracked files. You need to update your watchlist using manual search and replace.
+- This tool will NOT rename the `file://`-prefixed names contained in the chunk context headers. Feel free to patch the script if needed.
+
 """
 
 import sys
