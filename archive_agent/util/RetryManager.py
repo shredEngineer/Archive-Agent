@@ -14,7 +14,7 @@ from openai import OpenAIError
 
 from ollama import RequestError, ResponseError
 
-from qdrant_client.http.api_client import ResponseHandlingException
+from qdrant_client.http.exceptions import ResponseHandlingException
 from qdrant_client.http.exceptions import UnexpectedResponse
 from httpx import ReadTimeout, TimeoutException
 

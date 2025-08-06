@@ -31,13 +31,13 @@ class AiManager(RetryManager):
     AI manager.
     """
 
-    RETRY_MANAGER_KWARGS = dict(
-        predelay=0,
-        delay_min=0,
-        delay_max=60,
-        backoff_exponent=2,
-        retries=10,
-    )
+    AI_RETRY_KWARGS = {
+        'predelay': 0.0,
+        'delay_min': 0.0,
+        'delay_max': 60.0,
+        'backoff_exponent': 2.0,
+        'retries': 10,
+    }
 
     SCHEMA_RETRY_ATTEMPTS = 10
 
@@ -73,7 +73,7 @@ class AiManager(RetryManager):
         # NOTE: This switches between `AiVisionEntity` and `AiVisionOCR` modules
         self.requested: Optional[AiVisionRequest] = None
 
-        RetryManager.__init__(self, **AiManager.RETRY_MANAGER_KWARGS)
+        RetryManager.__init__(self, **AiManager.AI_RETRY_KWARGS)
 
         if not self.ai_provider.supports_vision:
             self.cli.logger.warning(f"Image vision is DISABLED in your current configuration")

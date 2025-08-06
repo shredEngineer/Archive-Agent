@@ -39,13 +39,16 @@ class QdrantManager:
     """
 
     QDRANT_REQUEST_TIMEOUT_S = 3600
+
     QDRANT_UPSERT_BATCH_SIZE = 25
-    QDRANT_RETRY_KWARGS = dict(
-        delay_min=1.0,
-        delay_max=10.0,
-        backoff_exponent=2,
-        retries=10,
-    )
+
+    QDRANT_RETRY_KWARGS = {
+        'predelay': 0.0,
+        'delay_min': 0.0,
+        'delay_max': 10.0,
+        'backoff_exponent': 2.0,
+        'retries': 10,
+    }
 
     def __init__(
             self,
