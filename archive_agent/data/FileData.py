@@ -44,6 +44,8 @@ class FileData:
             decoder_settings: DecoderSettings,
             file_path: str,
             file_meta: Dict[str, Any],
+            max_workers_vision: int,
+            max_workers_embed: int,
     ):
         """
         Initialize file data.
@@ -51,12 +53,16 @@ class FileData:
         :param decoder_settings: Decoder settings.
         :param file_path: Path to the file.
         :param file_meta: File metadata.
+        :param max_workers_vision: Max. workers for vision.
+        :param max_workers_embed: Max. workers for embedding.
         """
         # Core dependencies and configuration
         self.ai_factory = ai_factory
         self.ai = ai_factory.get_ai()  # Primary AI instance for vision, chunking, config
         self.decoder_settings = decoder_settings
         self.chunk_lines_block = self.ai.chunk_lines_block
+        self.max_workers_vision = max_workers_vision
+        self.max_workers_embed = max_workers_embed
 
         # File metadata and logging
         self.file_path = file_path
@@ -64,7 +70,7 @@ class FileData:
         self.logger = self.ai.cli.get_prefixed_logger(prefix=format_filename_short(self.file_path))
 
         # Processing components
-        self.chunk_processor = EmbedProcessor(ai_factory, self.logger, file_path)
+        self.chunk_processor = EmbedProcessor(ai_factory, self.logger, file_path, self.max_workers_embed)
         self.points: List[PointStruct] = []
 
         # Vision callback configuration based on AI provider capabilities
@@ -118,6 +124,7 @@ class FileData:
                 logger=self.logger,
                 verbose=self.ai.cli.VERBOSE_LOADER,
                 file_path=self.file_path,
+                max_workers_vision=self.max_workers_vision,
                 image_to_text_callback=self.image_to_text_callback_image,
                 progress=progress,
                 vision_task_id=vision_task_id,
@@ -129,6 +136,7 @@ class FileData:
                 logger=self.logger,
                 verbose=self.ai.cli.VERBOSE_LOADER,
                 file_path=self.file_path,
+                max_workers_vision=self.max_workers_vision,
                 image_to_text_callback_page=self.image_to_text_callback_page,
                 image_to_text_callback_image=self.image_to_text_callback_image,
                 decoder_settings=self.decoder_settings,

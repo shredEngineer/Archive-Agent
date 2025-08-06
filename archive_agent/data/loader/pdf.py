@@ -70,6 +70,7 @@ def load_pdf_document(
         logger: Logger,
         verbose: bool,
         file_path: str,
+        max_workers_vision: int,
         image_to_text_callback_page: Optional[ImageToTextCallback],
         image_to_text_callback_image: Optional[ImageToTextCallback],
         decoder_settings: DecoderSettings,
@@ -82,6 +83,7 @@ def load_pdf_document(
     :param logger: Logger.
     :param verbose: Enable verbose output.
     :param file_path: File path.
+    :param max_workers_vision: Max. workers for vision.
     :param image_to_text_callback_page: Optional image-to-text callback for pages (`strict` OCR strategy).
     :param image_to_text_callback_image: Optional image-to-text callback for images (`relaxed` OCR strategy).
     :param decoder_settings: DecoderSettings.
@@ -119,6 +121,7 @@ def load_pdf_document(
             logger=logger,
             verbose=verbose,
             file_path=file_path,
+            max_workers_vision=max_workers_vision,
             page_contents=page_contents,
             image_to_text_callback_page=image_to_text_callback_page,
             image_to_text_callback_image=image_to_text_callback_image,
@@ -178,6 +181,7 @@ def extract_image_texts_per_page(
         logger: Logger,
         verbose: bool,
         file_path: str,
+        max_workers_vision: int,
         page_contents: List[PdfPageContent],
         image_to_text_callback_page: ImageToTextCallback,
         image_to_text_callback_image: ImageToTextCallback,
@@ -190,6 +194,7 @@ def extract_image_texts_per_page(
     :param logger: Logger.
     :param verbose: Enable verbose output.
     :param file_path: File path (used for logging only).
+    :param max_workers_vision: Max. workers for vision.
     :param page_contents: PDF page contents.
     :param image_to_text_callback_page: Optional image-to-text callback for pages (`strict` OCR strategy).
     :param image_to_text_callback_image: Optional image-to-text callback for images (`relaxed` OCR strategy).
@@ -198,7 +203,7 @@ def extract_image_texts_per_page(
     :return: List of text results per page (one list of strings per page).
     """
     # Create VisionProcessor for batch processing
-    vision_processor = VisionProcessor(ai_factory, logger, verbose, file_path)
+    vision_processor = VisionProcessor(ai_factory, logger, verbose, file_path, max_workers_vision)
     vision_requests = []
 
     # Collect all vision requests across all pages

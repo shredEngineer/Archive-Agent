@@ -14,8 +14,6 @@ from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.data.loader.image import ImageToTextCallback
 from archive_agent.util.text_util import splitlines_exact
 
-MAX_WORKERS = 8
-
 
 @dataclass
 class VisionRequest:
@@ -36,18 +34,20 @@ class VisionProcessor:
     Handles both PDF and Binary document vision requests.
     """
 
-    def __init__(self, ai_factory: AiManagerFactory, logger: Logger, verbose: bool, file_path: str):
+    def __init__(self, ai_factory: AiManagerFactory, logger: Logger, verbose: bool, file_path: str, max_workers: int):
         """
         Initialize vision processor.
         :param ai_factory: AI manager factory for creating worker instances.
         :param logger: Logger instance from ai.cli hierarchy.
         :param verbose: Enable verbose output.
         :param file_path: File path for logging context.
+        :param max_workers: Max. workers.
         """
         self.ai_factory = ai_factory
         self.logger = logger
         self.verbose = verbose
         self.file_path = file_path
+        self.max_workers = max_workers
 
     def process_vision_requests_parallel(
             self,
@@ -106,9 +106,7 @@ class VisionProcessor:
                 return request_index, _formatted_result
 
         # Use ThreadPoolExecutor for parallel vision processing
-        max_workers = min(MAX_WORKERS, len(requests))
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             # Submit all vision tasks
             future_to_request = {
                 executor.submit(process_vision_request, (request_index, request)): (request_index, request)

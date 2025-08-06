@@ -277,6 +277,8 @@ At least 32 GiB RAM is recommended for smooth performance.
 
 📌 **Note:** Legacy `.doc` files are currently not supported.
 
+📌 **Note:** Unsupported files are tracked but not processed.
+
 ---
 
 ## How files are processed
@@ -291,6 +293,8 @@ Ultimately, **Archive Agent** decodes everything to text like this:
   - *Entity extraction* extracts structured information from images.
   - Structured information is formatted as image description.
 
+See [Archive Agent settings](#archive-agent-settings): `image_ocr`, `image_entity_extract`
+
 **Archive Agent** processes files with optimized performance:
 - **Surgical Synchronization**:
   - PDF analyzing phase is serialized (due to PyMuPDF threading limitations).
@@ -299,9 +303,7 @@ Ultimately, **Archive Agent** decodes everything to text like this:
 - **Embedding operations** are parallelized across text chunks and files.
 - **Smart chunking** uses sequential processing due to carry mechanism dependencies.
 
-See [Archive Agent settings](#archive-agent-settings): `image_ocr`, `image_entity_extract`
-
-📌 **Note:** Unsupported files are tracked but not processed.
+See [Archive Agent settings](#archive-agent-settings): `max_workers_ingest`, `max_workers_vision`, `max_workers_embed`
 
 ---
 
@@ -721,6 +723,9 @@ The profile configuration is contained in the profile folder as `config.json`.
 | `retrieve_chunks_max`  | Maximum number of retrieved chunks                                                               |
 | `rerank_chunks_max`    | Number of top chunks to keep after reranking                                                     |
 | `expand_chunks_radius` | Number of preceding and following chunks to prepend and append to each reranked chunk            |
+| `max_workers_ingest`   | Maximum number of files to process in parallel, creating one thread for each file                |
+| `max_workers_vision`   | Maxmimum number of parallel vision requests **per file**, creating one thread per request        |
+| `max_workers_embed`    | Maxmimum number of parallel embedding requests **per file**, creating one thread per request     |
 | `ai_provider`          | AI provider in [`ai_provider_registry.py`](archive_agent/ai_provider/ai_provider_registry.py)    |
 | `ai_server_url`        | AI server URL                                                                                    |
 | `ai_model_chunk`       | AI model used for chunking                                                                       |
@@ -730,6 +735,10 @@ The profile configuration is contained in the profile folder as `config.json`.
 | `ai_model_vision`      | AI model used for vision (`""` disables vision)                                                  |
 | `ai_vector_size`       | Vector size of embeddings (used for Qdrant collection)                                           |
 | `ai_temperature_query` | Temperature of the query model                                                                   |
+
+📌 **Note:** Since `max_workers_vision` and `max_workers_embed` requests are processed in parallel **per file**,
+and `max_workers_ingest` files are processed in parallel, the total number of requests multiplies quickly.
+Adjust according to your system resources and in alignment with your AI provider's rate limits.
 
 ### Watchlist
 

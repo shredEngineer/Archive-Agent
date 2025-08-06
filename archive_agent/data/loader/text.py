@@ -127,6 +127,7 @@ def load_binary_document(
         logger: Logger,
         verbose: bool,
         file_path: str,
+        max_workers_vision: int,
         image_to_text_callback: Optional[ImageToTextCallback],
         progress: Optional[Progress] = None,
         vision_task_id: Optional[Any] = None,
@@ -137,6 +138,7 @@ def load_binary_document(
     :param logger: Logger.
     :param verbose: Enable verbose output.
     :param file_path: File path.
+    :param max_workers_vision: Max. workers for vision.
     :param image_to_text_callback: Optional image-to-text callback.
     :param progress: A rich.progress.Progress object for progress reporting.
     :param vision_task_id: The vision task ID for progress reporting.
@@ -158,7 +160,17 @@ def load_binary_document(
     images = load_binary_document_images(logger=logger, file_path=file_path)
 
     # Stage 3: Vision processing (new function, same logic)
-    image_texts = extract_binary_image_texts(ai_factory, logger, verbose, images, image_to_text_callback, progress, vision_task_id)
+    image_texts = extract_binary_image_texts(
+        ai_factory,
+        logger,
+        verbose,
+        file_path,
+        max_workers_vision,
+        images,
+        image_to_text_callback,
+        progress,
+        vision_task_id,
+    )
 
     # Stage 4: Assembly (new function)
     return build_binary_document_with_images(builder, image_texts)
@@ -168,6 +180,8 @@ def extract_binary_image_texts(
         ai_factory: AiManagerFactory,
         logger: Logger,
         verbose: bool,
+        file_path: str,
+        max_workers_vision: int,
         images: List[Image.Image],
         image_to_text_callback: Optional[ImageToTextCallback],
         progress: Optional[Progress] = None,
@@ -178,6 +192,8 @@ def extract_binary_image_texts(
     :param ai_factory: AI manager factory.
     :param logger: Logger.
     :param verbose: Enable verbose output.
+    :param file_path: File path.
+    :param max_workers_vision: Max. workers for vision.
     :param images: List of PIL Images.
     :param image_to_text_callback: Optional image-to-text callback.
     :param progress: A rich.progress.Progress object for progress reporting.
@@ -195,7 +211,7 @@ def extract_binary_image_texts(
         return image_texts
 
     # Create VisionProcessor for batch processing
-    vision_processor = VisionProcessor(ai_factory, logger, verbose, "binary_document")
+    vision_processor = VisionProcessor(ai_factory, logger, verbose, file_path, max_workers_vision)
     vision_requests = []
 
     # Collect all vision requests

@@ -9,24 +9,24 @@ from rich.progress import Progress
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.util.format import format_file
 
-MAX_WORKERS = 8
-
 
 class EmbedProcessor:
     """
     Handles parallel processing of chunk embeddings.
     """
 
-    def __init__(self, ai_factory: AiManagerFactory, logger, file_path: str):
+    def __init__(self, ai_factory: AiManagerFactory, logger, file_path: str, max_workers: int):
         """
         Initialize chunk embedding processor.
         :param ai_factory: AI manager factory for creating worker instances.
         :param logger: Logger instance.
         :param file_path: File path for logging.
+        :param max_workers: Max. workers.
         """
         self.ai_factory = ai_factory
         self.logger = logger
         self.file_path = file_path
+        self.max_workers = max_workers
 
     def process_chunks_parallel(
             self,
@@ -70,9 +70,7 @@ class EmbedProcessor:
                 return chunk_index, chunk, None
 
         # Use ThreadPoolExecutor for parallel embedding
-        max_workers = min(MAX_WORKERS, len(chunks))  # Limit concurrent workers
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             # Submit all embedding tasks
             future_to_chunk = {
                 executor.submit(embed_chunk, (chunk_index, chunk)): (chunk_index, chunk)

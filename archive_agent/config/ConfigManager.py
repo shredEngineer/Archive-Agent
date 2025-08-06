@@ -48,8 +48,12 @@ class ConfigManager(StorageManager, AiProviderKeys):
 
     EXPAND_CHUNKS_RADIUS = 'expand_chunks_radius'
 
+    MAX_WORKERS_INGEST = 'max_workers_ingest'
+    MAX_WORKERS_VISION = 'max_workers_vision'
+    MAX_WORKERS_EMBED = 'max_workers_embed'
+
     DEFAULT_CONFIG = {
-        CONFIG_VERSION: 10,  # TODO:  DON'T FORGET TO UPDATE BOTH  `CONFIG_VERSION`  AND  `upgrade()`
+        CONFIG_VERSION: 11,  # TODO:  DON'T FORGET TO UPDATE BOTH  `CONFIG_VERSION`  AND  `upgrade()`
 
         MCP_SERVER_PORT: 8008,
 
@@ -73,6 +77,10 @@ class ConfigManager(StorageManager, AiProviderKeys):
         RERANK_CHUNKS_MAX: 30,
 
         EXPAND_CHUNKS_RADIUS: 2,
+
+        MAX_WORKERS_INGEST: 8,
+        MAX_WORKERS_VISION: 8,
+        MAX_WORKERS_EMBED: 8,
 
         # deferred to `_prompt_ai_provider`
         AiProviderKeys.AI_PROVIDER: "",
@@ -257,6 +265,17 @@ class ConfigManager(StorageManager, AiProviderKeys):
         if version < 10:
             self._set_version(10)
             self._add_option(self.IMAGE_OCR)
+            upgraded = True
+
+        # Option(s) added in v11:
+        # - `max_workers_ingest`
+        # - `max_workers_vision`
+        # - `max_workers_embed`
+        if version < 11:
+            self._set_version(11)
+            self._add_option(self.MAX_WORKERS_INGEST)
+            self._add_option(self.MAX_WORKERS_VISION)
+            self._add_option(self.MAX_WORKERS_EMBED)
             upgraded = True
 
         return upgraded

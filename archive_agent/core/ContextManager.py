@@ -110,6 +110,9 @@ class ContextManager:
             ai_factory=self.ai_factory,
             decoder_settings=self.decoder_settings,
             qdrant=self.qdrant,
+            max_workers_ingest=self.config.data[self.config.MAX_WORKERS_INGEST],
+            max_workers_vision=self.config.data[self.config.MAX_WORKERS_VISION],
+            max_workers_embed=self.config.data[self.config.MAX_WORKERS_EMBED],
         )
 
     def _get_ai_provider_class(self) -> Type[AiProvider]:

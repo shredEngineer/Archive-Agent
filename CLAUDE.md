@@ -200,7 +200,7 @@ Providing accurate, real-time updates for cumulative statistics like AI token us
 - **Module Constants**: Every parallel processing class must have `MAX_WORKERS = 8` at module top
 - **Class Location**: All parallel processing classes belong in `archive_agent/data/processor/` 
 - **Logger Hierarchy**: Use instance loggers from `ai.cli` - never module-level loggers
-- **Worker Limits**: Always use `min(MAX_WORKERS, len(items))` pattern
+- **ThreadPoolExecutor Usage**: Use `max_workers=MAX_WORKERS` directly (ThreadPoolExecutor automatically limits workers to task count)
 - **Variable Naming**: Use `future_to_[item_type]` convention for executor mappings
 - **Error Handling**: Per-item exception handling that doesn't stop batch processing
 - **Resource Isolation**: Create dedicated AI managers per worker thread

@@ -10,20 +10,20 @@ from archive_agent.core.CliManager import CliManager
 from archive_agent.data.FileData import FileData
 from archive_agent.util.format import format_file, format_filename_short
 
-MAX_WORKERS = 8
-
 
 class IngestionManager:
     """
     Ingestion manager for parallel file processing.
     """
 
-    def __init__(self, cli: CliManager):
+    def __init__(self, cli: CliManager, max_workers):
         """
         Initialize ingestion manager.
         :param cli: CLI manager.
+        :param max_workers: Max. workers.
         """
         self.cli = cli
+        self.max_workers = max_workers
 
     def process_files_parallel(
             self,
@@ -41,7 +41,7 @@ class IngestionManager:
 
         processed_results = []
         with self.cli.progress_context(progress_label, total=len(files)) as (progress, overall_task_id):
-            with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 future_to_filedata = {
                     executor.submit(self._process_file_data, fd, progress, overall_task_id): fd
                     for fd in files

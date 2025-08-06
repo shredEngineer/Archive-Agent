@@ -30,6 +30,9 @@ class CommitManager:
             ai_factory: AiManagerFactory,
             decoder_settings: DecoderSettings,
             qdrant: QdrantManager,
+            max_workers_ingest: int,
+            max_workers_vision: int,
+            max_workers_embed: int,
     ):
         """
         Initialize commit manager.
@@ -38,13 +41,18 @@ class CommitManager:
         :param ai_factory: AI manager factory.
         :param decoder_settings: Decoder settings.
         :param qdrant: Qdrant manager.
+        :param max_workers_ingest: Max. workers for IngestionManager.
+        :param max_workers_vision: Max. workers for VisionProcessor.
+        :param max_workers_embed: Max. workers for EmbedProcessor.
         """
         self.cli = cli
         self.watchlist = watchlist
         self.ai_factory = ai_factory
         self.decoder_settings = decoder_settings
         self.qdrant = qdrant
-        self.ingestion = IngestionManager(cli)
+        self.ingestion = IngestionManager(cli, max_workers=max_workers_ingest)
+        self.max_workers_vision = max_workers_vision
+        self.max_workers_embed = max_workers_embed
 
     @file_lock("archive_agent_commit")
     def commit(self) -> None:
@@ -104,6 +112,8 @@ class CommitManager:
                 decoder_settings=self.decoder_settings,
                 file_path=file_path,
                 file_meta=file_meta,
+                max_workers_vision=self.max_workers_vision,
+                max_workers_embed=self.max_workers_embed,
             )
             tracked_file_data.append(file_data)
 
