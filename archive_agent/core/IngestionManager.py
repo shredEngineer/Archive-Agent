@@ -8,7 +8,7 @@ from rich.progress import Progress
 
 from archive_agent.core.CliManager import CliManager
 from archive_agent.data.FileData import FileData
-from archive_agent.util.format import format_file
+from archive_agent.util.format import format_file, format_filename_short
 
 MAX_WORKERS = 8
 
@@ -73,7 +73,7 @@ class IngestionManager:
             from archive_agent.data.loader.text import is_binary_document
             has_vision = is_pdf_document(file_data.file_path) or is_binary_document(file_data.file_path)
             total_phases = 3 if has_vision else 2
-            task_id = progress.add_task(f"[cyan]↳[/cyan] {format_file(file_data.file_path)}", total=total_phases, start=True)
+            task_id = progress.add_task(f"{format_filename_short(file_data.file_path)}", total=total_phases, start=True)
 
         success = file_data.process(progress, task_id)
 

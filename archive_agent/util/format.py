@@ -25,7 +25,7 @@ def format_time(timestamp: float) -> str:
     return dt.strftime('%Y-%m-%d %H:%M:%S')
 
 
-def format_filename_short(file_path: str, max_length: int = 48) -> str:
+def format_filename_short(file_path: str, max_length: int = 80) -> str:
     """
     Format filename for display, shortening if necessary.
     Strips the path and replaces middle part with ... if length exceeds max_length.
