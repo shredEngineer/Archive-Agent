@@ -102,6 +102,7 @@ graph LR
   * [Find what you need with natural language](#find-what-you-need-with-natural-language)
   * [Natively index your documents on-device](#natively-index-your-documents-on-device)
   * [Your AI, Your Choice](#your-ai-your-choice)
+  * [Scalable Performance](#scalable-performance)
   * [Architecture](#architecture)
   * [Just getting started?](#just-getting-started)
   * [Documentation](#documentation)
