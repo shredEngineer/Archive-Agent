@@ -48,7 +48,7 @@ Simply adjust the URL [settings](#archive-agent-settings) and overwrite `OPENAI_
 
 ---
 
-## Scalable and Stable
+## Scalable Performance
 
 - **Fully resumable parallel processing**
 - Processes multiple files at once using optimized multi-threading.  
