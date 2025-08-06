@@ -3,6 +3,7 @@
 
 from logging import Logger
 import io
+import threading
 from dataclasses import dataclass, field
 from typing import Optional, List, Set, Any, Dict, Tuple
 
@@ -26,6 +27,10 @@ TINY_IMAGE_WIDTH_THRESHOLD: int = 32
 TINY_IMAGE_HEIGHT_THRESHOLD: int = 32
 
 OCR_STRATEGY_STRICT_PAGE_DPI: int = 300
+
+# Module-level lock for PyMuPDF operations to prevent threading issues
+# PyMuPDF does not support multithreading - this ensures only one PDF analyzing phase runs at a time
+_PDF_ANALYZING_LOCK = threading.Lock()
 
 
 LayoutBlock = Dict[str, Any]
@@ -69,7 +74,7 @@ def load_pdf_document(
         image_to_text_callback_image: Optional[ImageToTextCallback],
         decoder_settings: DecoderSettings,
         progress: Optional[Progress] = None,
-        task_id: Optional[Any] = None,
+        vision_task_id: Optional[Any] = None,
 ) -> Optional[DocumentContent]:
     """
     Load PDF document.
@@ -79,19 +84,30 @@ def load_pdf_document(
     :param file_path: File path.
     :param image_to_text_callback_page: Optional image-to-text callback for pages (`strict` OCR strategy).
     :param image_to_text_callback_image: Optional image-to-text callback for images (`relaxed` OCR strategy).
-    :param decoder_settings: Decoder settings.
+    :param decoder_settings: DecoderSettings.
     :param progress: A rich.progress.Progress object for progress reporting.
-    :param task_id: The task ID for the progress bar.
+    :param vision_task_id: The vision task ID for progress reporting.
     :return: Document content if successful, None otherwise.
     """
     doc: fitz.Document = fitz.open(file_path)
 
-    page_contents = get_pdf_page_contents(
-        logger=logger,
-        verbose=verbose,
-        doc=doc,
-        decoder_settings=decoder_settings,
-    )
+    # Use module-level lock to serialize PyMuPDF analyzing operations across all threads
+    # This allows vision/chunking/embedding phases to run in parallel while
+    # ensuring only one PDF analyzing phase executes at a time
+    with _PDF_ANALYZING_LOCK:
+        if verbose:
+            logger.info("Acquired PDF analyzing lock - starting page analysis")
+
+        page_contents = get_pdf_page_contents(
+            logger=logger,
+            verbose=verbose,
+            doc=doc,
+            decoder_settings=decoder_settings,
+            progress=progress,
+        )
+
+        if verbose:
+            logger.info("PDF analyzing complete - releasing lock")
 
     image_texts_per_page = None
 
@@ -107,7 +123,7 @@ def load_pdf_document(
             image_to_text_callback_page=image_to_text_callback_page,
             image_to_text_callback_image=image_to_text_callback_image,
             progress=progress,
-            task_id=task_id,
+            vision_task_id=vision_task_id,
         )
 
     return build_document_text_from_pages(page_contents, image_texts_per_page)
@@ -166,7 +182,7 @@ def extract_image_texts_per_page(
         image_to_text_callback_page: ImageToTextCallback,
         image_to_text_callback_image: ImageToTextCallback,
         progress: Optional[Progress] = None,
-        task_id: Optional[Any] = None,
+        vision_task_id: Optional[Any] = None,
 ) -> List[List[str]]:
     """
     Extract text from images per page.
@@ -178,7 +194,7 @@ def extract_image_texts_per_page(
     :param image_to_text_callback_page: Optional image-to-text callback for pages (`strict` OCR strategy).
     :param image_to_text_callback_image: Optional image-to-text callback for images (`relaxed` OCR strategy).
     :param progress: A rich.progress.Progress object for progress reporting.
-    :param task_id: The task ID for the progress bar.
+    :param vision_task_id: The vision task ID for progress reporting.
     :return: List of text results per page (one list of strings per page).
     """
     # Create VisionProcessor for batch processing
@@ -227,11 +243,11 @@ def extract_image_texts_per_page(
         return image_texts_per_page
 
     # Update progress total now that we know the number of vision requests
-    if progress and task_id:
-        progress.update(task_id, total=len(vision_requests))
+    if progress and vision_task_id:
+        progress.update(vision_task_id, total=len(vision_requests))
 
     # Process all requests in parallel
-    vision_results = vision_processor.process_vision_requests_parallel(vision_requests, progress, task_id)
+    vision_results = vision_processor.process_vision_requests_parallel(vision_requests, progress, vision_task_id)
 
     # Reassemble results into per-page structure
     for request_index, formatted_result in enumerate(vision_results):
@@ -291,6 +307,7 @@ def get_pdf_page_contents(
         verbose: bool,
         doc: fitz.Document,
         decoder_settings: DecoderSettings,
+        progress: Optional[Progress] = None,
 ) -> List[PdfPageContent]:
     """
     Get PDF page contents.
@@ -298,10 +315,17 @@ def get_pdf_page_contents(
     :param verbose: Enable verbose output.
     :param doc: PDF document.
     :param decoder_settings: Decoder settings.
+    :param progress: A rich.progress.Progress object for progress reporting.
     :return: PDF page contents.
     """
     page_contents: List[PdfPageContent] = []
     pages: List[Any] = [page for page in doc]
+
+    # Create PDF analyzing sub-task if progress tracking is enabled
+    analyzing_task_id = None
+    if progress:
+        analyzing_task_id = progress.add_task("[cyan]PDF Analyzing[/cyan]", total=len(pages))
+
     for page_index, page in enumerate(pages):
 
         if verbose:
@@ -354,5 +378,13 @@ def get_pdf_page_contents(
         assert page_content.ocr_strategy != OcrStrategy.AUTO, "BUG DETECTED: Unresolved `auto` OCR strategy"  # should never happen
 
         page_contents.append(page_content)
+
+        # Update analyzing progress
+        if progress and analyzing_task_id is not None:
+            progress.update(analyzing_task_id, advance=1)
+
+    # Clean up analyzing task and update main file progress
+    if progress and analyzing_task_id is not None:
+        progress.remove_task(analyzing_task_id)
 
     return page_contents

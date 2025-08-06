@@ -129,7 +129,7 @@ def load_binary_document(
         file_path: str,
         image_to_text_callback: Optional[ImageToTextCallback],
         progress: Optional[Progress] = None,
-        task_id: Optional[Any] = None,
+        vision_task_id: Optional[Any] = None,
 ) -> Optional[DocumentContent]:
     """
     Load binary document (using Pandoc).
@@ -139,7 +139,7 @@ def load_binary_document(
     :param file_path: File path.
     :param image_to_text_callback: Optional image-to-text callback.
     :param progress: A rich.progress.Progress object for progress reporting.
-    :param task_id: The task ID for the progress bar.
+    :param vision_task_id: The vision task ID for progress reporting.
     :return: Document content if successful, None otherwise.
     """
     file_ext = os.path.splitext(file_path)[1].lower()
@@ -158,7 +158,7 @@ def load_binary_document(
     images = load_binary_document_images(logger=logger, file_path=file_path)
 
     # Stage 3: Vision processing (new function, same logic)
-    image_texts = extract_binary_image_texts(ai_factory, logger, verbose, images, image_to_text_callback, progress, task_id)
+    image_texts = extract_binary_image_texts(ai_factory, logger, verbose, images, image_to_text_callback, progress, vision_task_id)
 
     # Stage 4: Assembly (new function)
     return build_binary_document_with_images(builder, image_texts)
@@ -171,7 +171,7 @@ def extract_binary_image_texts(
         images: List[Image.Image],
         image_to_text_callback: Optional[ImageToTextCallback],
         progress: Optional[Progress] = None,
-        task_id: Optional[Any] = None,
+        vision_task_id: Optional[Any] = None,
 ) -> List[str]:
     """
     Extract text from binary document images with parallel processing.
@@ -181,7 +181,7 @@ def extract_binary_image_texts(
     :param images: List of PIL Images.
     :param image_to_text_callback: Optional image-to-text callback.
     :param progress: A rich.progress.Progress object for progress reporting.
-    :param task_id: The task ID for the progress bar.
+    :param vision_task_id: The vision task ID for progress reporting.
     :return: List of formatted image texts.
     """
     image_texts = []
@@ -222,11 +222,11 @@ def extract_binary_image_texts(
         return image_texts
 
     # Update progress total now that we know the number of vision requests
-    if progress and task_id:
-        progress.update(task_id, total=len(vision_requests))
+    if progress and vision_task_id:
+        progress.update(vision_task_id, total=len(vision_requests))
 
     # Process all requests in parallel
-    vision_results = vision_processor.process_vision_requests_parallel(vision_requests, progress, task_id)
+    vision_results = vision_processor.process_vision_requests_parallel(vision_requests, progress, vision_task_id)
 
     return vision_results
 

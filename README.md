@@ -29,7 +29,7 @@
 ## Natively index your documents on-device
 
 - **Includes local AI file system indexer**
-- **Parallel processing** for vision, embedding, and file operations
+- **Optimized parallel processing** for vision, embedding, and file operations
 - Natively ingests [PDFs, images, Markdown, plaintext, and more…](#which-files-are-processed)
 - [Selects and tracks files using patterns](#how-files-are-selected-for-tracking) like `~/Documents/*.pdf` 
 - Transcribes images using [automatic OCR](#ocr-strategies) (experimental) and entity extraction
@@ -292,10 +292,12 @@ Ultimately, **Archive Agent** decodes everything to text like this:
   - Structured information is formatted as image description.
 
 **Archive Agent** processes files with optimized performance:
-- Files are processed in parallel.
-- Vision operations are parallelized across images and pages.
-- Embedding operations are parallelized across text chunks.
-- Smart chunking uses sequential processing due to carry mechanism dependencies.
+- **Surgical Synchronization**:
+  - PDF analyzing phase is serialized (due to PyMuPDF threading limitations).
+  - All other phases (vision, chunking, embedding) run in parallel for maximum performance.
+- **Vision operations** are parallelized across images and pages within and across files.
+- **Embedding operations** are parallelized across text chunks and files.
+- **Smart chunking** uses sequential processing due to carry mechanism dependencies.
 
 See [Archive Agent settings](#archive-agent-settings): `image_ocr`, `image_entity_extract`
 

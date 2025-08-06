@@ -227,15 +227,38 @@ result = callback(ai_worker, item)
 
 #### Nested Progress Architecture
 
-Archive Agent uses a three-level progress tracking system with smart phase detection:
+Archive Agent uses a hierarchical progress tracking system with smart phase detection:
 
-**Key Features**:
+**Top-Level File Phases**:
 - **Smart Phase Detection**: PDF/Binary files get 3 phases (Vision+Chunking+Embedding), others get 2 (Chunking+Embedding)
-- **Dynamic Progress Totals**: Sub-tasks set `total=len(requests)` when request counts are known (not when created)
 - **File-Level Updates**: File progress advances as phases complete (1/3, 2/3, 3/3)
-- **Meaningful Progress**: Shows actual work completed (sentences/images/chunks processed)
-- **Real-time Updates**: Progress tracking works correctly with parallel processing without serializing worker threads
-- **Clean Task Management**: Sub-tasks are removed after completion, preventing UI clutter
+
+**Vision Processing Phase Breakdown** (for PDF/Binary files):
+
+**PDF Processing Sub-tasks**:
+- **PDF Analyzing**: Page-by-page analysis and OCR strategy determination
+  - Created conditionally when `progress` tracking is enabled
+  - Tracks progress per page analyzed (`total=number_of_pages`)
+  - Determines OCR strategy (AUTO→STRICT/RELAXED) based on text content thresholds
+  - Prepares page layout extraction and image identification
+  - Uses separate `analyzing_task_id` for isolated progress tracking
+- **Vision Processing**: AI-powered image-to-text conversion operations
+  - Uses `vision_task_id` parameter for progress coordination
+  - Dynamic progress totals set when vision request counts are determined
+  - Handles both full-page images (STRICT mode) and embedded images (RELAXED mode)
+  - Parallel processing via `VisionProcessor` with proper thread isolation
+
+**Binary Processing Sub-tasks**:
+- **Vision Processing Only**: Binary documents skip analyzing phase
+  - Direct vision processing of extracted images
+  - Uses same `vision_task_id` parameter pattern as PDFs
+
+**Progress Architecture Features**:
+- **Hierarchical Task Structure**: Vision phase dynamically contains analyzing and/or vision sub-tasks based on file type
+- **Dynamic Progress Totals**: Vision tasks created with `total=None`, updated when request counts known
+- **Parameter Clarity**: `vision_task_id` clearly indicates vision processing progress tracking
+- **Clean Task Management**: All sub-tasks properly removed after completion to prevent UI clutter
+- **Thread-Safe Updates**: Progress updates routed through centralized queue system to avoid lock contention
 
 ## Parallel Processing Architecture
 
@@ -285,9 +308,22 @@ This pattern ensures worker isolation and prevents shared state corruption.
 
 #### Multi-Stage Loader Architecture
 Both PDF and Binary document loaders use consistent multi-stage patterns:
-1. **Content Extraction**: Text/image extraction from source
-2. **Vision Processing**: Parallel AI vision operations (if applicable)
-3. **Assembly**: Final document construction with processed content
+
+**PDF Document Processing**:
+1. **Document Opening**: PyMuPDF document initialization
+2. **PDF Analyzing**: Page-by-page layout analysis and OCR strategy determination
+   - Extracts text blocks, image blocks, and vector content from each page
+   - Resolves AUTO OCR strategy to STRICT or RELAXED based on text content thresholds
+   - For STRICT mode: Replaces page content with full-page rendered image
+   - For RELAXED mode: Preserves layout structure with embedded images
+3. **Vision Processing**: Parallel AI vision operations for image-to-text conversion
+4. **Assembly**: Final document construction with processed content and page mapping
+
+**Binary Document Processing**:
+1. **Content Extraction**: Pandoc-based text extraction from source document
+2. **Image Extraction**: ZIP-based image extraction from document container
+3. **Vision Processing**: Parallel AI vision operations for embedded images
+4. **Assembly**: Final document construction with processed content
 
 This architecture enables surgical integration of parallel processing without breaking existing functionality.
 
@@ -299,6 +335,42 @@ This architecture enables surgical integration of parallel processing without br
 - **Resource Management**: Appropriate concurrency limits prevent resource exhaustion
 - **Surgical Integration**: Only replace core processing loops, preserve all filtering/formatting logic
 - **System Brittleness**: The system is verified to work but extremely brittle - extreme caution required
+
+#### PDF Processing Limitations and Surgical Synchronization
+
+**PyMuPDF Threading Constraint**: PyMuPDF (fitz) library does not support multithreading and explicitly warns against concurrent usage:
+
+> "PyMuPDF does not support running on multiple threads - doing so may cause incorrect behaviour or even crash Python itself."
+
+**Architectural Solution: Surgical Synchronization**
+
+Archive Agent implements a precise synchronization approach that maximizes parallelism while respecting library constraints:
+
+**Synchronized Operations**:
+- **PDF Analyzing Phase Only**: `get_pdf_page_contents()` function calls are serialized using `_PDF_ANALYZING_LOCK`
+- **All Other Operations**: Vision processing, chunking, and embedding run in full parallel
+
+**Implementation Details**:
+- Module-level `threading.Lock()` in `archive_agent/data/loader/pdf.py`
+- Lock acquired only during PyMuPDF operations (page analysis, OCR strategy determination)
+- Lock released immediately after analyzing phase completes
+- All subsequent phases (vision, chunking, embedding) execute in parallel across all files
+- Verbose logging shows lock acquisition/release for debugging
+
+**Processing Flow per PDF**:
+1. **File Processing**: Fully parallel (`ThreadPoolExecutor` with `MAX_WORKERS=8`)
+2. **PDF Analyzing**: Serialized (one at a time due to lock)
+3. **Vision Processing**: Parallel (within and across files)
+4. **Chunking**: Parallel (across files)
+5. **Embedding**: Parallel (across files)
+
+**Performance Characteristics**:
+- **Maximum Parallelism**: Only the minimal required operation (PDF analyzing) is serialized
+- **Optimal Resource Utilization**: Vision/chunking/embedding phases fully utilize available cores
+- **Predictable Performance**: Eliminates PyMuPDF lock contention while maintaining concurrency benefits
+- **Mixed Workloads**: Non-PDF files maintain full parallelization throughout all phases
+
+**Key Insight**: Surgical synchronization isolates the threading constraint to the smallest possible scope, maximizing overall system throughput by preserving parallelism everywhere else.
 
 #### VisionProcessor Architecture Details
 The `VisionProcessor` implements a sophisticated parallel vision processing system:

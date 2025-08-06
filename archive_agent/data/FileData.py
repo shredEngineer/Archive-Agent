@@ -113,18 +113,18 @@ class FileData:
             )
 
         elif is_binary_document(self.file_path):
-            return lambda progress, task_id: load_binary_document(
+            return lambda progress, vision_task_id: load_binary_document(
                 ai_factory=self.ai_factory,
                 logger=self.logger,
                 verbose=self.ai.cli.VERBOSE_LOADER,
                 file_path=self.file_path,
                 image_to_text_callback=self.image_to_text_callback_image,
                 progress=progress,
-                task_id=task_id,
+                vision_task_id=vision_task_id,
             )
 
         elif is_pdf_document(self.file_path):
-            return lambda progress, task_id: load_pdf_document(
+            return lambda progress, vision_task_id: load_pdf_document(
                 ai_factory=self.ai_factory,
                 logger=self.logger,
                 verbose=self.ai.cli.VERBOSE_LOADER,
@@ -133,7 +133,7 @@ class FileData:
                 image_to_text_callback_image=self.image_to_text_callback_image,
                 decoder_settings=self.decoder_settings,
                 progress=progress,
-                task_id=task_id,
+                vision_task_id=vision_task_id,
             )
 
         return None
