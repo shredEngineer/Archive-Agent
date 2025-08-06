@@ -2,12 +2,16 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
+import logging
+
 from unittest.mock import Mock
 from qdrant_client.models import ScoredPoint
 
 from archive_agent.db.QdrantSchema import QdrantPayload, parse_payload
 from archive_agent.util.format import get_point_page_line_info, get_point_reference_info
 from archive_agent.ai.query.AiQuery import AiQuery
+
+logger = logging.getLogger(__name__)
 
 
 class TestPayloadIntegrationFormatUtils:
@@ -134,7 +138,7 @@ class TestPayloadIntegrationFormatUtils:
             "line_range": None
         }
         point = self.create_mock_point(payload_dict)
-        result = get_point_reference_info(point)
+        result = get_point_reference_info(logger=logger, point=point, verbose=True)
 
         # Should contain escaped file path and page info
         assert "file:///home/user/My%20Document.pdf" in result
@@ -153,7 +157,7 @@ class TestPayloadIntegrationFormatUtils:
             "line_range": [10, 15]
         }
         point = self.create_mock_point(payload_dict)
-        result = get_point_reference_info(point)
+        result = get_point_reference_info(logger=logger, point=point, verbose=True)
 
         assert "file:///home/user/notes.txt" in result
         assert "lines 10–15" in result
@@ -171,7 +175,7 @@ class TestPayloadIntegrationFormatUtils:
             "line_range": None
         }
         point = self.create_mock_point(payload_dict)
-        result = get_point_reference_info(point, verbose=True)
+        result = get_point_reference_info(logger=logger, point=point, verbose=True)
 
         # Verbose mode should include chunk info and timestamp
         assert "chunk 3/10" in result
@@ -188,7 +192,7 @@ class TestPayloadIntegrationFormatUtils:
             "chunk_text": "Legacy chunk without ranges.",
         }
         point = self.create_mock_point(legacy_payload_dict)
-        result = get_point_reference_info(point)
+        result = get_point_reference_info(logger=logger, point=point, verbose=True)
 
         # Should fall back to chunk info only
         assert "file:///home/user/old_document.txt" in result
@@ -355,7 +359,7 @@ class TestPayloadIntegrationBackwardCompatibility:
         mock_point.payload = legacy_payload
         mock_point.score = 0.9
 
-        reference_info = get_point_reference_info(mock_point)
+        reference_info = get_point_reference_info(logger=logger, point=mock_point, verbose=True)
         assert "chunk 1/1" in reference_info
         assert "file:///home/user/legacy.txt" in reference_info
 
@@ -386,7 +390,7 @@ class TestPayloadIntegrationBackwardCompatibility:
         page_line_info = get_point_page_line_info(mock_point)
         assert page_line_info is None  # No ranges available
 
-        reference_info = get_point_reference_info(mock_point)
+        reference_info = get_point_reference_info(logger=logger, point=mock_point, verbose=True)
         assert "chunk 3/5" in reference_info  # Falls back to chunk info
 
         # AiQuery should work
@@ -458,7 +462,7 @@ class TestPayloadIntegrationBackwardCompatibility:
             mock_point.payload = payload_dict
             mock_point.score = 0.7
 
-            reference_info = get_point_reference_info(mock_point)
+            reference_info = get_point_reference_info(logger=logger, point=mock_point, verbose=True)
             assert isinstance(reference_info, str)
             assert len(reference_info) > 0
 

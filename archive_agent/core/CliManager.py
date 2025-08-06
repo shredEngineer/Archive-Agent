@@ -435,7 +435,7 @@ class CliManager:
         Format point.
         :param point: Point.
         """
-        self.logger.info(f"({point.score * 100:>6.2f} %) match: {get_point_reference_info(point, verbose=True)}")
+        self.logger.info(f"({point.score * 100:>6.2f} %) match: {get_point_reference_info(self.logger, point, verbose=True)}")
 
     def format_retrieved_points(self, points: List[ScoredPoint]) -> None:
         """

@@ -36,7 +36,12 @@ class ProfileManager(StorageManager):
         """
         self.cli = cli
 
-        StorageManager.__init__(self, settings_path / "profile.json", deepcopy(self.DEFAULT_CONFIG))
+        StorageManager.__init__(
+            self,
+            logger=self.cli.logger,
+            file_path=settings_path / "profile.json",
+            default=deepcopy(self.DEFAULT_CONFIG),
+        )
 
         available_profiles = [p.name for p in settings_path.iterdir() if p.is_dir()]
 

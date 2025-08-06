@@ -2,7 +2,6 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import click
-import logging
 import hashlib
 import os.path
 from pathlib import Path
@@ -17,8 +16,6 @@ from archive_agent.core.CliManager import CliManager
 from archive_agent.util.format import format_file
 
 from archive_agent.util.StorageManager import StorageManager
-
-logger = logging.getLogger(__name__)
 
 
 class ConfigManager(StorageManager, AiProviderKeys):
@@ -106,16 +103,16 @@ class ConfigManager(StorageManager, AiProviderKeys):
         file_path = settings_path / profile_name / "config.json"
 
         if not os.path.exists(file_path):
-            logger.info(f"Creating profile: '{profile_name}'")
+            self.cli.logger.info(f"Creating profile: '{profile_name}'")
 
             self._qdrant_collection_name(profile_name)
             self._prompt_ai_provider()
             self._prompt_ocr_strategy()
 
         else:
-            logger.info(f"Using profile: '{profile_name}'")
+            self.cli.logger.info(f"Using profile: '{profile_name}'")
 
-        StorageManager.__init__(self, file_path=file_path, default=self.DEFAULT_CONFIG)
+        StorageManager.__init__(self, logger=self.cli.logger, file_path=file_path, default=self.DEFAULT_CONFIG)
 
     def _qdrant_collection_name(self, profile_name: str) -> None:
         """
@@ -223,7 +220,7 @@ class ConfigManager(StorageManager, AiProviderKeys):
             self._add_option(self.OCR_AUTO_THRESHOLD)
 
             self.data[self.OCR_STRATEGY] = 'auto'
-            logger.warning("Your config has been updated to use the new 'auto' OCR strategy.")
+            self.cli.logger.warning("Your config has been updated to use the new 'auto' OCR strategy.")
 
             upgraded = True
 
@@ -285,7 +282,7 @@ class ConfigManager(StorageManager, AiProviderKeys):
         Set version number.
         :param version: Version number.
         """
-        logger.warning(f"Upgrading config (v{version}): {format_file(self.file_path)}")
+        self.cli.logger.warning(f"Upgrading config (v{version}): {format_file(self.file_path)}")
         self.data[self.CONFIG_VERSION] = version
 
     def _add_option(self, key: str, default: Optional[Any] = None):

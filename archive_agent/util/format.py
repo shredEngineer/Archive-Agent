@@ -2,7 +2,7 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import logging
+from logging import Logger
 import os
 import pathlib
 import urllib.parse
@@ -11,8 +11,6 @@ from typing import Optional
 
 from qdrant_client.http.models import ScoredPoint, PointStruct
 from archive_agent.db.QdrantSchema import parse_payload
-
-logger = logging.getLogger(__name__)
 
 
 def format_time(timestamp: float) -> str:
@@ -84,11 +82,12 @@ def get_point_page_line_info(point: ScoredPoint | PointStruct) -> Optional[str]:
         return None
 
 
-def get_point_reference_info(point: ScoredPoint, verbose: bool = False) -> str:
+def get_point_reference_info(logger: Logger, point: ScoredPoint, verbose: bool) -> str:
     """
     Get point reference info.
     NOTE: Chunks that were added before v5.0.0 don't have the fields `page_range` and `line_range.
           This is handled gracefully in here.
+    :param logger: Logger.
     :param point: Point.
     :param verbose: Append additional chunk info
     :return: Point reference info.

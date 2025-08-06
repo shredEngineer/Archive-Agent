@@ -23,7 +23,7 @@ from archive_agent.ai.vision.AiVisionOCR import AiVisionOCR
 from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 from archive_agent.config.DecoderSettings import DecoderSettings
 from archive_agent.data.DocumentContent import DocumentContent
-from archive_agent.util.format import format_file, get_point_page_line_info, format_filename_short
+from archive_agent.util.format import get_point_page_line_info, format_filename_short
 from archive_agent.data.loader.pdf import is_pdf_document, load_pdf_document
 from archive_agent.data.loader.image import is_image, load_image
 from archive_agent.data.loader.text import is_plaintext, load_plaintext
@@ -168,7 +168,7 @@ class FileData:
 
         image_possibly_resized = image_resize_safe(image=image, logger=self.logger, verbose=self.ai.cli.VERBOSE_VISION)
         if image_possibly_resized is None:
-            self.logger.warning(f"Failed to resize {format_file(self.file_path)}")
+            self.logger.warning(f"Failed to resize image")
             return None
 
         image_base64 = image_to_base64(image_possibly_resized)
@@ -176,7 +176,7 @@ class FileData:
         vision_result = ai.vision(image_base64)
 
         if vision_result.is_rejected:
-            self.logger.critical(f"⚠️ Image rejected: \"{vision_result.rejection_reason}\"")
+            self.logger.error(f"⚠️ Image rejected: \"{vision_result.rejection_reason}\"")
             return None
 
         return vision_result
@@ -250,10 +250,10 @@ class FileData:
             try:
                 return self.decoder_func(progress, task_id)
             except Exception as e:
-                self.logger.error(f"Failed to process {format_file(self.file_path)}: {e}")
+                self.logger.error(f"Failed to process file: {e}")
                 return None
 
-        self.logger.warning(f"Cannot process {format_file(self.file_path)}")
+        self.logger.warning(f"Cannot process file")
         return None
 
     # AI CHUNKING CALLBACK
@@ -286,7 +286,7 @@ class FileData:
         # Create vision processing sub-task for file types that support vision
         vision_task_id = None
         if progress and (is_pdf_document(self.file_path) or is_binary_document(self.file_path)):
-            vision_task_id = progress.add_task("[cyan]Vision Processing[/cyan]", total=None)
+            vision_task_id = progress.add_task("  [cyan]├─ Vision Processing[/cyan]", total=None)
 
         # Call the loader function assigned to this file data.
         # NOTE: DocumentContent is an array of text lines, mapped to page or line numbers.
@@ -295,13 +295,13 @@ class FileData:
         # Clean up vision task if it was created and update file progress
         if progress and vision_task_id is not None:
             progress.remove_task(vision_task_id)
-            # Update file-level progress: Vision phase complete
+            # Update file-level progress: Vision phase complete (5% for vision-enabled files)
             if task_id is not None:
-                progress.update(task_id, advance=1)
+                progress.update(task_id, completed=5)
 
         # Decoder may fail, e.g. on I/O error, exhausted AI attempts, …
         if doc_content is None:
-            self.logger.warning(f"Failed to process {format_file(self.file_path)}")
+            self.logger.warning(f"Failed to decode document")
             return False
 
         # PHASE 2: Sentence Extraction and AI Chunking
@@ -315,7 +315,10 @@ class FileData:
         # Create chunking sub-task
         chunking_task_id = None
         if progress:
-            chunking_task_id = progress.add_task("[yellow]Chunking[/yellow]", total=None)
+            # Use appropriate tree symbol based on whether this file has vision processing
+            has_vision = is_pdf_document(self.file_path) or is_binary_document(self.file_path)
+            tree_symbol = "├─" if has_vision else "└─"
+            chunking_task_id = progress.add_task(f"  [yellow]{tree_symbol} Chunking[/yellow]", total=None)
 
         # Group sentences into chunks, keeping track of references.
         if self.ai.cli.VERBOSE_CHUNK:
@@ -336,8 +339,11 @@ class FileData:
         if progress and chunking_task_id is not None:
             progress.remove_task(chunking_task_id)
             # Update file-level progress: Chunking phase complete
+            # (80% for vision-enabled files, 85% for text-only files)
             if task_id is not None:
-                progress.update(task_id, advance=1)
+                has_vision = is_pdf_document(self.file_path) or is_binary_document(self.file_path)
+                chunking_completion = 80 if has_vision else 85
+                progress.update(task_id, completed=chunking_completion)
 
         # PHASE 3: Reference Range Analysis and Point Creation Setup
         is_page_based = doc_content.pages_per_line is not None
@@ -352,7 +358,7 @@ class FileData:
         # Create embedding sub-task
         embedding_task_id = None
         if progress:
-            embedding_task_id = progress.add_task("[green]Embedding[/green]", total=len(chunks))
+            embedding_task_id = progress.add_task("  [green]└─ Embedding[/green]", total=len(chunks))
 
         # PHASE 4: Parallel Embedding and Vector Point Creation
         # Process chunks in parallel for embedding
@@ -366,7 +372,7 @@ class FileData:
         # Process results and create points
         for chunk_index, (chunk, vector) in enumerate(embedding_results):
             if vector is None:
-                self.logger.warning(f"Failed to embed chunk ({chunk_index + 1}) / ({len(chunks)}) of {format_file(self.file_path)}")
+                self.logger.warning(f"Failed to embed chunk ({chunk_index + 1}) / ({len(chunks)})")
                 continue
 
             payload_model = QdrantPayload(
@@ -407,8 +413,8 @@ class FileData:
         # Clean up embedding task and update file progress
         if progress and embedding_task_id is not None:
             progress.remove_task(embedding_task_id)
-            # Update file-level progress: Embedding phase complete
+            # Update file-level progress: Embedding phase complete (100%)
             if task_id is not None:
-                progress.update(task_id, advance=1)
+                progress.update(task_id, completed=100)
 
         return True

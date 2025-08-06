@@ -61,11 +61,13 @@ class ContextManager:
         )
 
         self.watchlist = WatchlistManager(
+            cli=self.cli,
             settings_path=settings_path,
             profile_name=self.profile_manager.get_profile_name(),
         )
 
         self.ai_cache = CacheManager(
+            cli=self.cli,
             cache_path=settings_path / self.profile_manager.get_profile_name() / "ai_cache",
             invalidate_cache=self.invalidate_cache,
             verbose=verbose,
@@ -98,6 +100,7 @@ class ContextManager:
         )
 
         self.decoder_settings = DecoderSettings(
+            cli=self.cli,
             ocr_strategy=OcrStrategy(self.config.data[self.config.OCR_STRATEGY]),
             ocr_auto_threshold=self.config.data[self.config.OCR_AUTO_THRESHOLD],
             image_ocr=str(self.config.data[self.config.IMAGE_OCR]).lower().strip() == "true",

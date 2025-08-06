@@ -2,7 +2,7 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import typer
-import logging
+from logging import Logger
 import json
 import shutil
 from pathlib import Path
@@ -12,20 +12,19 @@ from abc import ABC, abstractmethod
 
 from archive_agent.util.format import format_file
 
-logger = logging.getLogger(__name__)
-
 
 class StorageManager(ABC):
     """
     Storage manager.
     """
 
-    def __init__(self, file_path: Path, default: Dict[str, Any]) -> None:
+    def __init__(self, logger: Logger, file_path: Path, default: Dict[str, Any]) -> None:
         """
         Initialize storage manager.
         :param file_path: File path.
         :param default: Default data.
         """
+        self.logger = logger
         self.file_path = file_path
         self.default = default
 
@@ -43,7 +42,7 @@ class StorageManager(ABC):
             else:
                 self.load()
         except Exception as e:
-            logger.exception(f"Failed to load {format_file(self.file_path)}: {e}")
+            self.logger.exception(f"Failed to load {format_file(self.file_path)}: {e}")
             raise typer.Exit(code=1)
 
     def create(self) -> None:
@@ -52,7 +51,7 @@ class StorageManager(ABC):
         """
         self.data = deepcopy(self.default)
         self.save()
-        logger.info(f"Created default {format_file(self.file_path)}")
+        self.logger.info(f"Created default {format_file(self.file_path)}")
 
     def load(self) -> None:
         """
@@ -65,17 +64,17 @@ class StorageManager(ABC):
 
         missing_keys = self.default.keys() - self.data.keys()
         if missing_keys:
-            logger.error(f"Missing keys in {format_file(self.file_path)}: {missing_keys}")
+            self.logger.error(f"Missing keys in {format_file(self.file_path)}: {missing_keys}")
             raise typer.Exit(code=1)
 
         if not self.validate():
-            logger.error(f"Invalid data in {format_file(self.file_path)}")
+            self.logger.error(f"Invalid data in {format_file(self.file_path)}")
             raise typer.Exit(code=1)
 
-        logger.debug(f"Loaded existing {format_file(self.file_path)}")
+        self.logger.debug(f"Loaded existing {format_file(self.file_path)}")
 
         if upgraded:
-            logger.debug(f"Upgraded existing {format_file(self.file_path)}")
+            self.logger.debug(f"Upgraded existing {format_file(self.file_path)}")
             self.save()
 
     def save(self) -> None:
@@ -83,7 +82,7 @@ class StorageManager(ABC):
         Save file (atomic write).
         """
         if not self.validate():
-            logger.error(f"Invalid data in {format_file(self.file_path)}")
+            self.logger.error(f"Invalid data in {format_file(self.file_path)}")
             raise typer.Exit(code=1)
 
         self.file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -94,7 +93,7 @@ class StorageManager(ABC):
             json.dump(self.data, f, indent=4)
         shutil.move(temp_path, self.file_path)
 
-        logger.debug(f"Saved {format_file(self.file_path)}")
+        self.logger.debug(f"Saved {format_file(self.file_path)}")
 
     @abstractmethod
     def upgrade(self) -> bool:

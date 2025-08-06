@@ -182,7 +182,7 @@ class AiQuery:
                 hash_id = extract_hash(chunk_ref)
                 point = points_by_hash.get(hash_id)
                 if point is not None:
-                    answer.chunk_ref_list[i] = get_point_reference_info(point)
+                    answer.chunk_ref_list[i] = get_point_reference_info(logger, point, verbose=False)
                 else:
                     answer.chunk_ref_list[i] = f"??? ({hash_id})"
 

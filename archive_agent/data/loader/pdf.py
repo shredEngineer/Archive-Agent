@@ -18,7 +18,14 @@ from archive_agent.data.loader.image import ImageToTextCallback
 from archive_agent.util.text_util import splitlines_exact
 from archive_agent.util.PageTextBuilder import PageTextBuilder
 from archive_agent.data.processor.VisionProcessor import VisionProcessor, VisionRequest
+
+
 from archive_agent.data.loader.backend.pdf_pymupdf import create_pdf_document
+
+# TODO: Remove this once PyMuPDF backend has been replaced.
+# Module-level lock for PyMuPDF operations to prevent threading issues
+# PyMuPDF does not support multithreading - this ensures only one PDF analyzing phase runs at a time
+_PDF_ANALYZING_LOCK = threading.Lock()
 
 
 TINY_IMAGE_WIDTH_THRESHOLD: int = 32
@@ -27,10 +34,8 @@ TINY_IMAGE_HEIGHT_THRESHOLD: int = 32
 OCR_STRATEGY_STRICT_PAGE_DPI: int = 150
 
 
-# TODO: Remove this once PyMuPDF backend has been replaced.
-# Module-level lock for PyMuPDF operations to prevent threading issues
-# PyMuPDF does not support multithreading - this ensures only one PDF analyzing phase runs at a time
-_PDF_ANALYZING_LOCK = threading.Lock()
+# Control verbose logging within lock to reduce display stalling while preserving information
+PDF_ANALYZING_VERBOSE = True
 
 
 def is_pdf_document(file_path: str) -> bool:
@@ -71,13 +76,13 @@ def load_pdf_document(
     """
     doc: PdfDocument = create_pdf_document(file_path)
 
+    if verbose:
+        logger.info("Acquiring PDF analyzing lock...")
+
     # Use module-level lock to serialize PyMuPDF analyzing operations across all threads
     # This allows vision/chunking/embedding phases to run in parallel while
     # ensuring only one PDF analyzing phase executes at a time
     with _PDF_ANALYZING_LOCK:
-        if verbose:
-            logger.info("Acquired PDF analyzing lock - starting page analysis")
-
         page_contents = get_pdf_page_contents(
             logger=logger,
             verbose=verbose,
@@ -86,8 +91,8 @@ def load_pdf_document(
             progress=progress,
         )
 
-        if verbose:
-            logger.info("PDF analyzing complete - releasing lock")
+    if verbose:
+        logger.info("PDF analyzing complete - lock released")
 
     image_texts_per_page = None
 
@@ -264,11 +269,11 @@ def get_pdf_page_contents(
     # Create PDF analyzing sub-task if progress tracking is enabled
     analyzing_task_id = None
     if progress:
-        analyzing_task_id = progress.add_task("[cyan]PDF Analyzing[/cyan]", total=len(pages))
+        analyzing_task_id = progress.add_task("  [cyan]├─ PDF Analyzing[/cyan]", total=len(pages))
 
     for page_index, page in enumerate(pages):
 
-        if verbose:
+        if verbose and PDF_ANALYZING_VERBOSE:
             logger.info(f"Analyzing PDF page ({page_index + 1}) / ({len(pages)}):")
         page_content: PdfPageContent = page.get_content()
 
@@ -276,23 +281,23 @@ def get_pdf_page_contents(
         if decoder_settings.ocr_strategy == OcrStrategy.AUTO:
             if len(page_content.text) >= decoder_settings.ocr_auto_threshold:
                 page_content.ocr_strategy = OcrStrategy.RELAXED
-                if verbose:
+                if verbose and PDF_ANALYZING_VERBOSE:
                     logger.info(f"- OCR strategy: 'auto' resolved to 'relaxed'")
             else:
                 page_content.ocr_strategy = OcrStrategy.STRICT
-                if verbose:
+                if verbose and PDF_ANALYZING_VERBOSE:
                     logger.info(f"- OCR strategy: 'auto' resolved to 'strict'")
         else:
             page_content.ocr_strategy = decoder_settings.ocr_strategy
-            if verbose:
+            if verbose and PDF_ANALYZING_VERBOSE:
                 logger.info(f"- OCR strategy: '{page_content.ocr_strategy.value}'")
 
         if page_content.ocr_strategy == OcrStrategy.STRICT:
             # Replace page content with only one full-page image.
-            if verbose:
+            if verbose and PDF_ANALYZING_VERBOSE:
                 logger.info(f"- IGNORING ({page_content.image_block_count}) image(s)")
                 logger.info(f"- IGNORING ({len(page_content.text)}) character(s) in ({page_content.text_block_count}) text block(s)")
-                logger.info(f"- Decoding full-page image ({OCR_STRATEGY_STRICT_PAGE_DPI} DPI) ")
+                logger.info(f"- Decoding full-page image ({OCR_STRATEGY_STRICT_PAGE_DPI} DPI)")
             page_content = PdfPageContent(
                 text="",
                 layout_image_bytes=[page.get_full_page_pixmap(dpi=OCR_STRATEGY_STRICT_PAGE_DPI)],
@@ -301,7 +306,7 @@ def get_pdf_page_contents(
 
         elif page_content.ocr_strategy == OcrStrategy.RELAXED:
             # Keep page content as-is.
-            if verbose:
+            if verbose and PDF_ANALYZING_VERBOSE:
                 logger.info(f"- Decoding ({page_content.image_block_count}) image(s)")
                 logger.info(f"- Decoding ({len(page_content.text)}) character(s) in ({page_content.text_block_count}) text block(s)")
 
