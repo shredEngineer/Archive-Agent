@@ -3,13 +3,11 @@
 
 from logging import Logger
 import re
-from typing import List, Tuple, Optional, Callable, Any
+from typing import List, Tuple, Optional, Callable
 
-from rich.progress import Progress
 from dataclasses import dataclass
 
 import spacy
-from spacy import Language  # type: ignore
 from spacy.language import Language
 from spacy.tokens import Doc
 import bisect
@@ -20,6 +18,7 @@ from archive_agent.ai.chunk.AiChunk import ChunkSchema
 from archive_agent.data.DocumentContent import DocumentContent, ReferenceList
 from archive_agent.util.format import format_file
 from archive_agent.util.text_util import splitlines_exact
+from archive_agent.data.ProgressManager import ProgressInfo
 
 SentenceRange = Tuple[int, int]
 
@@ -345,8 +344,7 @@ def get_chunks_with_reference_ranges(
         file_path: str,
         logger: Logger,
         verbose: bool = True,
-        progress: Optional[Progress] = None,
-        task_id: Optional[Any] = None,
+        progress_info: Optional[ProgressInfo] = None,
 ) -> List[ChunkWithRange]:
     """
     Chunkify a list of sentences into AI-determined chunks, carrying over leftover sentences where needed,
@@ -358,8 +356,7 @@ def get_chunks_with_reference_ranges(
     :param file_path: Path to the originating file (used for logging and labeling).
     :param logger: Logger.
     :param verbose: Enable to show additional information.
-    :param progress: A rich.progress.Progress object for progress reporting.
-    :param task_id: The task ID for the progress bar.
+    :param progress_info: Progress tracking information.
     :return: List of ChunkWithRange objects containing the formatted chunk and its reference range.
     """
     sentences = [s.text for s in sentences_with_references]
@@ -376,8 +373,8 @@ def get_chunks_with_reference_ranges(
     blocks_of_sentences = _group_blocks_of_sentences(sentences, chunk_lines_block)
 
     # Set progress total based on total sentences (more meaningful than block count)
-    if progress and task_id:
-        progress.update(task_id, total=len(sentences_with_references))
+    if progress_info and progress_info.phase_key:
+        progress_info.progress_manager.set_phase_total(progress_info.phase_key, len(sentences_with_references))
 
     chunks_with_ranges: List[ChunkWithRange] = []
     carry: Optional[str] = None
@@ -442,8 +439,8 @@ def get_chunks_with_reference_ranges(
             last_carry_header = chunk_headers[-1]
 
         # Update progress after processing each block (advance by number of sentences processed)
-        if progress and task_id:
-            progress.update(task_id, advance=block_len)
+        if progress_info and progress_info.phase_key:
+            progress_info.progress_manager.update_phase(progress_info.phase_key, advance=block_len)
 
     if carry:
         assert last_carry_header is not None, "Internal error: carry exists but no header was recorded"

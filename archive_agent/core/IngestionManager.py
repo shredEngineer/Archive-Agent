@@ -2,12 +2,11 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import concurrent.futures
-from typing import List, Tuple, Optional, Any
-
-from rich.progress import Progress
+from typing import List, Tuple
 
 from archive_agent.core.CliManager import CliManager
 from archive_agent.data.FileData import FileData
+from archive_agent.data.ProgressManager import ProgressManager
 from archive_agent.util.format import format_file, format_filename_short
 
 
@@ -41,9 +40,11 @@ class IngestionManager:
 
         processed_results = []
         with self.cli.progress_context(progress_label, total=len(files)) as (progress, overall_task_id):
+            progress_manager = ProgressManager(progress)
+
             with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 future_to_filedata = {
-                    executor.submit(self._process_file_data, fd, progress, overall_task_id): fd
+                    executor.submit(self._process_file_data, fd, progress_manager, overall_task_id): fd
                     for fd in files
                 }
                 for future in concurrent.futures.as_completed(future_to_filedata):
@@ -60,22 +61,17 @@ class IngestionManager:
     def _process_file_data(
             self,
             file_data: FileData,
-            progress: Optional[Progress] = None,
-            overall_task_id: Optional[Any] = None
+            progress_manager: ProgressManager,
+            overall_task_id
     ) -> Tuple[FileData, bool]:
         """
         Wrapper to call file_data.process() and handle results for ThreadPoolExecutor, with progress reporting.
         """
-        task_id = None
-        if progress:
-            # Use percentage-based progress (0-100) for smoother progress tracking
-            task_id = progress.add_task(f"{format_filename_short(file_data.file_path)}", total=100, start=True)
+        file_key = progress_manager.start_file(format_filename_short(file_data.file_path))
+        success = file_data.process(progress_manager, file_key)
+        progress_manager.complete_file(file_key)
 
-        success = file_data.process(progress, task_id)
-
-        if progress and task_id is not None:
-            progress.remove_task(task_id)
-            if overall_task_id is not None:
-                progress.update(overall_task_id, advance=1)
+        # Update overall files progress
+        progress_manager.progress.update(overall_task_id, advance=1)
 
         return file_data, success

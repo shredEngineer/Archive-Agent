@@ -3,16 +3,16 @@
 
 import concurrent.futures
 from dataclasses import dataclass
-from typing import List, Union, Optional, Callable, Any
+from typing import List, Union, Optional, Callable
 import io
 from logging import Logger
 
 from PIL import Image
-from rich.progress import Progress
 
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.data.loader.image import ImageToTextCallback
 from archive_agent.util.text_util import splitlines_exact
+from archive_agent.data.ProgressManager import ProgressInfo
 
 
 @dataclass
@@ -52,14 +52,12 @@ class VisionProcessor:
     def process_vision_requests_parallel(
             self,
             requests: List[VisionRequest],
-            progress: Optional[Progress] = None,
-            task_id: Optional[Any] = None
+            progress_info: Optional[ProgressInfo] = None
     ) -> List[str]:
         """
         Process vision requests in parallel with progress tracking.
         :param requests: List of VisionRequest objects to process.
-        :param progress: A rich.progress.Progress object for progress reporting.
-        :param task_id: The task ID for the progress bar.
+        :param progress_info: Progress tracking information.
         :return: List of formatted result strings in same order as requests.
         """
         if not requests:
@@ -89,8 +87,8 @@ class VisionProcessor:
                 _formatted_result = request.formatter(vision_result)
 
                 # Update progress after successful vision processing
-                if progress and task_id:
-                    progress.update(task_id, advance=1)
+                if progress_info and progress_info.phase_key:
+                    progress_info.progress_manager.update_subphase(progress_info.phase_key, advance=1)
 
                 return request_index, _formatted_result
 
@@ -100,8 +98,8 @@ class VisionProcessor:
                 _formatted_result = request.formatter(None)
 
                 # Update progress even on failure
-                if progress and task_id:
-                    progress.update(task_id, advance=1)
+                if progress_info and progress_info.phase_key:
+                    progress_info.progress_manager.update_subphase(progress_info.phase_key, advance=1)
 
                 return request_index, _formatted_result
 

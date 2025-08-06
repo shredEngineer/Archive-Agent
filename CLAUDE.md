@@ -17,6 +17,7 @@ Archive Agent is an intelligent file indexer with powerful AI search (RAG engine
 
 ### Important Modules
 - `archive_agent/data/FileData.py` - File processing and payload creation
+- `archive_agent/data/ProgressManager.py` - Centralized hierarchical progress management
 - `archive_agent/data/loader/pdf.py` - PDF processing with business logic (OCR strategy resolution)
 - `archive_agent/data/loader/PdfDocument.py` - Clean PDF abstraction interfaces (PdfDocument, PdfPage, PdfPageContent)
 - `archive_agent/data/loader/backend/pdf_pymupdf.py` - PyMuPDF implementation backend (fully isolated)
@@ -101,6 +102,21 @@ When developing or modifying parallel processing components:
 - **Test validation through proper pathways** - use parsing functions for invalid data tests, not direct constructors
 - **Schema violations in tests are unacceptable** - don't create objects that violate your own schema design
 - **Type errors indicate design flaws** - address the root cause, never suppress the symptom
+
+### Logger Usage Requirements
+- **NEVER remove valuable logging information** - use conditional flags instead
+- **Use centralized logger hierarchy** - all loggers derive from `ai.cli` system for thread safety
+- **Avoid redundant format_file() calls** - prefixed loggers already include file context
+- **Appropriate severity levels**: Use `.error()` for processing failures, `.critical()` only for system threats
+
+### Progress Management
+- **Use centralized ProgressManager** for all progress operations instead of raw Rich Progress
+- **ProgressInfo pattern**: Bundle ProgressManager + phase_key in dataclass for clean API boundaries
+- **Hierarchical progress**: Parent progress automatically calculated from weighted child completion
+- **Sub-phase support**: Vision phase contains PDF analyzing and Vision AI sub-phases
+- **Stable visual ordering**: Tasks appear in creation order (file → phases → sub-phases sequentially)  
+- **Weighted phases**: Different processing phases contribute proportionally to overall progress
+- **Complete implementation**: No transition period - all components use unified ProgressManager system
 
 ### Qdrant Payload Handling
 - **ALWAYS** use `QdrantSchema.parse_payload()` for payload access
@@ -236,7 +252,7 @@ Archive Agent uses a hierarchical progress tracking system with smart phase dete
 - **Smart Phase Detection**: PDF/Binary files get 3 phases (Vision+Chunking+Embedding), others get 2 (Chunking+Embedding)
 - **File-Level Updates**: File progress advances as phases complete (1/3, 2/3, 3/3)
 
-**Vision Processing Phase Breakdown** (for PDF/Binary files):
+**Image Processing Phase Breakdown** (for PDF/Binary files):
 
 **PDF Processing Sub-tasks**:
 - **PDF Analyzing**: Page-by-page analysis and OCR strategy determination
@@ -245,14 +261,14 @@ Archive Agent uses a hierarchical progress tracking system with smart phase dete
   - Determines OCR strategy (AUTO→STRICT/RELAXED) based on text content thresholds
   - Prepares page layout extraction and image identification
   - Uses separate `analyzing_task_id` for isolated progress tracking
-- **Vision Processing**: AI-powered image-to-text conversion operations
+- **AI Vision**: AI-powered image-to-text conversion operations
   - Uses `vision_task_id` parameter for progress coordination
   - Dynamic progress totals set when vision request counts are determined
   - Handles both full-page images (STRICT mode) and embedded images (RELAXED mode)
   - Parallel processing via `VisionProcessor` with proper thread isolation
 
 **Binary Processing Sub-tasks**:
-- **Vision Processing Only**: Binary documents skip analyzing phase
+- **Image Processing Only**: Binary documents skip analyzing phase
   - Direct vision processing of extracted images
   - Uses same `vision_task_id` parameter pattern as PDFs
 
@@ -268,7 +284,7 @@ Archive Agent uses a hierarchical progress tracking system with smart phase dete
 Archive Agent implements comprehensive parallel processing across major operations using a unified multithreading architecture.
 
 ### Parallelized Operations
-- **Vision Processing**: Cross-page parallel OCR and entity extraction via `VisionProcessor` (in `data/processor/`)
+- **Image Processing**: Cross-page parallel OCR and entity extraction via `VisionProcessor` (in `data/processor/`)
   - Essential for STRICT OCR mode where each PDF page becomes a full-page image
   - Processes multiple images simultaneously across different documents
   - Supports both PDF image bytes and Binary PIL Images with unified interface
@@ -321,13 +337,13 @@ Both PDF and Binary document loaders use consistent multi-stage patterns:
    - Resolves AUTO OCR strategy to STRICT or RELAXED based on text content thresholds
    - For STRICT mode: Uses `page.get_full_page_pixmap()` helper for full-page rendering
    - For RELAXED mode: Uses existing extracted image bytes from layout
-4. **Vision Processing**: Parallel AI vision operations for image-to-text conversion
+4. **Image Processing**: Parallel AI vision operations for image-to-text conversion
 5. **Assembly**: Final document construction with processed content and page mapping
 
 **Binary Document Processing**:
 1. **Content Extraction**: Pandoc-based text extraction from source document
 2. **Image Extraction**: ZIP-based image extraction from document container
-3. **Vision Processing**: Parallel AI vision operations for embedded images
+3. **Image Processing**: Parallel AI vision operations for embedded images
 4. **Assembly**: Final document construction with processed content
 
 This architecture enables surgical integration of parallel processing without breaking existing functionality.
@@ -377,7 +393,7 @@ Archive Agent implements a two-tier approach that both isolates PyMuPDF dependen
 **Processing Flow per PDF**:
 1. **File Processing**: Fully parallel (`ThreadPoolExecutor` with `MAX_WORKERS=8`)
 2. **PDF Analyzing**: Serialized (one at a time due to lock)
-3. **Vision Processing**: Parallel (within and across files)
+3. **Image Processing**: Parallel (within and across files)
 4. **Chunking**: Parallel (across files)
 5. **Embedding**: Parallel (across files)
 
@@ -659,6 +675,186 @@ All Qdrant database operations use a dedicated `RetryManager` instance:
 - Each `AiManager` instance (one per worker thread) has independent retry state
 - Retry managers don't share state between parallel operations
 - Cache invalidation is thread-safe within individual AI instances
+
+---
+
+## Progress Management Architecture
+
+Archive Agent uses a centralized progress management system that provides true hierarchical progress tracking with stable visual ordering, automatic parent-child coordination, and dynamic task cleanup.
+
+### ProgressManager (Centralized Progress Control)
+
+**Location**: `archive_agent/data/ProgressManager.py`
+
+The `ProgressManager` class provides centralized control over all progress operations, eliminating the need for modules to interact directly with Rich Progress objects.
+
+**Key Features**:
+- **Hierarchical Tasks**: Parent progress automatically calculated from weighted child completion
+- **Stable Ordering**: Tasks appear in deterministic creation order (files → phases → sub-phases)
+- **Dynamic Tree Symbols**: Correct `├─` / `└─` symbols that update when tasks are removed
+- **Task State Tracking**: PENDING/ACTIVE/COMPLETED states with color-coded display
+- **Progressive Cleanup**: Completed phases and sub-phases are removed to keep display clean
+- **Clean Interfaces**: Modules use opaque keys (file_key, phase_key) instead of task IDs
+- **Type Safety**: All Rich Progress operations use proper TaskID types
+- **Weighted Progress**: Different phases contribute proportionally to overall file progress
+- **Robust Error Handling**: Defensive validation and graceful degradation
+
+**Core Methods**:
+- `start_file(filename)` → `file_key` - Begin processing a file
+- `start_phase(file_key, phase_name, weight)` → `phase_key` - Begin a processing phase
+- `start_subphase(phase_key, subphase_name, total)` → `subphase_key` - Begin a sub-phase
+- `activate_phase(phase_key)` - Mark phase as currently active (with visual highlighting)
+- `update_phase(phase_key, advance=N)` - Update phase progress
+- `update_subphase(subphase_key, advance=1)` - Update sub-phase progress
+- `complete_phase(phase_key)` - Mark phase complete, update parent, and remove from display
+- `complete_subphase(subphase_key)` - Complete and remove sub-phase from display
+- `complete_file(file_key)` - Finish file processing and cleanup all associated tasks
+
+### ProgressInfo Pattern
+
+**Location**: `archive_agent/data/ProgressManager.py`
+
+The `ProgressInfo` dataclass provides clean API boundaries by bundling progress tracking information:
+
+```python
+@dataclass
+class ProgressInfo:
+    progress_manager: ProgressManager
+    phase_key: Optional[str] = None
+```
+
+**Usage Pattern**: All loader functions now accept single `ProgressInfo` parameter instead of multiple progress-related arguments:
+- **Old**: `load_pdf_document(..., progress=progress, vision_task_id=task_id)`
+- **New**: `load_pdf_document(..., progress_info=ProgressInfo(progress_manager, vision_key))`
+
+**Benefits**:
+- **Clean Signatures**: Single parameter instead of multiple progress arguments
+- **Type Safety**: Bundled progress information with proper typing
+- **Extensible**: Easy to add new progress-related fields without signature changes
+- **Consistent**: Uniform pattern across all loader and processor functions
+
+### Progress Flow Architecture
+
+```
+CliManager.progress_context()
+└── yields Progress object
+    └── IngestionManager creates ProgressManager(progress)
+        └── For each file:
+            ├── file_key = start_file(filename)
+            └── FileData.process(progress_manager, file_key)
+                ├── vision_key = start_phase(file_key, "Image Processing", weight=0.33)
+                │   ├── analyzing_key = start_subphase(vision_key, "PDF Analyzing", total=pages)
+                │   └── vision_ai_key = start_subphase(vision_key, "AI Vision", total=images)
+                ├── chunking_key = start_phase(file_key, "Chunking", weight=0.34/0.50)  
+                ├── embedding_key = start_phase(file_key, "Embedding", weight=0.33/0.50)
+                └── complete_file(file_key)
+```
+
+### Phase Weight Distribution
+
+**Conditional Phase Creation**: The system automatically creates the appropriate phases based on file type:
+
+**PDF/Binary Files** (3 phases - equal weights):
+- Image Processing: 33% (image extraction and AI vision processing)  
+- Chunking: 34% (semantic text analysis and chunking)
+- Embedding: 33% (vector generation and database operations)
+
+**Text-Only Files** (2 phases - equal weights):
+- Image Processing: *skipped automatically* - no phase created
+- Chunking: 50% (semantic text analysis and chunking)
+- Embedding: 50% (vector generation and database operations)
+
+**Smart Weight Adjustment**: The system automatically adjusts weights based on which phases are active:
+- Files with images: 3 phases share 100% (33% + 34% + 33%)
+- Files without images: 2 phases share 100% (50% + 50%)
+- No manual configuration required - the weight system handles this transparently
+
+### Visual Progress Hierarchy
+
+The system displays clean hierarchical progress with dynamic cleanup and color-coded states:
+
+**During Processing** (with active phase highlighted):
+```
+Files                           [████████████████████████████████] 100%
+myfile.pdf                     [████████████████████              ]  65%  
+  ├─ Image Processing          [████████████████████████████████] 100%  ← Removed after completion
+     ├─ PDF Analyzing          [████████████████████████████████] 100%  ← Sub-phases removed after completion
+     └─ AI Vision              [████████████████████████████████] 100%  ← Sub-phases removed after completion
+  └─ Chunking                  [██████████████████              ]  65%  ← Currently active (highlighted)
+document.txt                   [                                ]   0%  ← Pending (dimmed)
+```
+
+**Clean Display After Phases Complete**:
+```
+Files                           [████████████████████████████████] 100%
+myfile.pdf                     [████████████████████████████████]  90%
+  └─ Embedding                 [██████████████████              ]  75%  ← Currently active
+document.txt                   [████████████████████████████████] 100%
+```
+
+**Key Visual Features**:
+- **Completed phases disappear** to keep display focused on active work
+- **Dynamic tree symbols** (└─ for last child, ├─ for others)
+- **Color-coded states**: Active phases highlighted, pending phases dimmed
+- **Proper indentation**: 2-space increments for clean hierarchical nesting
+- **Real-time updates**: Tree structure updates as tasks complete and are removed
+
+### Integration Points
+
+**IngestionManager**: Creates ProgressManager and manages file-level operations
+**FileData**: Uses phase-based interface for processing pipeline via ProgressInfo pattern
+**VisionProcessor**: Updates sub-phase progress during parallel image processing
+**EmbedProcessor**: Updates phase progress during parallel chunk embedding
+**ChunkProcessor**: Updates phase progress during sequential sentence processing
+**PDF Processing**: Sub-phases (analyzing, vision) integrate seamlessly with hierarchical display
+
+### Updated Function Signatures
+
+All loader and processor functions now use the ProgressInfo pattern:
+
+**PDF Processing**:
+- `load_pdf_document(..., progress_info: Optional[ProgressInfo] = None)`
+- `get_pdf_page_contents(..., analyzing_info: Optional[ProgressInfo] = None)`
+- `extract_image_texts_per_page(..., vision_info: Optional[ProgressInfo] = None)`
+
+**Binary Processing**:
+- `load_binary_document(..., progress_info: Optional[ProgressInfo] = None)`
+- `extract_binary_image_texts(..., progress_info: Optional[ProgressInfo] = None)`
+
+**Parallel Processors**:
+- `VisionProcessor.process_vision_requests_parallel(..., progress_info: Optional[ProgressInfo] = None)`
+- `EmbedProcessor.process_chunks_parallel(..., progress_info: Optional[ProgressInfo] = None)`
+
+**Chunking**:
+- `get_chunks_with_reference_ranges(..., progress_info: Optional[ProgressInfo] = None)`
+
+### Implementation Status
+
+✅ **Production Ready**: Enhanced ProgressManager with comprehensive fixes
+✅ **Complete Integration**: All components use unified ProgressManager architecture  
+✅ **Type Safe**: Full mypy compliance with proper TaskID handling
+✅ **Thread Safe**: Centralized progress updates through decoupled logging system
+✅ **Hierarchical Display**: True parent-child progress relationships with weighted calculation
+✅ **Stable Ordering**: Deterministic task creation order prevents display inconsistencies
+✅ **Dynamic Cleanup**: Completed tasks are removed to maintain clean, focused display
+✅ **Visual Enhancement**: Color-coded states and proper tree symbols for improved UX
+✅ **Robust Error Handling**: Defensive validation prevents crashes from invalid operations
+
+### Recent Improvements
+
+**Fixed Core Issues**:
+- **Unordered Progress Bars**: Added creation order tracking with sequential counters
+- **Finished Tasks Not Removed**: Consistent removal policy for all completed tasks
+- **Incorrect Tree Symbols**: Dynamic `├─` / `└─` calculation with proper updates
+- **Weight Normalization**: Robust parent progress calculation handling edge cases
+- **Memory Leaks**: Complete cleanup of tracking data when tasks finish
+
+**Enhanced Features**:
+- **Task State Tracking**: PENDING/ACTIVE/COMPLETED states with visual indicators
+- **Progressive Cleanup**: Tasks disappear after completion for cleaner display  
+- **Color-Coded Display**: Active tasks highlighted, pending tasks dimmed
+- **Defensive Operations**: Input validation and graceful degradation on errors
+- **Performance Optimization**: Efficient tree updates and minimal Rich operations
 
 ---
 

@@ -4,9 +4,7 @@
 from logging import Logger
 import io
 import threading
-from typing import Optional, List, Set, Any
-
-from rich.progress import Progress
+from typing import Optional, List, Set
 
 from PIL import Image
 
@@ -18,6 +16,7 @@ from archive_agent.data.loader.image import ImageToTextCallback
 from archive_agent.util.text_util import splitlines_exact
 from archive_agent.util.PageTextBuilder import PageTextBuilder
 from archive_agent.data.processor.VisionProcessor import VisionProcessor, VisionRequest
+from archive_agent.data.ProgressManager import ProgressInfo
 
 
 from archive_agent.data.loader.backend.pdf_pymupdf import create_pdf_document
@@ -57,8 +56,7 @@ def load_pdf_document(
         image_to_text_callback_page: Optional[ImageToTextCallback],
         image_to_text_callback_image: Optional[ImageToTextCallback],
         decoder_settings: DecoderSettings,
-        progress: Optional[Progress] = None,
-        vision_task_id: Optional[Any] = None,
+        progress_info: Optional[ProgressInfo] = None,
 ) -> Optional[DocumentContent]:
     """
     Load PDF document.
@@ -70,11 +68,20 @@ def load_pdf_document(
     :param image_to_text_callback_page: Optional image-to-text callback for pages (`strict` OCR strategy).
     :param image_to_text_callback_image: Optional image-to-text callback for images (`relaxed` OCR strategy).
     :param decoder_settings: DecoderSettings.
-    :param progress: A rich.progress.Progress object for progress reporting.
-    :param vision_task_id: The vision task ID for progress reporting.
+    :param progress_info: Progress tracking information.
     :return: Document content if successful, None otherwise.
     """
     doc: PdfDocument = create_pdf_document(file_path)
+
+    # Create sub-phases under the Vision phase if we have progress tracking
+    analyzing_key = None
+    vision_ai_key = None
+
+    if progress_info and progress_info.phase_key:
+        analyzing_key = progress_info.progress_manager.start_subphase(
+            progress_info.phase_key, "PDF Analyzing", len(list(doc))
+        )
+        # Vision AI key will be created later when we know the number of vision requests
 
     if verbose:
         logger.info("Acquiring PDF analyzing lock...")
@@ -88,17 +95,27 @@ def load_pdf_document(
             verbose=verbose,
             doc=doc,
             decoder_settings=decoder_settings,
-            progress=progress,
+            analyzing_info=ProgressInfo(progress_info.progress_manager, analyzing_key) if progress_info else None,
         )
 
     if verbose:
         logger.info("PDF analyzing complete - lock released")
+
+    # Complete analyzing sub-phase
+    if analyzing_key and progress_info:
+        progress_info.progress_manager.complete_subphase(analyzing_key)
 
     image_texts_per_page = None
 
     if image_to_text_callback_page is None or image_to_text_callback_image is None:
         logger.warning(f"Image vision is DISABLED in your current configuration")
     else:
+        # Create vision AI sub-phase (we'll set the total when we know the request count)
+        if progress_info and progress_info.phase_key:
+            vision_ai_key = progress_info.progress_manager.start_subphase(
+                progress_info.phase_key, "AI Vision", 0
+            )
+
         image_texts_per_page = extract_image_texts_per_page(
             ai_factory=ai_factory,
             logger=logger,
@@ -108,9 +125,12 @@ def load_pdf_document(
             page_contents=page_contents,
             image_to_text_callback_page=image_to_text_callback_page,
             image_to_text_callback_image=image_to_text_callback_image,
-            progress=progress,
-            vision_task_id=vision_task_id,
+            vision_info=ProgressInfo(progress_info.progress_manager, vision_ai_key) if progress_info else None,
         )
+
+        # Complete vision AI sub-phase
+        if vision_ai_key and progress_info:
+            progress_info.progress_manager.complete_subphase(vision_ai_key)
 
     return build_document_text_from_pages(page_contents, image_texts_per_page)
 
@@ -168,8 +188,7 @@ def extract_image_texts_per_page(
         page_contents: List[PdfPageContent],
         image_to_text_callback_page: ImageToTextCallback,
         image_to_text_callback_image: ImageToTextCallback,
-        progress: Optional[Progress] = None,
-        vision_task_id: Optional[Any] = None,
+        vision_info: Optional[ProgressInfo] = None,
 ) -> List[List[str]]:
     """
     Extract text from images per page.
@@ -181,8 +200,7 @@ def extract_image_texts_per_page(
     :param page_contents: PDF page contents.
     :param image_to_text_callback_page: Optional image-to-text callback for pages (`strict` OCR strategy).
     :param image_to_text_callback_image: Optional image-to-text callback for images (`relaxed` OCR strategy).
-    :param progress: A rich.progress.Progress object for progress reporting.
-    :param vision_task_id: The vision task ID for progress reporting.
+    :param vision_info: Progress info for vision AI sub-phase.
     :return: List of text results per page (one list of strings per page).
     """
     # Create VisionProcessor for batch processing
@@ -231,11 +249,11 @@ def extract_image_texts_per_page(
         return image_texts_per_page
 
     # Update progress total now that we know the number of vision requests
-    if progress and vision_task_id:
-        progress.update(vision_task_id, total=len(vision_requests))
+    if vision_info and vision_info.phase_key:
+        vision_info.progress_manager.set_phase_total(vision_info.phase_key, len(vision_requests))
 
     # Process all requests in parallel
-    vision_results = vision_processor.process_vision_requests_parallel(vision_requests, progress, vision_task_id)
+    vision_results = vision_processor.process_vision_requests_parallel(vision_requests, vision_info)
 
     # Reassemble results into per-page structure
     for request_index, formatted_result in enumerate(vision_results):
@@ -252,7 +270,7 @@ def get_pdf_page_contents(
         verbose: bool,
         doc: PdfDocument,
         decoder_settings: DecoderSettings,
-        progress: Optional[Progress] = None,
+        analyzing_info: Optional[ProgressInfo] = None,
 ) -> List[PdfPageContent]:
     """
     Get PDF page contents.
@@ -260,16 +278,11 @@ def get_pdf_page_contents(
     :param verbose: Enable verbose output.
     :param doc: PDF document.
     :param decoder_settings: Decoder settings.
-    :param progress: A rich.progress.Progress object for progress reporting.
+    :param analyzing_info: Progress info for analyzing sub-phase.
     :return: PDF page contents.
     """
     page_contents: List[PdfPageContent] = []
     pages: List[PdfPage] = [page for page in doc]
-
-    # Create PDF analyzing sub-task if progress tracking is enabled
-    analyzing_task_id = None
-    if progress:
-        analyzing_task_id = progress.add_task("  [cyan]├─ PDF Analyzing[/cyan]", total=len(pages))
 
     for page_index, page in enumerate(pages):
 
@@ -324,11 +337,7 @@ def get_pdf_page_contents(
         page_contents.append(page_content)
 
         # Update analyzing progress
-        if progress and analyzing_task_id is not None:
-            progress.update(analyzing_task_id, advance=1)
-
-    # Clean up analyzing task and update main file progress
-    if progress and analyzing_task_id is not None:
-        progress.remove_task(analyzing_task_id)
+        if analyzing_info and analyzing_info.phase_key:
+            analyzing_info.progress_manager.update_subphase(analyzing_info.phase_key, advance=1)
 
     return page_contents
