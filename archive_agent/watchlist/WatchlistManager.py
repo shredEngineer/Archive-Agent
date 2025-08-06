@@ -11,6 +11,7 @@ from archive_agent.data.FileData import FileData
 from archive_agent.util.StorageManager import StorageManager
 from archive_agent.util.format import format_file
 from archive_agent.watchlist.pattern import validate_pattern, resolve_pattern
+from archive_agent.core.lock import file_lock
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +80,7 @@ class WatchlistManager(StorageManager):
 
         return True
 
+    @file_lock("archive_agent_watchlist")
     def include(self, pattern) -> None:
         """
         Add included pattern.
@@ -103,6 +105,7 @@ class WatchlistManager(StorageManager):
             self.data['included'] = list(set(self.data['included']) | {pattern})
             self.save()
 
+    @file_lock("archive_agent_watchlist")
     def exclude(self, pattern) -> None:
         """
         Add excluded pattern.
@@ -127,6 +130,7 @@ class WatchlistManager(StorageManager):
             self.data['excluded'] = list(set(self.data['excluded']) | {pattern})
             self.save()
 
+    @file_lock("archive_agent_watchlist")
     def remove(self, pattern) -> None:
         """
         Remove previously included / excluded pattern.
@@ -182,6 +186,7 @@ class WatchlistManager(StorageManager):
         """
         return self.data['excluded']
 
+    @file_lock("archive_agent_watchlist")
     def track(self) -> int:
         """
         Resolve all patterns and track changed files.
@@ -310,6 +315,7 @@ class WatchlistManager(StorageManager):
         else:
             logger.info("(0) removed file(s)")
 
+    @file_lock("archive_agent_watchlist")
     def diff_mark_resolved(self, file_data: FileData) -> None:
         """
         Mark file in diff as resolved.
