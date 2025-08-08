@@ -176,9 +176,9 @@ Responsibilities:
 2. Constructs all necessary `rich` components (`Progress`, `Group`, `Live`, etc.) for a consistent look and feel
 3. Automatically includes shared UI elements, like the AI token usage table
 4. Internally wraps the entire operation within the `live_context` manager, so that safe, concurrent logging is handled automatically
-5. Yields the necessary `rich.Progress` handles back to the caller
+5. Yields the ProgressManager instance directly for hierarchical progress tracking
 
-**Decoupling Callers**: Callers like `IngestionManager` use the `progress_context` in a simple `with` block. Inside this block, they use the yielded handles to report progress. This allows the caller to be completely ignorant of the underlying `rich` objects or the multithreaded logging complexity.
+**Decoupling Callers**: Callers like `IngestionManager` use the `progress_context` in a simple `with` block. Inside this block, they create task hierarchies using the ProgressManager. This allows the caller to be completely ignorant of the underlying `rich` objects or the multithreaded logging complexity.
 
 #### Challenge: Dynamic UI Updates
 A challenge is ensuring dynamic UI elements, like the AI token usage table, update in real-time. While worker threads correctly update the underlying statistics (protected by a `threading.Lock`), the `Live` object, if initialized with static content, will not reflect these changes.
@@ -680,181 +680,49 @@ All Qdrant database operations use a dedicated `RetryManager` instance:
 
 ## Progress Management Architecture
 
-Archive Agent uses a centralized progress management system that provides true hierarchical progress tracking with stable visual ordering, automatic parent-child coordination, and dynamic task cleanup.
+Archive Agent uses a hierarchical progress management system that provides true nested progress tracking with automatic cleanup and thread-safe concurrent updates.
 
-### ProgressManager (Centralized Progress Control)
+### ProgressManager Integration
 
-**Location**: `archive_agent/data/ProgressManager.py`
+**Location**: `archive_agent/core/ProgressManager.py`
 
-The `ProgressManager` class provides centralized control over all progress operations, eliminating the need for modules to interact directly with Rich Progress objects.
-
-**Key Features**:
-- **Hierarchical Tasks**: Parent progress automatically calculated from weighted child completion
-- **Stable Ordering**: Tasks appear in deterministic creation order (files → phases → sub-phases)
-- **Dynamic Tree Symbols**: Correct `├─` / `└─` symbols that update when tasks are removed
-- **Task State Tracking**: PENDING/ACTIVE/COMPLETED states with color-coded display
-- **Progressive Cleanup**: Completed phases and sub-phases are removed to keep display clean
-- **Clean Interfaces**: Modules use opaque keys (file_key, phase_key) instead of task IDs
-- **Type Safety**: All Rich Progress operations use proper TaskID types
-- **Weighted Progress**: Different phases contribute proportionally to overall file progress
-- **Robust Error Handling**: Defensive validation and graceful degradation
-
-**Core Methods**:
-- `start_file(filename)` → `file_key` - Begin processing a file
-- `start_phase(file_key, phase_name, weight)` → `phase_key` - Begin a processing phase
-- `start_subphase(phase_key, subphase_name, total)` → `subphase_key` - Begin a sub-phase
-- `activate_phase(phase_key)` - Mark phase as currently active (with visual highlighting)
-- `update_phase(phase_key, advance=N)` - Update phase progress
-- `update_subphase(subphase_key, advance=1)` - Update sub-phase progress
-- `complete_phase(phase_key)` - Mark phase complete, update parent, and remove from display
-- `complete_subphase(subphase_key)` - Complete and remove sub-phase from display
-- `complete_file(file_key)` - Finish file processing and cleanup all associated tasks
+The `ProgressManager` is a self-contained hierarchical progress system that integrates with Archive Agent's CLI display architecture. It provides a generic interface for any nested progress scenario.
 
 ### ProgressInfo Pattern
 
-**Location**: `archive_agent/data/ProgressManager.py`
+**Location**: `archive_agent/core/ProgressManager.py`
 
-The `ProgressInfo` dataclass provides clean API boundaries by bundling progress tracking information:
+The `ProgressInfo` dataclass bundles progress parameters to maintain stable function signatures:
 
 ```python
 @dataclass
 class ProgressInfo:
     progress_manager: ProgressManager
-    phase_key: Optional[str] = None
+    parent_key: str  # Never Optional - progress tracking always enabled
 ```
 
-**Usage Pattern**: All loader functions now accept single `ProgressInfo` parameter instead of multiple progress-related arguments:
-- **Old**: `load_pdf_document(..., progress=progress, vision_task_id=task_id)`
-- **New**: `load_pdf_document(..., progress_info=ProgressInfo(progress_manager, vision_key))`
+**Factory Method**: ProgressManager provides `create_progress_info(parent_key)` to encapsulate all progress creation logic within the progress management system.
 
-**Benefits**:
-- **Clean Signatures**: Single parameter instead of multiple progress arguments
-- **Type Safety**: Bundled progress information with proper typing
-- **Extensible**: Easy to add new progress-related fields without signature changes
-- **Consistent**: Uniform pattern across all loader and processor functions
+**Usage Benefits**:
+- **Stable Function Signatures**: Functions accept single `progress_info: ProgressInfo` parameter
+- **Clean Parameter Passing**: Single object containing all progress context
+- **No Optional Complexity**: Progress tracking is always enabled, eliminating None checks
+- **Extensible**: Easy to add new progress-related fields without changing signatures
+- **Encapsulated Creation**: Factory method centralizes ProgressInfo creation logic
 
-### Progress Flow Architecture
+### Architecture Integration
 
-```
-CliManager.progress_context()
-└── yields Progress object
-    └── IngestionManager creates ProgressManager(progress)
-        └── For each file:
-            ├── file_key = start_file(filename)
-            └── FileData.process(progress_manager, file_key)
-                ├── vision_key = start_phase(file_key, "Image Processing", weight=0.33)
-                │   ├── analyzing_key = start_subphase(vision_key, "PDF Analyzing", total=pages)
-                │   └── vision_ai_key = start_subphase(vision_key, "AI Vision", total=images)
-                ├── chunking_key = start_phase(file_key, "Chunking", weight=0.34/0.50)  
-                ├── embedding_key = start_phase(file_key, "Embedding", weight=0.33/0.50)
-                └── complete_file(file_key)
-```
+**ContextManager**: Creates ProgressManager once with console access, passes through component hierarchy to IngestionManager.
 
-### Phase Weight Distribution
+**CliManager**: Integrates ProgressManager tree with Live display and AI usage stats in single unified view.
 
-**Conditional Phase Creation**: The system automatically creates the appropriate phases based on file type:
+**Component Flow**: ContextManager → CommitManager → IngestionManager → progress_context() 
 
-**PDF/Binary Files** (3 phases - equal weights):
-- Image Processing: 33% (image extraction and AI vision processing)  
-- Chunking: 34% (semantic text analysis and chunking)
-- Embedding: 33% (vector generation and database operations)
+### Usage in Archive Agent
 
-**Text-Only Files** (2 phases - equal weights):
-- Image Processing: *skipped automatically* - no phase created
-- Chunking: 50% (semantic text analysis and chunking)
-- Embedding: 50% (vector generation and database operations)
+**File Processing**: ProgressManager provides hierarchical progress (Files → Individual Files → Processing Phases → Sub-phases) with automatic weighted calculations and progressive cleanup.
 
-**Smart Weight Adjustment**: The system automatically adjusts weights based on which phases are active:
-- Files with images: 3 phases share 100% (33% + 34% + 33%)
-- Files without images: 2 phases share 100% (50% + 50%)
-- No manual configuration required - the weight system handles this transparently
-
-### Visual Progress Hierarchy
-
-The system displays clean hierarchical progress with dynamic cleanup and color-coded states:
-
-**During Processing** (with active phase highlighted):
-```
-Files                           [████████████████████████████████] 100%
-myfile.pdf                     [████████████████████              ]  65%  
-  ├─ Image Processing          [████████████████████████████████] 100%  ← Removed after completion
-     ├─ PDF Analyzing          [████████████████████████████████] 100%  ← Sub-phases removed after completion
-     └─ AI Vision              [████████████████████████████████] 100%  ← Sub-phases removed after completion
-  └─ Chunking                  [██████████████████              ]  65%  ← Currently active (highlighted)
-document.txt                   [                                ]   0%  ← Pending (dimmed)
-```
-
-**Clean Display After Phases Complete**:
-```
-Files                           [████████████████████████████████] 100%
-myfile.pdf                     [████████████████████████████████]  90%
-  └─ Embedding                 [██████████████████              ]  75%  ← Currently active
-document.txt                   [████████████████████████████████] 100%
-```
-
-**Key Visual Features**:
-- **Completed phases disappear** to keep display focused on active work
-- **Dynamic tree symbols** (└─ for last child, ├─ for others)
-- **Color-coded states**: Active phases highlighted, pending phases dimmed
-- **Proper indentation**: 2-space increments for clean hierarchical nesting
-- **Real-time updates**: Tree structure updates as tasks complete and are removed
-
-### Integration Points
-
-**IngestionManager**: Creates ProgressManager and manages file-level operations
-**FileData**: Uses phase-based interface for processing pipeline via ProgressInfo pattern
-**VisionProcessor**: Updates sub-phase progress during parallel image processing
-**EmbedProcessor**: Updates phase progress during parallel chunk embedding
-**ChunkProcessor**: Updates phase progress during sequential sentence processing
-**PDF Processing**: Sub-phases (analyzing, vision) integrate seamlessly with hierarchical display
-
-### Updated Function Signatures
-
-All loader and processor functions now use the ProgressInfo pattern:
-
-**PDF Processing**:
-- `load_pdf_document(..., progress_info: Optional[ProgressInfo] = None)`
-- `get_pdf_page_contents(..., analyzing_info: Optional[ProgressInfo] = None)`
-- `extract_image_texts_per_page(..., vision_info: Optional[ProgressInfo] = None)`
-
-**Binary Processing**:
-- `load_binary_document(..., progress_info: Optional[ProgressInfo] = None)`
-- `extract_binary_image_texts(..., progress_info: Optional[ProgressInfo] = None)`
-
-**Parallel Processors**:
-- `VisionProcessor.process_vision_requests_parallel(..., progress_info: Optional[ProgressInfo] = None)`
-- `EmbedProcessor.process_chunks_parallel(..., progress_info: Optional[ProgressInfo] = None)`
-
-**Chunking**:
-- `get_chunks_with_reference_ranges(..., progress_info: Optional[ProgressInfo] = None)`
-
-### Implementation Status
-
-✅ **Production Ready**: Enhanced ProgressManager with comprehensive fixes
-✅ **Complete Integration**: All components use unified ProgressManager architecture  
-✅ **Type Safe**: Full mypy compliance with proper TaskID handling
-✅ **Thread Safe**: Centralized progress updates through decoupled logging system
-✅ **Hierarchical Display**: True parent-child progress relationships with weighted calculation
-✅ **Stable Ordering**: Deterministic task creation order prevents display inconsistencies
-✅ **Dynamic Cleanup**: Completed tasks are removed to maintain clean, focused display
-✅ **Visual Enhancement**: Color-coded states and proper tree symbols for improved UX
-✅ **Robust Error Handling**: Defensive validation prevents crashes from invalid operations
-
-### Recent Improvements
-
-**Fixed Core Issues**:
-- **Unordered Progress Bars**: Added creation order tracking with sequential counters
-- **Finished Tasks Not Removed**: Consistent removal policy for all completed tasks
-- **Incorrect Tree Symbols**: Dynamic `├─` / `└─` calculation with proper updates
-- **Weight Normalization**: Robust parent progress calculation handling edge cases
-- **Memory Leaks**: Complete cleanup of tracking data when tasks finish
-
-**Enhanced Features**:
-- **Task State Tracking**: PENDING/ACTIVE/COMPLETED states with visual indicators
-- **Progressive Cleanup**: Tasks disappear after completion for cleaner display  
-- **Color-Coded Display**: Active tasks highlighted, pending tasks dimmed
-- **Defensive Operations**: Input validation and graceful degradation on errors
-- **Performance Optimization**: Efficient tree updates and minimal Rich operations
+**ProgressInfo Pattern**: Functions use ProgressInfo dataclass for stable signatures and consistent progress tracking throughout codebase.
 
 ---
 

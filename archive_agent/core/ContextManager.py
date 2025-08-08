@@ -11,6 +11,7 @@ from archive_agent.profile.ProfileManager import ProfileManager
 from archive_agent.config.ConfigManager import ConfigManager
 from archive_agent.core.CacheManager import CacheManager
 from archive_agent.core.CliManager import CliManager
+from archive_agent.core.ProgressManager import ProgressManager
 from archive_agent.config.DecoderSettings import DecoderSettings, OcrStrategy
 from archive_agent.watchlist.WatchlistManager import WatchlistManager
 from archive_agent.db.QdrantManager import QdrantManager
@@ -47,6 +48,9 @@ class ContextManager:
         settings_path = Path.home() / ".archive-agent-settings"
 
         self.cli = CliManager(verbose=verbose)
+
+        # Initialize ProgressManager with console access
+        self.progress_manager = ProgressManager(self.cli.console)
 
         self.profile_manager = ProfileManager(
             cli=self.cli,
@@ -113,6 +117,7 @@ class ContextManager:
             ai_factory=self.ai_factory,
             decoder_settings=self.decoder_settings,
             qdrant=self.qdrant,
+            progress_manager=self.progress_manager,
             max_workers_ingest=self.config.data[self.config.MAX_WORKERS_INGEST],
             max_workers_vision=self.config.data[self.config.MAX_WORKERS_VISION],
             max_workers_embed=self.config.data[self.config.MAX_WORKERS_EMBED],

@@ -7,7 +7,7 @@ from archive_agent import __version__
 import uuid
 from typing import List, Optional, Dict, Callable, Any
 
-from archive_agent.data.ProgressManager import ProgressManager, ProgressInfo
+from archive_agent.core.ProgressManager import ProgressManager, ProgressInfo
 
 from PIL import Image
 
@@ -34,7 +34,7 @@ from archive_agent.util.image_util import image_resize_safe, image_to_base64
 from archive_agent.data.chunk import get_chunks_with_reference_ranges, get_sentences_with_reference_ranges
 
 
-DecoderCallable = Callable[[Optional[ProgressInfo]], Optional[DocumentContent]]
+DecoderCallable = Callable[[ProgressInfo], Optional[DocumentContent]]
 
 
 class FileData:
@@ -237,12 +237,12 @@ class FileData:
         # Join with a single space
         return text_ocr + " " + text_entity
 
-    def decode(self, progress_info: Optional[ProgressInfo] = None) -> Optional[DocumentContent]:
+    def decode(self, progress_info: ProgressInfo) -> Optional[DocumentContent]:
         """
         Decode the file using the determined decoder function.
 
-        :param progress_info: Progress tracking information.
-        :return: DocumentContent or None if failed or unsupported.
+        :param progress_info: Progress tracking information
+        :return: DocumentContent or None if failed or unsupported
         """
         if self.decoder_func is not None:
             try:
@@ -267,7 +267,7 @@ class FileData:
 
         return chunk_result
 
-    def process(self, progress_manager: ProgressManager, file_key: str) -> bool:
+    def process(self, progress_manager: ProgressManager, file_progress_key: str) -> bool:
         """
         Process the file through the complete RAG pipeline:
         Phase 1: Document decoding and vision processing (PDF/Binary only)
@@ -276,27 +276,30 @@ class FileData:
         Phase 4: Parallel embedding and vector point creation
 
         :param progress_manager: Progress manager for progress reporting.
-        :param file_key: File key for progress tracking.
+        :param file_progress_key: File progress key for progress tracking.
         :return: True if successful, False otherwise.
         """
 
         # PHASE 1: Document Decoding and Image Processing
-        vision_key = None
+        vision_progress_key = None
         if is_pdf_document(self.file_path) or is_binary_document(self.file_path):
-            vision_key = progress_manager.start_phase(file_key, "Image Processing", weight=0.33)
-
-        # Create ProgressInfo for image processing
-        if vision_key:
-            progress_manager.activate_phase(vision_key)
-        image_progress_info = ProgressInfo(progress_manager, vision_key) if vision_key else None
+            # Use generic interface - create child task under file
+            vision_progress_key = progress_manager.start_task("Image Processing", parent=file_progress_key, weight=0.33)
+            progress_manager.activate_task(vision_progress_key)
 
         # Call the loader function assigned to this file data.
         # NOTE: DocumentContent is an array of text lines, mapped to page or line numbers.
-        doc_content: Optional[DocumentContent] = self.decode(image_progress_info)
+        # Create ProgressInfo for clean parameter passing
+        if vision_progress_key:
+            vision_progress_info = progress_manager.create_progress_info(vision_progress_key)
+        else:
+            # For text-only files, decode() reports against file-level progress
+            vision_progress_info = progress_manager.create_progress_info(file_progress_key)
+        doc_content: Optional[DocumentContent] = self.decode(vision_progress_info)
 
         # Complete image processing phase if it was created
-        if vision_key is not None:
-            progress_manager.complete_phase(vision_key)
+        if vision_progress_key is not None:
+            progress_manager.complete_task(vision_progress_key)
 
         # Decoder may fail, e.g. on I/O error, exhausted AI attempts, …
         if doc_content is None:
@@ -311,11 +314,11 @@ class FileData:
             self.logger.info(f"Extracting sentences across ({len(doc_content.lines)}) lines")
         sentences_with_reference_ranges = get_sentences_with_reference_ranges(doc_content)
 
-        # Create chunking phase
+        # Create chunking phase - use generic interface
         has_vision = is_pdf_document(self.file_path) or is_binary_document(self.file_path)
         chunking_weight = 0.34 if has_vision else 0.50
-        chunking_key = progress_manager.start_phase(file_key, "Chunking", weight=chunking_weight)
-        progress_manager.activate_phase(chunking_key)
+        chunking_progress_key = progress_manager.start_task("Chunking", parent=file_progress_key, weight=chunking_weight)
+        progress_manager.activate_task(chunking_progress_key)
 
         # Group sentences into chunks, keeping track of references.
         if self.ai.cli.VERBOSE_CHUNK:
@@ -326,13 +329,13 @@ class FileData:
             chunk_callback=self.chunk_callback,
             chunk_lines_block=self.chunk_lines_block,
             file_path=self.file_path,
+            progress_info=progress_manager.create_progress_info(chunking_progress_key),
             logger=self.logger,
             verbose=self.ai.cli.VERBOSE_CHUNK,
-            progress_info=ProgressInfo(progress_manager, chunking_key),
         )
 
         # Complete chunking phase
-        progress_manager.complete_phase(chunking_key)
+        progress_manager.complete_task(chunking_progress_key)
 
         # PHASE 3: Reference Range Analysis and Point Creation Setup
         is_page_based = doc_content.pages_per_line is not None
@@ -344,17 +347,19 @@ class FileData:
             max_line = max(doc_content.lines_per_line) if doc_content.lines_per_line else 0
             reference_total_info = f"{max_line}"
 
-        # Create embedding phase
+        # Create embedding phase - use generic interface
         embedding_weight = 0.33 if has_vision else 0.50
-        embedding_key = progress_manager.start_phase(file_key, "Embedding", weight=embedding_weight, estimated_work=len(chunks))
-        progress_manager.activate_phase(embedding_key)
+        embedding_progress_key = progress_manager.start_task(
+            "Embedding", parent=file_progress_key, weight=embedding_weight, total=len(chunks)
+        )
+        progress_manager.activate_task(embedding_progress_key)
 
         # PHASE 4: Parallel Embedding and Vector Point Creation
         # Process chunks in parallel for embedding
         embedding_results = self.chunk_processor.process_chunks_parallel(
             chunks=chunks,
             verbose=self.ai.cli.VERBOSE_CHUNK,
-            progress_info=ProgressInfo(progress_manager, embedding_key)
+            progress_info=progress_manager.create_progress_info(embedding_progress_key)
         )
 
         # Process results and create points
@@ -399,6 +404,6 @@ class FileData:
             self.points.append(point)
 
         # Complete embedding phase
-        progress_manager.complete_phase(embedding_key)
+        progress_manager.complete_task(embedding_progress_key)
 
         return True

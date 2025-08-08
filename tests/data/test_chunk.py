@@ -12,6 +12,7 @@ from archive_agent.data.DocumentContent import DocumentContent
 from archive_agent.data.chunk import get_sentences_with_reference_ranges, get_chunks_with_reference_ranges, SentenceWithRange
 from archive_agent.ai.chunk.AiChunk import ChunkSchema, ChunkItem
 from archive_agent.util.text_util import splitlines_exact
+from archive_agent.core.ProgressManager import ProgressManager, ProgressInfo
 
 logger = logging.getLogger(__name__)
 
@@ -145,6 +146,14 @@ def create_mock_ai_factory() -> Mock:
     return mock_factory
 
 
+def create_mock_progress_info() -> ProgressInfo:
+    """Create a mock ProgressInfo with mocked ProgressManager for testing."""
+    mock_progress_manager = Mock(spec=ProgressManager)
+    mock_progress_manager.set_total = Mock()
+    mock_progress_manager.update_task = Mock()
+    return ProgressInfo(progress_manager=mock_progress_manager, parent_key="test_parent_key")
+
+
 # noinspection PyUnusedLocal
 def dummy_chunk_callback(ai: AiManager, block_of_sentences: List[str]) -> ChunkSchema:
     """
@@ -176,7 +185,9 @@ def test_generate_chunks_with_ranges_basic_no_carry():
         dummy_chunk_callback,
         chunk_lines_block,
         file_path,
+        create_mock_progress_info(),
         logger,
+        True,
     )
 
     assert len(result) == 1
@@ -206,7 +217,9 @@ def test_generate_chunks_with_ranges_with_carry():
         dummy_chunk_callback,
         chunk_lines_block,
         file_path,
+        create_mock_progress_info(),
         logger,
+        True,
     )
 
     assert len(result) == 1
@@ -236,7 +249,9 @@ def test_generate_chunks_with_ranges_ignores_zeros_in_agg():
         dummy_chunk_callback,
         chunk_lines_block,
         file_path,
+        create_mock_progress_info(),
         logger,
+        True,
     )
 
     assert len(result) == 1
@@ -262,7 +277,9 @@ def test_generate_chunks_with_ranges_empty():
         dummy_chunk_callback,
         chunk_lines_block,
         file_path,
+        create_mock_progress_info(),
         logger,
+        True,
     )
 
     assert result == []

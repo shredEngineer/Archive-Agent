@@ -18,7 +18,7 @@ from archive_agent.data.processor.VisionProcessor import VisionProcessor, Vision
 from archive_agent.data.loader.image import is_image
 from archive_agent.util.text_util import utf8_tempfile
 from archive_agent.util.LineTextBuilder import LineTextBuilder
-from archive_agent.data.ProgressManager import ProgressInfo
+from archive_agent.core.ProgressManager import ProgressInfo
 
 from archive_agent.data.DocumentContent import DocumentContent
 
@@ -128,7 +128,7 @@ def load_binary_document(
         file_path: str,
         max_workers_vision: int,
         image_to_text_callback: Optional[ImageToTextCallback],
-        progress_info: Optional[ProgressInfo] = None,
+        progress_info: ProgressInfo,
 ) -> Optional[DocumentContent]:
     """
     Load binary document (using Pandoc).
@@ -138,7 +138,7 @@ def load_binary_document(
     :param file_path: File path.
     :param max_workers_vision: Max. workers for vision.
     :param image_to_text_callback: Optional image-to-text callback.
-    :param progress_info: Progress tracking information.
+    :param progress_info: Progress tracking information
     :return: Document content if successful, None otherwise.
     """
     file_ext = os.path.splitext(file_path)[1].lower()
@@ -180,7 +180,7 @@ def extract_binary_image_texts(
         max_workers_vision: int,
         images: List[Image.Image],
         image_to_text_callback: Optional[ImageToTextCallback],
-        progress_info: Optional[ProgressInfo] = None,
+        progress_info: ProgressInfo,
 ) -> List[str]:
     """
     Extract text from binary document images with parallel processing.
@@ -232,11 +232,12 @@ def extract_binary_image_texts(
         return image_texts
 
     # Update progress total now that we know the number of vision requests
-    if progress_info and progress_info.phase_key:
-        progress_info.progress_manager.set_phase_total(progress_info.phase_key, len(vision_requests))
+    progress_info.progress_manager.set_total(progress_info.parent_key, len(vision_requests))
 
     # Process all requests in parallel
-    vision_results = vision_processor.process_vision_requests_parallel(vision_requests, progress_info)
+    vision_results = vision_processor.process_vision_requests_parallel(
+        vision_requests, progress_info
+    )
 
     return vision_results
 

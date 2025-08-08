@@ -6,7 +6,7 @@ from typing import List, Any, Optional, Tuple
 
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.util.format import format_file
-from archive_agent.data.ProgressManager import ProgressInfo
+from archive_agent.core.ProgressManager import ProgressInfo
 
 
 class EmbedProcessor:
@@ -31,13 +31,13 @@ class EmbedProcessor:
             self,
             chunks: List[Any],
             verbose: bool,
-            progress_info: Optional[ProgressInfo] = None
+            progress_info: ProgressInfo
     ) -> List[Tuple[Any, Optional[List[float]]]]:
         """
         Process chunks in parallel for embedding.
         :param chunks: List of chunks to process.
         :param verbose: Whether to log verbose messages.
-        :param progress_info: Progress tracking information.
+        :param progress_info: Progress tracking information
         :return: List of (chunk, vector) tuples in original order.
         """
         def embed_chunk(chunk_data: Tuple[int, Any]) -> Tuple[int, Any, Optional[List[float]]]:
@@ -56,14 +56,12 @@ class EmbedProcessor:
                 _vector = ai_worker.embed(text=chunk.text)
 
                 # Update progress after successful embedding
-                if progress_info and progress_info.phase_key:
-                    progress_info.progress_manager.update_phase(progress_info.phase_key, advance=1)
+                progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
 
                 return chunk_index, chunk, _vector
             except Exception as e:
                 self.logger.error(f"Failed to embed chunk ({chunk_index + 1}): {e}")
-                if progress_info and progress_info.phase_key:
-                    progress_info.progress_manager.update_phase(progress_info.phase_key, advance=1)
+                progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
                 return chunk_index, chunk, None
 
         # Use ThreadPoolExecutor for parallel embedding

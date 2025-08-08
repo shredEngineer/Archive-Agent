@@ -12,7 +12,7 @@ from PIL import Image
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.data.loader.image import ImageToTextCallback
 from archive_agent.util.text_util import splitlines_exact
-from archive_agent.data.ProgressManager import ProgressInfo
+from archive_agent.core.ProgressManager import ProgressInfo
 
 
 @dataclass
@@ -52,13 +52,18 @@ class VisionProcessor:
     def process_vision_requests_parallel(
             self,
             requests: List[VisionRequest],
-            progress_info: Optional[ProgressInfo] = None
+            progress_info: ProgressInfo
     ) -> List[str]:
         """
         Process vision requests in parallel with progress tracking.
-        :param requests: List of VisionRequest objects to process.
-        :param progress_info: Progress tracking information.
-        :return: List of formatted result strings in same order as requests.
+
+        THREAD SAFETY: This method uses ThreadPoolExecutor to process requests
+        concurrently. Each worker thread gets its own AiManager instance and
+        updates progress safely through the progress_manager.
+
+        :param requests: List of VisionRequest objects to process
+        :param progress_info: Progress tracking information
+        :return: List of formatted result strings in same order as requests
         """
         if not requests:
             return []
@@ -87,8 +92,7 @@ class VisionProcessor:
                 _formatted_result = request.formatter(vision_result)
 
                 # Update progress after successful vision processing
-                if progress_info and progress_info.phase_key:
-                    progress_info.progress_manager.update_subphase(progress_info.phase_key, advance=1)
+                progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
 
                 return request_index, _formatted_result
 
@@ -98,8 +102,7 @@ class VisionProcessor:
                 _formatted_result = request.formatter(None)
 
                 # Update progress even on failure
-                if progress_info and progress_info.phase_key:
-                    progress_info.progress_manager.update_subphase(progress_info.phase_key, advance=1)
+                progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
 
                 return request_index, _formatted_result
 

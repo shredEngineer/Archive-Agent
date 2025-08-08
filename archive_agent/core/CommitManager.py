@@ -30,6 +30,7 @@ class CommitManager:
             ai_factory: AiManagerFactory,
             decoder_settings: DecoderSettings,
             qdrant: QdrantManager,
+            progress_manager,
             max_workers_ingest: int,
             max_workers_vision: int,
             max_workers_embed: int,
@@ -41,6 +42,7 @@ class CommitManager:
         :param ai_factory: AI manager factory.
         :param decoder_settings: Decoder settings.
         :param qdrant: Qdrant manager.
+        :param progress_manager: Progress manager from ContextManager.
         :param max_workers_ingest: Max. workers for IngestionManager.
         :param max_workers_vision: Max. workers for VisionProcessor.
         :param max_workers_embed: Max. workers for EmbedProcessor.
@@ -50,7 +52,8 @@ class CommitManager:
         self.ai_factory = ai_factory
         self.decoder_settings = decoder_settings
         self.qdrant = qdrant
-        self.ingestion = IngestionManager(cli, max_workers=max_workers_ingest)
+        self.progress_manager = progress_manager
+        self.ingestion = IngestionManager(cli, progress_manager, max_workers=max_workers_ingest)
         self.max_workers_vision = max_workers_vision
         self.max_workers_embed = max_workers_embed
 

@@ -19,7 +19,6 @@ from rich.live import Live
 from rich.logging import RichHandler
 from rich.panel import Panel
 from rich.pretty import Pretty
-from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
 from qdrant_client.models import ScoredPoint
@@ -232,32 +231,21 @@ class CliManager:
         return table
 
     @contextmanager
-    def progress_context(self, title: str, total: int) -> Any:
+    def progress_context(self, progress_manager) -> Any:
         """
-        A context manager for displaying a progress bar with live logging.
-        It sets up a Rich Live display with a progress bar and AI usage stats,
-        and ensures all logging is correctly routed.
-        :param title: The title for the overall progress bar.
-        :param total: The total number of items for the progress bar.
+        A context manager for displaying hierarchical progress with live logging.
+        Uses the provided ProgressManager from ContextManager.
+        :param progress_manager: ProgressManager instance from ContextManager.
         """
-        progress = Progress(
-            SpinnerColumn(),
-            TextColumn("[bold magenta]{task.description}"),
-            BarColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            TimeElapsedColumn(),
-        )
-        overall_task_id = progress.add_task(f"[bold blue]{title}", total=total)
-
         def get_renderable() -> Group:
             return Group(
-                progress,
+                progress_manager.get_tree_renderable(),
                 self.get_ai_usage_renderable()
             )
 
         with Live(get_renderable(), screen=False, redirect_stderr=False, transient=True) as live:
             with self.live_context(live, get_renderable):
-                yield progress, overall_task_id
+                yield progress_manager, None  # yield ProgressManager directly
 
     def format_json(self, text: str) -> None:
         """
