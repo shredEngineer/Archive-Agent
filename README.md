@@ -631,6 +631,16 @@ To see additional information on embedding, retrieval, reranking and querying, p
 
 To bypass the [AI cache](#ai-cache) (embedding, reranking) for this query, pass the `--nocache` option.
 
+To save the query results to a JSON file, pass the `--to-json` option with a filename:
+
+```bash
+archive-agent query "Which files mention donuts?" --to-json answer.json
+```
+
+The JSON output follows the `QuerySchema` format
+defined in [`AiQuery.py`](archive_agent/ai/query/AiQuery.py) (tap on link)
+and includes the original question, structured query result, and formatted answer text.
+
 ### Launch Archive Agent GUI
 
 To launch the **Archive Agent** GUI in your browser, run this:

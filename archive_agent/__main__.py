@@ -2,11 +2,13 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 from archive_agent.util.Informer import Informer
+from archive_agent.util.format import format_file
 
 with Informer("Starting…"):
     import typer
     import logging
     import subprocess
+    import json
     from typing import List
 
     from archive_agent.core.ContextManager import ContextManager
@@ -273,6 +275,11 @@ def query(
             "--verbose",
             help="Show additional embedding and reranking information."
         ),
+        to_json: str = typer.Option(
+            None,
+            "--to-json",
+            help="Write answer to JSON file."
+        ),
 ) -> None:
     """
     Get answer to question using RAG.
@@ -285,6 +292,18 @@ def query(
         question = context.cli.prompt("🧠 Ask Archive Agent…", is_cmd=True)
 
     _query_result, _answer_text = context.qdrant.query(question)
+
+    if to_json:
+        query_data = {
+            "question": question,
+            "query_result": _query_result.model_dump(),
+            "answer_text": _answer_text
+        }
+        
+        with open(to_json, 'w', encoding='utf-8') as f:
+            json.dump(query_data, f, ensure_ascii=False, indent=4)
+        
+        logger.info(f"Writing answer to JSON: {format_file(to_json)}")
 
     context.usage()
 
