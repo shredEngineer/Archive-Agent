@@ -7,7 +7,9 @@ from typing import Set, Optional, Callable
 from PIL import Image, UnidentifiedImageError
 
 from archive_agent.ai.AiManager import AiManager
+from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.data.DocumentContent import DocumentContent
+from archive_agent.core.ProgressManager import ProgressInfo
 
 from archive_agent.util.format import format_file
 from archive_agent.util.text_util import splitlines_exact
@@ -28,17 +30,19 @@ def is_image(file_path: str) -> bool:
 
 
 def load_image(
-        ai: AiManager,
+        ai_factory: AiManagerFactory,
         logger: Logger,
         file_path: str,
         image_to_text_callback: Optional[ImageToTextCallback],
+        progress_info: ProgressInfo,
 ) -> Optional[DocumentContent]:
     """
-    Load image as text.
-    :param ai: AI manager.
+    Load image as text with progress tracking.
+    :param ai_factory: AI manager factory for creating AI instance.
     :param logger: Logger.
     :param file_path: File path.
     :param image_to_text_callback: Optional image-to-text callback.
+    :param progress_info: Progress tracking information.
     :return: Document content if successful, None otherwise.
     """
     try:
@@ -51,10 +55,21 @@ def load_image(
         logger.warning(f"Image vision is DISABLED in your current configuration")
         return None
 
+    # Create vision AI sub-task for progress tracking
+    vision_ai_progress_key = progress_info.progress_manager.start_task(
+        "AI Vision", parent=progress_info.parent_key, total=1
+    )
+
+    # Original business logic: get AI instance and call callback directly
+    ai = ai_factory.get_ai()
     image_text = image_to_text_callback(ai, image)
+
+    # Update progress after vision processing
+    progress_info.progress_manager.update_task(vision_ai_progress_key, advance=1)
+    progress_info.progress_manager.complete_task(vision_ai_progress_key)
+
     if image_text is None:
         return None
-
     assert len(splitlines_exact(image_text)) == 1, f"Text from image must be single line:\n'{image_text}'"
 
     return PageTextBuilder(text=image_text).getDocumentContent()

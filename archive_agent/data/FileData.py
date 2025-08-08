@@ -101,10 +101,11 @@ class FileData:
         """
         if is_image(self.file_path):
             return lambda progress_info: load_image(
-                ai=self.ai,
+                ai_factory=self.ai_factory,
                 logger=self.logger,
                 file_path=self.file_path,
                 image_to_text_callback=self.image_to_text_callback_image,
+                progress_info=progress_info,
             )
 
         elif is_plaintext(self.file_path):

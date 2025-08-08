@@ -1,5 +1,5 @@
 """
-Unit tests for archive_agent.data.ProgressManager.
+Unit tests for archive_agent.core.ProgressManager.
 
 These tests validate:
 - Hierarchical parent→child ordering
@@ -42,16 +42,16 @@ def test_hierarchy_creation_and_order() -> None:
     a2 = pm.start_task("A2", parent=a)
     b1 = pm.start_task("B1", parent=b)
 
-    # Access internal children lists for order validation.
-    # This is acceptable in unit tests to assert implementation guarantees.
-    with pm._lock:  # type: ignore[attr-defined]
-        top = pm._children[None]  # type: ignore[attr-defined]
-        a_kids = pm._children[a]  # type: ignore[attr-defined]
-        b_kids = pm._children[b]  # type: ignore[attr-defined]
+    # Validate sibling insertion order via public snapshots
+    snap_a = pm.get_task_snapshot(a)
+    snap_b = pm.get_task_snapshot(b)
+    assert snap_a is not None and snap_b is not None
 
-    assert top == [root]
-    assert a_kids == [a1, a2]
-    assert b_kids == [b1]
+    assert snap_a.children == [a1, a2]
+    assert snap_b.children == [b1]
+
+    # Sanity: renderable builds without error
+    _ = pm.get_tree_renderable()
 
 
 def test_weighted_rollup() -> None:
@@ -73,11 +73,10 @@ def test_weighted_rollup() -> None:
     pm.update_task(c1, completed=5)
     pm.update_task(c2, completed=10)
 
-    # Inspect internal parent state.
-    with pm._lock:  # type: ignore[attr-defined]
-        parent = pm._tasks[p]  # type: ignore[attr-defined]
-        assert parent.total == 100
-        assert parent.completed == 50
+    snap_p = pm.get_task_snapshot(p)
+    assert snap_p is not None
+    assert snap_p.total == 100
+    assert snap_p.completed == 50
 
 
 def test_complete_task_auto_hide() -> None:
@@ -90,12 +89,12 @@ def test_complete_task_auto_hide() -> None:
     pm.update_task(child, completed=5)
     pm.complete_task(root)
 
-    # Allow timer to fire (manager uses ~0.35 s delay).
-    time.sleep(pm._REMOVE_DELAY_S + 0.25)  # type: ignore[attr-defined]
+    # Allow timer to fire (manager uses ~0.35 s delay by default).
+    # Access via the public property for robustness.
+    time.sleep(pm.remove_delay_s + 0.25)
 
-    with pm._lock:  # type: ignore[attr-defined]
-        assert root not in pm._tasks  # type: ignore[attr-defined]
-        assert child not in pm._tasks  # type: ignore[attr-defined]
+    assert pm.get_task_snapshot(root) is None
+    assert pm.get_task_snapshot(child) is None
 
 
 def test_activate_task_flag() -> None:
@@ -105,8 +104,9 @@ def test_activate_task_flag() -> None:
     pm = _make_manager()
     k = pm.start_task("active-task")
     pm.activate_task(k)
-    with pm._lock:  # type: ignore[attr-defined]
-        assert pm._tasks[k].active is True  # type: ignore[attr-defined]
+    snap = pm.get_task_snapshot(k)
+    assert snap is not None
+    assert snap.active is True
 
 
 def test_concurrent_updates_thread_safety() -> None:
@@ -138,11 +138,11 @@ def test_concurrent_updates_thread_safety() -> None:
     t1.join()
     t2.join()
 
-    # Allow processing to complete
+    # Allow any final roll-up to settle
     time.sleep(0.05)
 
-    with pm._lock:  # type: ignore[attr-defined]
-        parent = pm._tasks[p]  # type: ignore[attr-defined]
-        assert parent.total == 100
-        # Allow for integer rounding
-        assert 74 <= parent.completed <= 76
+    snap_p = pm.get_task_snapshot(p)
+    assert snap_p is not None
+    assert snap_p.total == 100
+    # Allow for integer rounding
+    assert 74 <= snap_p.completed <= 76

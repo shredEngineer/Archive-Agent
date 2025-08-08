@@ -117,6 +117,7 @@ When developing or modifying parallel processing components:
 - **Stable visual ordering**: Tasks appear in creation order (file → phases → sub-phases sequentially)  
 - **Weighted phases**: Different processing phases contribute proportionally to overall progress
 - **Complete implementation**: No transition period - all components use unified ProgressManager system
+- **Progress Symmetry**: All image-containing files (PDF/Binary/Image) show consistent vision progress tracking
 
 ### Qdrant Payload Handling
 - **ALWAYS** use `QdrantSchema.parse_payload()` for payload access
@@ -249,8 +250,9 @@ result = callback(ai_worker, item)
 Archive Agent uses a hierarchical progress tracking system with smart phase detection:
 
 **Top-Level File Phases**:
-- **Smart Phase Detection**: PDF/Binary files get 3 phases (Vision+Chunking+Embedding), others get 2 (Chunking+Embedding)
-- **File-Level Updates**: File progress advances as phases complete (1/3, 2/3, 3/3)
+- **Smart Phase Detection**: Files with images (PDF/Binary/Image) get 3 phases (Vision+Chunking+Embedding), text-only files get 2 (Chunking+Embedding)
+- **File-Level Updates**: File progress advances as phases complete (1/3, 2/3, 3/3) for image files or (1/2, 2/2) for text files
+- **Progress Symmetry**: All image processing (PDF pages, binary images, standalone images) shows consistent "AI Vision" subtask
 
 **Image Processing Phase Breakdown** (for PDF/Binary files):
 
@@ -271,6 +273,13 @@ Archive Agent uses a hierarchical progress tracking system with smart phase dete
 - **Image Processing Only**: Binary documents skip analyzing phase
   - Direct vision processing of extracted images
   - Uses same `vision_task_id` parameter pattern as PDFs
+
+**Standalone Image Processing**:
+- **Single Image Vision**: Standalone image files (JPG/PNG/etc.) get direct vision processing
+  - Creates "AI Vision" subtask for progress tracking  
+  - Preserves original business logic: fails entirely if vision processing fails
+  - No parallel processing overhead (single image doesn't need threading)
+  - Maintains exact same callback pattern as original implementation
 
 **Progress Architecture Features**:
 - **Hierarchical Task Structure**: Vision phase dynamically contains analyzing and/or vision sub-tasks based on file type
