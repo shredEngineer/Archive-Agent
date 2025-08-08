@@ -6,7 +6,6 @@ from archive_agent.util.Informer import Informer
 with Informer("Starting…"):
     import typer
     import logging
-    import pathlib
     import subprocess
     from typing import List
 
@@ -296,11 +295,25 @@ def query(
 def gui() -> None:
     """
     Launch browser-based GUI.
+
+    This runs Streamlit via the current Python interpreter to ensure we use the
+    environment created by ``uv sync`` / ``uv run`` rather than relying on a
+    globally installed ``uv`` or ``streamlit``.
     """
     logger.info("💡 GUI is starting…")
 
+    import sys
+    import pathlib
+    import subprocess
+
     gui_path = pathlib.Path(__file__).parent / "core" / "GuiManager.py"
-    subprocess.run(["streamlit", "run", str(gui_path)])
+
+    # Run "python -m streamlit run <GuiManager.py>" within the *current* venv.
+    # ``check=True`` so we fail fast and propagate the exit code.
+    subprocess.run(
+        [sys.executable, "-m", "streamlit", "run", str(gui_path)],
+        check=True,
+    )
 
 
 @app.command()
