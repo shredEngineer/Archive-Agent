@@ -81,10 +81,10 @@ class VisionProcessor:
                 # Convert bytes to PIL Image if needed
                 if isinstance(request.image_data, bytes):
                     with Image.open(io.BytesIO(request.image_data)) as image:
-                        vision_result = request.callback(ai_worker, image)
+                        vision_result = request.callback(ai_worker, image, progress_info)
                 else:
                     # Already PIL Image
-                    vision_result = request.callback(ai_worker, request.image_data)
+                    vision_result = request.callback(ai_worker, request.image_data, progress_info)
 
                 # Validate single-line constraint before formatting (same as original)
                 if vision_result is not None:
@@ -93,18 +93,12 @@ class VisionProcessor:
                 # Apply formatter to get final result
                 _formatted_result = request.formatter(vision_result)
 
-                # Update progress after successful vision processing
-                progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
-
                 return request_index, _formatted_result
 
             except Exception as e:
                 self.logger.error(f"Failed to process vision request ({request.image_index + 1}): {e}")
                 # Apply formatter to None for error case
                 _formatted_result = request.formatter(None)
-
-                # Update progress even on failure
-                progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
 
                 return request_index, _formatted_result
 

@@ -181,43 +181,48 @@ class FileData:
 
         return vision_result
 
-    def image_to_text_ocr(self, ai: AiManager, image: Image.Image) -> Optional[str]:
+    def image_to_text_ocr(self, ai: AiManager, image: Image.Image, progress_info: ProgressInfo) -> Optional[str]:
         """
         Request vision with OCR on the image and format the result.
         :param ai: AI manager.
         :param image: PIL Image object.
+        :param progress_info: Progress tracking information.
         :return: OCR text or None if failed.
         """
         if self.ai.cli.VERBOSE_VISION:
             self.logger.info("Requesting vision feature: OCR")
         ai.request_ocr()
         vision_result = self.image_to_text(ai=ai, image=image)
+        progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
         if vision_result is not None:
             return AiVisionOCR.format_vision_answer(vision_result=vision_result)
         else:
             return None
 
-    def image_to_text_entity(self, ai: AiManager, image: Image.Image) -> Optional[str]:
+    def image_to_text_entity(self, ai: AiManager, image: Image.Image, progress_info: ProgressInfo) -> Optional[str]:
         """
         Request vision with entity extraction on the image and format the result.
         :param ai: AI manager.
         :param image: PIL Image object.
+        :param progress_info: Progress tracking information.
         :return: Entity text or None if failed.
         """
         if self.ai.cli.VERBOSE_VISION:
             self.logger.info("Requesting vision feature: Entity Extraction")
         ai.request_entity()
         vision_result = self.image_to_text(ai=ai, image=image)
+        progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
         if vision_result is not None:
             return AiVisionEntity.format_vision_answer(vision_result=vision_result)
         else:
             return None
 
-    def image_to_text_combined(self, ai: AiManager, image: Image.Image) -> Optional[str]:
+    def image_to_text_combined(self, ai: AiManager, image: Image.Image, progress_info: ProgressInfo) -> Optional[str]:
         """
         Request vision with OCR and entity extraction on the image, format and join the results.
         :param ai: AI manager.
         :param image: PIL Image object.
+        :param progress_info: Progress tracking information.
         :return: Combined text or None if any part failed.
         """
         if self.ai.cli.VERBOSE_VISION:
@@ -225,12 +230,14 @@ class FileData:
 
         ai.request_ocr()
         vision_result_ocr = self.image_to_text(ai=ai, image=image)
+        progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
         if vision_result_ocr is None:
             return None
         text_ocr = AiVisionOCR.format_vision_answer(vision_result=vision_result_ocr)
 
         ai.request_entity()
         vision_result_entity = self.image_to_text(ai=ai, image=image)
+        progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
         if vision_result_entity is None:
             return None
         text_entity = AiVisionEntity.format_vision_answer(vision_result=vision_result_entity)
