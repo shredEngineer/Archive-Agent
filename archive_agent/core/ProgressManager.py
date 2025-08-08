@@ -65,17 +65,27 @@ class _Task:
     children: List[str] = field(default_factory=list)
     removed: bool = False
 
-    # Derived helpers (no storage)
     def ratio(self) -> float:
         """
-        Completion ratio in [0, 1].
+        Compute the completion ratio in ``[0, 1]``.
 
-        - Determinate: ``completed / max(total, 1)``
-        - Indeterminate: 1.0 only when marked fully complete by the manager.
+        Behavior
+        --------
+        * **Determinate tasks** (``total`` is not ``None``): returns
+          ``completed / max(total, 1)`` clamped to ``[0, 1]``.
+        * **Indeterminate tasks** (``total`` is ``None``): contribute ``0.0`` to
+          parents until they are either assigned a ``total`` or explicitly marked
+          complete by the manager (which sets ``total=1`` and ``completed=1``,
+          making the ratio evaluate to ``1.0`` on the next call).
+
+        Returns
+        -------
+        float
+            The normalized completion ratio.
         """
         if self.total is None:
-            # Indeterminate tasks only report progress when we have completion.
-            return 1.0 if self.completed > 0 and self.total == 0 else 0.0
+            # Indeterminate until given a total, or until complete_task() sets total/completed.
+            return 0.0
         return max(0.0, min(1.0, self.completed / max(1, self.total)))
 
 
@@ -288,9 +298,22 @@ class ProgressManager:
 
     def get_tree_renderable(self) -> RenderableType:
         """
-        Get the current tree renderable for integration with other displays.
+        Build and return the current hierarchical renderable.
 
-        :return: The current tree structure for external rendering.
+        The renderable is a fresh Rich :class:`~rich.tree.Tree` composed of
+        two-line rows (header + :class:`~rich.progress_bar.ProgressBar`) for each task.
+        You can pass this directly to an externally managed :class:`~rich.live.Live`
+        or any other Rich rendering surface.
+
+        Thread Safety
+        -------------
+        This method acquires the manager's re-entrant lock to take a consistent
+        snapshot of the task graph before building the renderable.
+
+        Returns
+        -------
+        RenderableType
+            The tree renderable representing the current task hierarchy.
         """
         with self._lock:
             return self._build_renderable()
