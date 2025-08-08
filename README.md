@@ -631,10 +631,17 @@ To see additional information on embedding, retrieval, reranking and querying, p
 
 To bypass the [AI cache](#ai-cache) (embedding, reranking) for this query, pass the `--nocache` option.
 
-To save the query results to a JSON file, pass the `--to-json` option with a filename:
+To save the query results to a JSON file, use either:
 
+- `--to-json` with a specific filename:
 ```bash
 archive-agent query "Which files mention donuts?" --to-json answer.json
+```
+
+- `--to-json-auto` to auto-generate a clean filename from the question (max 160 chars, truncated with `[...]` if needed):
+```bash
+archive-agent query "Which files mention donuts?" --to-json-auto
+# Creates: Which_files_mention_donuts_.json
 ```
 
 The JSON output follows the `QuerySchema` format

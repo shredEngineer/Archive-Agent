@@ -5,6 +5,7 @@
 from logging import Logger
 import os
 import pathlib
+import re
 import urllib.parse
 from datetime import datetime, timezone
 from typing import Optional
@@ -127,3 +128,30 @@ def format_chunk_brief(chunk: str, max_len: int = 160) -> str:
     """
     chunk_brief = chunk.replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t")
     return f"{chunk_brief[:max_len]}…" if len(chunk_brief) > max_len else f"{chunk_brief}"
+
+
+def generate_json_filename(question: str, max_length: int = 160) -> str:
+    """
+    Generate a clean filename from a question for JSON output.
+    :param question: The question text.
+    :param max_length: Maximum filename length.
+    :return: Clean filename with .json extension.
+    """
+    # Remove or replace problematic characters for filenames
+    clean_question = re.sub(r'[<>:"/\\|?*]', '_', question)
+    
+    # Replace multiple whitespace with single spaces and strip
+    clean_question = re.sub(r'\s+', ' ', clean_question).strip()
+    
+    # Replace spaces with underscores
+    clean_question = clean_question.replace(' ', '_')
+    
+    # Calculate max length for base name (subtract 5 for '.json')
+    max_base_length = max_length - 5
+    
+    # Truncate if necessary and add [...] if cut off
+    if len(clean_question) > max_base_length:
+        truncate_length = max_base_length - 5  # subtract 5 for '[...]'
+        clean_question = clean_question[:truncate_length] + '[...]'
+    
+    return f"{clean_question}.json"

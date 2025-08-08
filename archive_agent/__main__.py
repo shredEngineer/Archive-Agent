@@ -2,7 +2,7 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 from archive_agent.util.Informer import Informer
-from archive_agent.util.format import format_file
+from archive_agent.util.format import format_file, generate_json_filename
 
 with Informer("Starting…"):
     import typer
@@ -280,6 +280,11 @@ def query(
             "--to-json",
             help="Write answer to JSON file."
         ),
+        to_json_auto: bool = typer.Option(
+            False,
+            "--to-json-auto",
+            help="Write answer to JSON file with auto-generated filename from question."
+        ),
 ) -> None:
     """
     Get answer to question using RAG.
@@ -293,17 +298,24 @@ def query(
 
     _query_result, _answer_text = context.qdrant.query(question)
 
+    # Handle JSON output options
+    json_filename = None
     if to_json:
+        json_filename = to_json
+    elif to_json_auto:
+        json_filename = generate_json_filename(question)
+    
+    if json_filename:
         query_data = {
             "question": question,
             "query_result": _query_result.model_dump(),
             "answer_text": _answer_text
         }
         
-        with open(to_json, 'w', encoding='utf-8') as f:
+        with open(json_filename, 'w', encoding='utf-8') as f:
             json.dump(query_data, f, ensure_ascii=False, indent=4)
         
-        logger.info(f"Writing answer to JSON: {format_file(to_json)}")
+        logger.info(f"Writing answer to JSON: {format_file(json_filename)}")
 
     context.usage()
 
