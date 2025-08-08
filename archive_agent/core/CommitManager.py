@@ -101,6 +101,12 @@ class CommitManager:
             else:
                 self.commit_diff(removed_files)
 
+        if len(added_files) > 0 or len(changed_files) > 0 or len(removed_files) > 0:
+            logger.info(f"✅ Commit completed:")
+            self.cli.logger.info(f"- ({len(added_files)}) file(s) added to Qdrant database")
+            self.cli.logger.info(f"- ({len(changed_files)}) file(s) updated in Qdrant database")
+            self.cli.logger.info(f"- ({len(removed_files)}) file(s) removed from Qdrant database")
+
     def commit_diff(self, tracked_files: TrackedFiles) -> None:
         """
         Commit tracked files.
