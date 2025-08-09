@@ -94,6 +94,7 @@ class QdrantManager:
                 func=self.qdrant.collection_exists,
                 kwargs={"collection_name": collection}
             )
+            logger.info(f"Connecting to Qdrant server: '{server_url}'")
             if not exists:
                 logger.info(f"Creating new Qdrant collection: '{collection}' (vector size: {vector_size})")
                 self.retry_manager.retry(
