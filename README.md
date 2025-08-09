@@ -14,6 +14,8 @@
 [![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/499d8d83-02c8-4c9b-9e4f-8e8391395482)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/shredEngineer/Archive-Agent)
 
+**Archive Agent** brings RAG to your command line — it's fundamentally a CLI and MCP tool and is expressedly *not* a chatbot.
+
 ---
 
 ## Find what you need with natural language
