@@ -124,16 +124,17 @@ class McpServer:
     MCP server.
     """
 
-    def __init__(self, context: ContextManager, port: int):
+    def __init__(self, context: ContextManager, host: str, port: int):
         """
         Initialize MCP server.
         :param context: Context manager.
+        :param host: Host.
         :param port: Port.
         """
         global _context
         _context = context
 
-        self.host = "127.0.0.1"
+        self.host = host
         self.port = port
 
         # noinspection PyProtectedMember

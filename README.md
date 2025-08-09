@@ -738,6 +738,7 @@ The profile configuration is contained in the profile folder as `config.json`.
 | Key                    | Description                                                                                      |
 |------------------------|--------------------------------------------------------------------------------------------------|
 | `config_version`       | Config version                                                                                   |
+| `mcp_server_host`      | MCP server host (default `http://127.0.0.1`; set to `http://0.0.0.0` to expose in LAN)           |
 | `mcp_server_port`      | MCP server port (default `8008`)                                                                 |
 | `ocr_strategy`         | OCR strategy in [`DecoderSettings.py`](archive_agent/config/DecoderSettings.py)                  |
 | `ocr_auto_threshold`   | Minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict` |

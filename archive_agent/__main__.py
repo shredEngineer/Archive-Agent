@@ -357,7 +357,11 @@ def mcp() -> None:
     logger.info("💡 MCP is starting…")
 
     # TODO: Allow for graceful CTRL+C shutdown without the `asyncio.exceptions.CancelledError`
-    mcp_server = McpServer(context=context, port=context.config.data[context.config.MCP_SERVER_PORT])
+    mcp_server = McpServer(
+        context=context,
+        host=context.config.data[context.config.MCP_SERVER_HOST],
+        port=context.config.data[context.config.MCP_SERVER_PORT],
+    )
     mcp_server.start()
 
     context.usage()

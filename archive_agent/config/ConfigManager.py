@@ -25,6 +25,7 @@ class ConfigManager(StorageManager, AiProviderKeys):
 
     CONFIG_VERSION = 'config_version'
 
+    MCP_SERVER_HOST = 'mcp_server_host'
     MCP_SERVER_PORT = 'mcp_server_port'
 
     OCR_STRATEGY = 'ocr_strategy'
@@ -50,8 +51,9 @@ class ConfigManager(StorageManager, AiProviderKeys):
     MAX_WORKERS_EMBED = 'max_workers_embed'
 
     DEFAULT_CONFIG = {
-        CONFIG_VERSION: 11,  # TODO:  DON'T FORGET TO UPDATE BOTH  `CONFIG_VERSION`  AND  `upgrade()`
+        CONFIG_VERSION: 12,  # TODO:  DON'T FORGET TO UPDATE BOTH  `CONFIG_VERSION`  AND  `upgrade()`
 
+        MCP_SERVER_HOST: "127.0.0.1",
         MCP_SERVER_PORT: 8008,
 
         # deferred to `_prompt_ocr_strategy`
@@ -273,6 +275,13 @@ class ConfigManager(StorageManager, AiProviderKeys):
             self._add_option(self.MAX_WORKERS_INGEST)
             self._add_option(self.MAX_WORKERS_VISION)
             self._add_option(self.MAX_WORKERS_EMBED)
+            upgraded = True
+
+        # Option(s) added in v12:
+        # - `mcp_server_host`
+        if version < 12:
+            self._set_version(12)
+            self._add_option(self.MCP_SERVER_HOST)
             upgraded = True
 
         return upgraded
