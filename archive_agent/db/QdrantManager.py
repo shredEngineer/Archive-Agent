@@ -101,22 +101,21 @@ class QdrantManager:
         self.rerank_chunks_max = rerank_chunks_max
         self.expand_chunks_radius = expand_chunks_radius
 
-        self.retry_manager = RetryManager(**QdrantManager.QDRANT_RETRY_KWARGS)
-
         asyncio.run(self.async_connect())
 
     async def async_connect(self) -> None:
         """
         Connect to Qdrant collection.
         """
+        retry_manager = RetryManager(**QdrantManager.QDRANT_RETRY_KWARGS)
         try:
-            exists = await self.retry_manager.retry_async(
+            exists = await retry_manager.retry_async(
                 func=self.qdrant.collection_exists,
                 kwargs={"collection_name": self.collection}
             )
             if not exists:
                 logger.info(f"Creating new Qdrant collection: '{self.collection}' (vector size: {self.vector_size})")
-                await self.retry_manager.retry_async(
+                await retry_manager.retry_async(
                     func=self.qdrant.create_collection,
                     kwargs={
                         "collection_name": self.collection,
@@ -160,8 +159,9 @@ class QdrantManager:
                 f"estimated payload size: {payload_bytes / (1024 * 1024):.2f} MiB"
             )
 
+            retry_manager = RetryManager(**QdrantManager.QDRANT_RETRY_KWARGS)
             try:
-                await self.retry_manager.retry_async(
+                await retry_manager.retry_async(
                     func=self.qdrant.upsert,
                     kwargs={
                         "collection_name": self.collection,
@@ -186,8 +186,9 @@ class QdrantManager:
         """
         logger.debug(f"Counting chunks for {format_file(file_data.file_path)}")
 
+        retry_manager = RetryManager(**QdrantManager.QDRANT_RETRY_KWARGS)
         try:
-            count_result = await self.retry_manager.retry_async(
+            count_result = await retry_manager.retry_async(
                 func=self.qdrant.count,
                 kwargs={
                     "collection_name": self.collection,
@@ -215,8 +216,9 @@ class QdrantManager:
         if not quiet:
             logger.info(f"- REMOVING ({count}) chunk(s) of {format_file(file_data.file_path)}")
 
+        retry_manager = RetryManager(**QdrantManager.QDRANT_RETRY_KWARGS)
         try:
-            await self.retry_manager.retry_async(
+            await retry_manager.retry_async(
                 func=self.qdrant.delete,
                 kwargs={
                     "collection_name": self.collection,
@@ -265,10 +267,11 @@ class QdrantManager:
         self.cli.format_question(question)
 
         ai = self.ai_factory.get_ai()
-        vector = ai.embed(question)
+        vector = await asyncio.to_thread(ai.embed, question)
 
         try:
-            response = await self.retry_manager.retry_async(
+            retry_manager = RetryManager(**QdrantManager.QDRANT_RETRY_KWARGS)
+            response = await retry_manager.retry_async(
                 func=self.qdrant.query_points,
                 kwargs={
                     "collection_name": self.collection,
@@ -294,7 +297,7 @@ class QdrantManager:
             }
 
             ai = self.ai_factory.get_ai()
-            reranked_schema = ai.rerank(question=question, indexed_chunks=indexed_chunks)
+            reranked_schema = await asyncio.to_thread(ai.rerank, question=question, indexed_chunks=indexed_chunks)
 
             if not reranked_schema.is_rejected:
                 reranked_indices = reranked_schema.reranked_indices
@@ -324,7 +327,8 @@ class QdrantManager:
             return []
 
         try:
-            response = await self.retry_manager.retry_async(
+            retry_manager = RetryManager(**QdrantManager.QDRANT_RETRY_KWARGS)
+            response = await retry_manager.retry_async(
                 func=self.qdrant.query_points,
                 kwargs={
                     "collection_name": self.collection,
@@ -440,7 +444,7 @@ class QdrantManager:
             self.cli.format_expanded_deduped_points(points)
 
         ai = self.ai_factory.get_ai()
-        query_result = ai.query(question, points)
+        query_result = await asyncio.to_thread(ai.query, question, points)
 
         if query_result.is_rejected:
             logger.warning(f"⚠️ Query rejected: \"{query_result.rejection_reason}\"")
@@ -456,8 +460,9 @@ class QdrantManager:
         Get stats, e.g. files and chunks counts.
         :return: Dict.
         """
+        retry_manager = RetryManager(**QdrantManager.QDRANT_RETRY_KWARGS)
         try:
-            count_result = await self.retry_manager.retry_async(
+            count_result = await retry_manager.retry_async(
                 func=self.qdrant.count,
                 kwargs={
                     "collection_name": self.collection,
@@ -470,7 +475,7 @@ class QdrantManager:
             )
 
             # Get unique file paths using scroll with distinct field
-            scroll_result = await self.retry_manager.retry_async(
+            scroll_result = await retry_manager.retry_async(
                 func=self.qdrant.scroll,
                 kwargs={
                     "collection_name": self.collection,
