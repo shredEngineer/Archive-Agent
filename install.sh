@@ -36,11 +36,20 @@ echo "| (sudo) Install pandoc |"
 echo "'-----------------------'"
 sudo apt update && sudo apt install -y pandoc
 
-echo ""
-echo ".------------------------------."
-echo "| (sudo) Install Qdrant server |"
-echo "'------------------------------'"
-sudo ./manage-qdrant.sh start
+# If 'ARCHIVE_AGENT_QDRANT_IN_MEMORY' is set, skip starting the Qdrant server.
+if [[ -n "${ARCHIVE_AGENT_QDRANT_IN_MEMORY:-}" ]]; then
+	echo ""
+	echo ".----------------------------------."
+	echo "| Skipping Qdrant server (in-memory) |"
+	echo "'----------------------------------'"
+	echo "'ARCHIVE_AGENT_QDRANT_IN_MEMORY' is set; not running ./manage-qdrant.sh."
+else
+	echo ""
+	echo ".------------------------------."
+	echo "| (sudo) Install Qdrant server |"
+	echo "'------------------------------'"
+	sudo ./manage-qdrant.sh start
+fi
 
 echo ""
 echo ".-----------------------."

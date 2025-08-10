@@ -658,6 +658,8 @@ To launch the **Archive Agent** GUI in your browser, run this:
 archive-agent gui
 ```
 
+This command enables verbose output by default.
+
 📌 **Note:** Press `CTRL+C` in the console to close the GUI server.
 
 ### Start MCP Server
@@ -667,6 +669,8 @@ To start the **Archive Agent** MCP server, run this:
 ```bash
 archive-agent mcp
 ```
+
+This command enables verbose output by default.
 
 📌 **Note:** Press `CTRL+C` in the console to close the MCP server.
 
@@ -855,6 +859,20 @@ To run unit tests, check types, and check style, run this:
 ```bash
 ./audit.sh
 ```
+
+### Run Qdrant with in-memory storage
+
+To run Qdrant with in-memory storage (e.g., in OpenAI Codex environment where Docker is not available),
+export this environment variable before running `install.sh` and `archive-agent`:
+
+```bash
+export ARCHIVE_AGENT_QDRANT_IN_MEMORY=1
+``` 
+
+- The environment variable is checked by `install.sh` to skip `manage-qdrant.sh`.
+- The environment variable is checked by `QdrantManager.py` to ignore server URL and use in-memory storage instead.
+
+📌 **Note:** Qdrant in-memory storage is volatile (not persisted to disk).
 
 ---
 

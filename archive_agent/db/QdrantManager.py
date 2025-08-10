@@ -2,6 +2,7 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
+import os
 import typer
 import logging
 from typing import List, Tuple, Dict
@@ -61,12 +62,13 @@ class QdrantManager:
             retrieve_chunks_max: int,
             rerank_chunks_max: int,
             expand_chunks_radius: int,
+
     ):
         """
         Initialize Qdrant manager.
         :param cli: CLI manager.
         :param ai: AI manager.
-        :param server_url: Server URL.
+        :param server_url: Server URL (ignored if `ARCHIVE_AGENT_QDRANT_IN_MEMORY` is set).
         :param collection: Collection name.
         :param vector_size: Vector size.
         :param retrieve_score_min: Minimum score of retrieved chunks (`0`...`1`).
@@ -76,10 +78,20 @@ class QdrantManager:
         """
         self.cli = cli
         self.ai = ai
-        self.qdrant = QdrantClient(
-            url=server_url,
-            timeout=QdrantManager.QDRANT_REQUEST_TIMEOUT_S,
-        )
+
+        if os.environ.get("ARCHIVE_AGENT_QDRANT_IN_MEMORY", False):
+            logger.info("'ARCHIVE_AGENT_QDRANT_IN_MEMORY' is set; connecting to in-memory Qdrant server.")
+            self.qdrant = QdrantClient(
+                location=":memory:",
+                timeout=QdrantManager.QDRANT_REQUEST_TIMEOUT_S,
+            )
+        else:
+            logger.info(f"Connecting to Qdrant server: '{server_url}'")
+            self.qdrant = QdrantClient(
+                url=server_url,
+                timeout=QdrantManager.QDRANT_REQUEST_TIMEOUT_S,
+            )
+
         self.collection = collection
         self.vector_size = vector_size
         self.retrieve_score_min = retrieve_score_min
@@ -94,7 +106,6 @@ class QdrantManager:
                 func=self.qdrant.collection_exists,
                 kwargs={"collection_name": collection}
             )
-            logger.info(f"Connecting to Qdrant server: '{server_url}'")
             if not exists:
                 logger.info(f"Creating new Qdrant collection: '{collection}' (vector size: {vector_size})")
                 self.retry_manager.retry(

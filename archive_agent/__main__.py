@@ -304,17 +304,17 @@ def query(
         json_filename = to_json
     elif to_json_auto:
         json_filename = generate_json_filename(question)
-    
+
     if json_filename:
         query_data = {
             "question": question,
             "query_result": _query_result.model_dump(),
             "answer_text": _answer_text
         }
-        
+
         with open(json_filename, 'w', encoding='utf-8') as f:
             json.dump(query_data, f, ensure_ascii=False, indent=4)
-        
+
         logger.info(f"Writing answer to JSON: {format_file(json_filename)}")
 
     context.usage()
@@ -352,7 +352,7 @@ def mcp() -> None:
     """
     Start MCP server.
     """
-    context = ContextManager()
+    context = ContextManager(verbose=True)
 
     logger.info("💡 MCP is starting…")
 

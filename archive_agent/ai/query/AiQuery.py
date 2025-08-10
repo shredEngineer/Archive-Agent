@@ -19,10 +19,11 @@ class AnswerItem(BaseModel):
     model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false — DO NOT REMOVE THIS
 
 
-"""
-THIS IS THE FORMAT THE JSON FILE WILL HAVE WHEN WRITTEN WITH `archive-agent query --to-json ~/answer.json "Which files mention donuts?"
-"""
 class QuerySchema(BaseModel):
+    """
+    THIS IS THE FORMAT THE JSON FILE WILL HAVE WHEN WRITTEN WITH `archive-agent query --to-json ~/answer.json "Which files mention donuts?`
+    """
+
     question_rephrased: str
     answer_list: List[AnswerItem]
     answer_conclusion: str

@@ -139,19 +139,19 @@ def generate_json_filename(question: str, max_length: int = 160) -> str:
     """
     # Remove or replace problematic characters for filenames
     clean_question = re.sub(r'[<>:"/\\|?*]', '_', question)
-    
+
     # Replace multiple whitespace with single spaces and strip
     clean_question = re.sub(r'\s+', ' ', clean_question).strip()
-    
+
     # Replace spaces with underscores
     clean_question = clean_question.replace(' ', '_')
-    
+
     # Calculate max length for base name (subtract 5 for '.json')
     max_base_length = max_length - 5
-    
+
     # Truncate if necessary and add [...] if cut off
     if len(clean_question) > max_base_length:
         truncate_length = max_base_length - 5  # subtract 5 for '[...]'
         clean_question = clean_question[:truncate_length] + '[...]'
-    
+
     return f"{clean_question}.json"

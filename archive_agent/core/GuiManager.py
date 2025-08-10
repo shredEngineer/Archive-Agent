@@ -28,7 +28,7 @@ class GuiManager:
         """
         st.set_page_config(page_title="Archive Agent", page_icon="⚡", layout="centered")
 
-        self.context = ContextManager()
+        self.context = ContextManager(verbose=True)
 
     def run(self) -> None:
         """

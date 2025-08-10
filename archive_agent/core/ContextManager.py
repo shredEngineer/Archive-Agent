@@ -1,7 +1,6 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import logging
 from pathlib import Path
 from typing import Optional, Type
 
@@ -21,9 +20,6 @@ from archive_agent.ai.AiManager import AiManager
 
 from archive_agent.ai_provider.ai_provider_registry import ai_provider_registry
 from archive_agent.ai_provider.AiProvider import AiProvider
-
-
-logger = logging.getLogger(__name__)
 
 
 class ContextManager:
@@ -136,7 +132,7 @@ class ContextManager:
             )
 
         ai_server_url = self.config.data[self.config.AI_SERVER_URL]
-        logger.info(f"Using AI provider: '{ai_provider_name}' @ {ai_server_url}")
+        self.cli.logger.info(f"Using AI provider: '{ai_provider_name}' @ {ai_server_url}")
 
         ai_provider_class = ai_provider_registry[ai_provider_name]["class"]
         return ai_provider_class
