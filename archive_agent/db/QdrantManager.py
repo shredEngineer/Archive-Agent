@@ -22,7 +22,7 @@ from qdrant_client.models import (
     ScoredPoint,
 )
 
-from archive_agent.ai.AiManager import AiManager
+from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.ai.query.AiQuery import AiQuery, QuerySchema
 from archive_agent.data.FileData import FileData
 from archive_agent.core.CliManager import CliManager
@@ -55,7 +55,7 @@ class QdrantManager:
     def __init__(
             self,
             cli: CliManager,
-            ai: AiManager,
+            ai_factory: AiManagerFactory,
             server_url: str,
             collection: str,
             vector_size: int,
@@ -68,7 +68,7 @@ class QdrantManager:
         """
         Initialize Qdrant manager.
         :param cli: CLI manager.
-        :param ai: AI manager.
+        :param ai_factory: AI manager factory.
         :param server_url: Server URL (ignored if `ARCHIVE_AGENT_QDRANT_IN_MEMORY` is set).
         :param collection: Collection name.
         :param vector_size: Vector size.
@@ -78,7 +78,8 @@ class QdrantManager:
         :param expand_chunks_radius: Number of preceding and following chunks to prepend and append to each reranked chunk.
         """
         self.cli = cli
-        self.ai = ai
+
+        self.ai_factory = ai_factory
 
         if os.environ.get("ARCHIVE_AGENT_QDRANT_IN_MEMORY", False):
             logger.info("'ARCHIVE_AGENT_QDRANT_IN_MEMORY' is set; connecting to in-memory Qdrant server.")
@@ -263,7 +264,8 @@ class QdrantManager:
         """
         self.cli.format_question(question)
 
-        vector = self.ai.embed(question)
+        ai = self.ai_factory.get_ai()
+        vector = ai.embed(question)
 
         try:
             response = await self.retry_manager.retry_async(
@@ -291,7 +293,8 @@ class QdrantManager:
                 for index, point in enumerate(points)
             }
 
-            reranked_schema = self.ai.rerank(question=question, indexed_chunks=indexed_chunks)
+            ai = self.ai_factory.get_ai()
+            reranked_schema = ai.rerank(question=question, indexed_chunks=indexed_chunks)
 
             if not reranked_schema.is_rejected:
                 reranked_indices = reranked_schema.reranked_indices
@@ -436,7 +439,8 @@ class QdrantManager:
             points = self._dedup_points(points_expanded)
             self.cli.format_expanded_deduped_points(points)
 
-        query_result = self.ai.query(question, points)
+        ai = self.ai_factory.get_ai()
+        query_result = ai.query(question, points)
 
         if query_result.is_rejected:
             logger.warning(f"⚠️ Query rejected: \"{query_result.rejection_reason}\"")

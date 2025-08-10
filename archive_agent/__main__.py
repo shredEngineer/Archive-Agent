@@ -357,14 +357,14 @@ def gui(
     gui_path = pathlib.Path(__file__).parent / "core" / "GuiManager.py"
 
     # Collect script-level args
-    script_args: list[str] = []
+    script_args: List[str] = []
     if nocache:
         script_args.append("--nocache")
     if verbose:
         script_args.append("--verbose")
 
     # Build command: put `--` before args so Streamlit forwards them to the script
-    cmd: list[str] = [sys.executable, "-m", "streamlit", "run", str(gui_path)]
+    cmd: List[str] = [sys.executable, "-m", "streamlit", "run", str(gui_path)]
     if script_args:
         cmd.append("--")
         cmd.extend(script_args)

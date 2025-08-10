@@ -16,8 +16,6 @@ from archive_agent.watchlist.WatchlistManager import WatchlistManager
 from archive_agent.db.QdrantManager import QdrantManager
 from archive_agent.core.CommitManager import CommitManager
 
-from archive_agent.ai.AiManager import AiManager
-
 from archive_agent.ai_provider.ai_provider_registry import ai_provider_registry
 from archive_agent.ai_provider.AiProvider import AiProvider
 
@@ -84,12 +82,9 @@ class ContextManager:
             server_url=self.config.data[self.config.AI_SERVER_URL],
         )
 
-        # "Base" AI manager used by QdrantManager for search and query
-        self.ai_base: AiManager = self.ai_factory.get_ai()
-
         self.qdrant = QdrantManager(
             cli=self.cli,
-            ai=self.ai_base,
+            ai_factory=self.ai_factory,
             server_url=self.config.data[self.config.QDRANT_SERVER_URL],
             collection=self.config.data[self.config.QDRANT_COLLECTION],
             vector_size=self.config.data[self.config.AI_VECTOR_SIZE],
@@ -155,9 +150,4 @@ class ContextManager:
         """
         Show AI token usage.
         """
-
-        # Add base AI usage to CLI total usage stats
-        for category in ['chunk', 'embed', 'rerank', 'query', 'vision']:
-            self.cli.ai_usage_stats[category] += self.ai_base.ai_usage_stats[category]
-
         self.cli.usage()
