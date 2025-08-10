@@ -691,13 +691,13 @@ To bypass the [AI cache](#ai-cache) (embedding, reranking) for this query, pass 
 
 **Archive Agent** exposes these tools via MCP:
 
-| MCP tool            | Equivalent CLI command(s) | Argument(s) | Description                                     |
-|---------------------|---------------------------|-------------|-------------------------------------------------|
-| `get_patterns`      | `patterns`                | None        | Get the list of included / excluded patterns.   |
-| `get_files_tracked` | `track` and then `list`   | None        | Get the list of tracked files.                  |
-| `get_files_changed` | `track` and then `diff`   | None        | Get the list of changed files.                  |
-| `get_search_result` | `search`                  | `question`  | Get the list of files relevant to the question. |
-| `get_answer_rag`    | `query`                   | `question`  | Get answer to question using RAG.               |
+| MCP tool            | Equivalent CLI command(s) | Argument(s) | Implementation | Description                                     |
+|---------------------|---------------------------|-------------|----------------|-------------------------------------------------|
+| `get_patterns`      | `patterns`                | None        | Synchronous    | Get the list of included / excluded patterns.   |
+| `get_files_tracked` | `track` and then `list`   | None        | Synchronous    | Get the list of tracked files.                  |
+| `get_files_changed` | `track` and then `diff`   | None        | Synchronous    | Get the list of changed files.                  |
+| `get_search_result` | `search`                  | `question`  | Asynchronous   | Get the list of files relevant to the question. |
+| `get_answer_rag`    | `query`                   | `question`  | Asynchronous   | Get answer to question using RAG.               |
 
 📌 **Note:** These commands are **read-only**, preventing the AI from changing your Qdrant database.
 
