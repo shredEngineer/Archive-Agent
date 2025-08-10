@@ -184,7 +184,7 @@ def commit(
         verbose: bool = typer.Option(
             False,
             "--verbose",
-            help="Show additional chunking and embedding information."
+            help="Show additional information (vision, chunking, embedding)."
         ),
 ) -> None:
     """
@@ -214,7 +214,7 @@ def update(
         verbose: bool = typer.Option(
             False,
             "--verbose",
-            help="Show additional chunking and embedding information."
+            help="Show additional information (vision, chunking, embedding)."
         ),
 ) -> None:
     """
@@ -245,7 +245,7 @@ def search(
         verbose: bool = typer.Option(
             False,
             "--verbose",
-            help="Show additional embedding and reranking information."
+            help="Show additional information (embedding, retrieval, reranking)."
         ),
 ) -> None:
     """
@@ -274,7 +274,7 @@ def query(
         verbose: bool = typer.Option(
             False,
             "--verbose",
-            help="Show additional embedding and reranking information."
+            help="Show additional information (embedding, retrieval, reranking, querying)."
         ),
         to_json: str = typer.Option(
             None,
@@ -324,13 +324,29 @@ def query(
 
 
 @app.command()
-def gui() -> None:
+def gui(
+    nocache: bool = typer.Option(
+        False,
+        "--nocache",
+        help="Invalidate the AI cache for this query."
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        help="Show additional information (embedding, retrieval, reranking, querying)."
+    ),
+) -> None:
     """
     Launch browser-based GUI.
 
-    This runs Streamlit via the current Python interpreter to ensure we use the
-    environment created by ``uv sync`` / ``uv run`` rather than relying on a
-    globally installed ``uv`` or ``streamlit``.
+    This runs Streamlit via the current Python interpreter so we use the
+    environment created by ``uv sync`` / ``uv run`` rather than a global install.
+
+    Notes
+    -----
+    Streamlit consumes its own CLI flags. To forward flags to the target script,
+    insert ``--`` after the script path; everything following is passed through
+    in ``sys.argv`` of the Streamlit app.
     """
     logger.info("💡 GUI is starting…")
 
@@ -340,20 +356,39 @@ def gui() -> None:
 
     gui_path = pathlib.Path(__file__).parent / "core" / "GuiManager.py"
 
-    # Run "python -m streamlit run <GuiManager.py>" within the *current* venv.
-    # ``check=True`` so we fail fast and propagate the exit code.
-    subprocess.run(
-        [sys.executable, "-m", "streamlit", "run", str(gui_path)],
-        check=True,
-    )
+    # Collect script-level args
+    script_args: list[str] = []
+    if nocache:
+        script_args.append("--nocache")
+    if verbose:
+        script_args.append("--verbose")
+
+    # Build command: put `--` before args so Streamlit forwards them to the script
+    cmd: list[str] = [sys.executable, "-m", "streamlit", "run", str(gui_path)]
+    if script_args:
+        cmd.append("--")
+        cmd.extend(script_args)
+
+    subprocess.run(cmd, check=True)
 
 
 @app.command()
-def mcp() -> None:
+def mcp(
+        nocache: bool = typer.Option(
+            False,
+            "--nocache",
+            help="Invalidate the AI cache for this query."
+        ),
+        verbose: bool = typer.Option(
+            False,
+            "--verbose",
+            help="Show additional information (embedding, retrieval, reranking, querying)."
+        ),
+) -> None:
     """
     Start MCP server.
     """
-    context = ContextManager(verbose=True)
+    context = ContextManager(invalidate_cache=nocache, verbose=verbose)
 
     logger.info("💡 MCP is starting…")
 

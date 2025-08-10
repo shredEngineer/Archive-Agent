@@ -2,6 +2,7 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import logging
+import sys
 from pathlib import Path
 import asyncio
 
@@ -23,13 +24,19 @@ class GuiManager:
     GUI manager.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+            self,
+            invalidate_cache: bool = False,
+            verbose: bool = False,
+    ) -> None:
         """
         Initialize GUI manager.
+        :param invalidate_cache: Invalidate cache if enabled, probe cache otherwise.
+        :param verbose: Set CLI verbosity.
         """
         st.set_page_config(page_title="Archive Agent", page_icon="⚡", layout="centered")
 
-        self.context = ContextManager(verbose=True)
+        self.context = ContextManager(invalidate_cache=invalidate_cache, verbose=verbose)
 
     def run(self) -> None:
         """
@@ -119,5 +126,13 @@ class GuiManager:
 
 
 if __name__ == '__main__':
-    gui = GuiManager()
+    is_nocache = False
+    is_verbose = False
+    for arg in sys.argv[1:]:
+        if arg == "--nocache":
+            is_nocache = True
+        elif arg == "--verbose":
+            is_verbose = True
+
+    gui = GuiManager(invalidate_cache=is_nocache, verbose=is_verbose)
     gui.run()

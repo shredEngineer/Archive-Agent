@@ -582,7 +582,7 @@ To sync changes to your files with the Qdrant database, run this:
 archive-agent commit
 ```
 
-To see additional information on chunking and embedding, pass the `--verbose` option.
+To see additional information (vision, chunking, embedding), pass the `--verbose` option.
 
 To bypass the [AI cache](#ai-cache) (vision, chunking, embedding) for this commit, pass the `--nocache` option.
 
@@ -603,7 +603,7 @@ To `track` and then `commit` in one go, run this:
 archive-agent update
 ```
 
-To see additional information on chunking and embedding, pass the `--verbose` option.
+To see additional information (vision, chunking, embedding), pass the `--verbose` option.
 
 To bypass the [AI cache](#ai-cache) (vision, chunking, embedding) for this commit, pass the `--nocache` option.
 
@@ -617,7 +617,7 @@ Lists files relevant to the question.
 
 📌 **Note:** **Always use quotes** for the question argument, **or skip it** to get an interactive prompt.
 
-To see additional information on embedding, retrieval, reranking and querying, pass the `--verbose` option.
+To see additional information (embedding, retrieval, reranking), pass the `--verbose` option.
 
 To bypass the [AI cache](#ai-cache) (embedding, reranking) for this search, pass the `--nocache` option.
 
@@ -631,7 +631,7 @@ Answers your question using RAG.
 
 📌 **Note:** **Always use quotes** for the question argument, **or skip it** to get an interactive prompt.
 
-To see additional information on embedding, retrieval, reranking and querying, pass the `--verbose` option.
+To see additional information (embedding, retrieval, reranking, querying), pass the `--verbose` option.
 
 To bypass the [AI cache](#ai-cache) (embedding, reranking) for this query, pass the `--nocache` option.
 
@@ -660,7 +660,9 @@ To launch the **Archive Agent** GUI in your browser, run this:
 archive-agent gui
 ```
 
-This command enables verbose output by default.
+To see additional information (embedding, retrieval, reranking, querying), pass the `--verbose` option.
+
+To bypass the [AI cache](#ai-cache) (embedding, reranking) for this query, pass the `--nocache` option.
 
 📌 **Note:** Press `CTRL+C` in the console to close the GUI server.
 
@@ -672,7 +674,9 @@ To start the **Archive Agent** MCP server, run this:
 archive-agent mcp
 ```
 
-This command enables verbose output by default.
+To see additional information (embedding, retrieval, reranking, querying), pass the `--verbose` option.
+
+To bypass the [AI cache](#ai-cache) (embedding, reranking) for this query, pass the `--nocache` option.
 
 📌 **Note:** Press `CTRL+C` in the console to close the MCP server.
 
