@@ -6,6 +6,7 @@ Qdrant Path Renaming Tool
 import sys
 import logging
 from typing import List, Tuple, Optional
+import asyncio
 
 # Set up minimal logging to avoid spam
 logging.basicConfig(level=logging.WARNING)
@@ -60,11 +61,13 @@ def step1_get_source_prefix_and_find_points(qdrant) -> Tuple[str, List, List[str
         
         # Find matching points
         try:
-            scroll_result = qdrant.qdrant.scroll(
-                collection_name=qdrant.collection,
-                scroll_filter=Filter(must=[]),  # Get all points
-                limit=1_000_000_000,  # Large limit to get all points
-                with_payload=True,
+            scroll_result = asyncio.run(
+                qdrant.qdrant.scroll(
+                    collection_name=qdrant.collection,
+                    scroll_filter=Filter(must=[]),  # Get all points
+                    limit=1_000_000_000,  # Large limit to get all points
+                    with_payload=True,
+                )
             )
             
             all_points = scroll_result[0]
@@ -203,10 +206,12 @@ def step4_update_paths(qdrant, source_prefix: str, target_prefix: str, matching_
             updated_payload['file_path'] = new_path
             
             # Update the point payload only
-            qdrant.qdrant.set_payload(
-                collection_name=qdrant.collection,
-                payload=updated_payload,
-                points=[point.id]
+            asyncio.run(
+                qdrant.qdrant.set_payload(
+                    collection_name=qdrant.collection,
+                    payload=updated_payload,
+                    points=[point.id]
+                )
             )
             updated_count += 1
             

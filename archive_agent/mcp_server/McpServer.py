@@ -80,7 +80,7 @@ async def get_search_result(question: str) -> Dict[str, Any]:
     """
     global _context
     assert _context is not None  # makes pyright happy
-    points: List[ScoredPoint] = _context.qdrant.search(question)
+    points: List[ScoredPoint] = await _context.qdrant.search(question)
     return {
         parse_payload(point.payload).file_path: point.score
         for point in points
@@ -103,7 +103,7 @@ async def get_answer_rag(question: str) -> Dict[str, Any]:
     """
     global _context
     assert _context is not None  # makes pyright happy
-    query_result, _answer = _context.qdrant.query(question)
+    query_result, _answer = await _context.qdrant.query(question)
     query_result = cast(QuerySchema, query_result)
 
     return {

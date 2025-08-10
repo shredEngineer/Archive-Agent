@@ -2,6 +2,7 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import logging
+import asyncio
 
 import typer
 
@@ -132,7 +133,7 @@ class CommitManager:
         for file_data in tracked_unprocessable:
             logger.warning(f"IGNORING unprocessable {format_file(file_data.file_path)}")
             if file_data.file_meta['diff'] == self.watchlist.DIFF_REMOVED:
-                _success = self.qdrant.remove(file_data)
+                _success = asyncio.run(self.qdrant.remove(file_data))
                 self.watchlist.diff_mark_resolved(file_data)
 
         files_to_process_in_parallel = [
@@ -150,12 +151,12 @@ class CommitManager:
                 continue
 
             if file_data.file_meta['diff'] == self.watchlist.DIFF_ADDED:
-                if self.qdrant.add(file_data):
+                if asyncio.run(self.qdrant.add(file_data)):
                     self.watchlist.diff_mark_resolved(file_data)
             elif file_data.file_meta['diff'] == self.watchlist.DIFF_CHANGED:
-                if self.qdrant.change(file_data):
+                if asyncio.run(self.qdrant.change(file_data)):
                     self.watchlist.diff_mark_resolved(file_data)
 
         for file_data in files_to_process_sequentially:
-            if self.qdrant.remove(file_data):
+            if asyncio.run(self.qdrant.remove(file_data)):
                 self.watchlist.diff_mark_resolved(file_data)

@@ -8,8 +8,9 @@ import logging
 from typing import List, Tuple, Dict
 import sys
 import json
+import asyncio
 
-from qdrant_client import QdrantClient
+from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import (
     VectorParams,
     Distance,
@@ -81,13 +82,13 @@ class QdrantManager:
 
         if os.environ.get("ARCHIVE_AGENT_QDRANT_IN_MEMORY", False):
             logger.info("'ARCHIVE_AGENT_QDRANT_IN_MEMORY' is set; connecting to in-memory Qdrant server.")
-            self.qdrant = QdrantClient(
+            self.qdrant = AsyncQdrantClient(
                 location=":memory:",
                 timeout=QdrantManager.QDRANT_REQUEST_TIMEOUT_S,
             )
         else:
             logger.info(f"Connecting to Qdrant server: '{server_url}'")
-            self.qdrant = QdrantClient(
+            self.qdrant = AsyncQdrantClient(
                 url=server_url,
                 timeout=QdrantManager.QDRANT_REQUEST_TIMEOUT_S,
             )
@@ -101,22 +102,28 @@ class QdrantManager:
 
         self.retry_manager = RetryManager(**QdrantManager.QDRANT_RETRY_KWARGS)
 
+        asyncio.run(self.async_connect())
+
+    async def async_connect(self) -> None:
+        """
+        Connect to Qdrant collection.
+        """
         try:
-            exists = self.retry_manager.retry(
+            exists = await self.retry_manager.retry_async(
                 func=self.qdrant.collection_exists,
-                kwargs={"collection_name": collection}
+                kwargs={"collection_name": self.collection}
             )
             if not exists:
-                logger.info(f"Creating new Qdrant collection: '{collection}' (vector size: {vector_size})")
-                self.retry_manager.retry(
+                logger.info(f"Creating new Qdrant collection: '{self.collection}' (vector size: {self.vector_size})")
+                await self.retry_manager.retry_async(
                     func=self.qdrant.create_collection,
                     kwargs={
-                        "collection_name": collection,
-                        "vectors_config": VectorParams(size=vector_size, distance=Distance.COSINE),
+                        "collection_name": self.collection,
+                        "vectors_config": VectorParams(size=self.vector_size, distance=Distance.COSINE),
                     }
                 )
             else:
-                logger.info(f"Connected to Qdrant collection: '{collection}'")
+                logger.info(f"Connected to Qdrant collection: '{self.collection}'")
         except Exception as e:
             logger.error(
                 f"Failed to connect to Qdrant collection: {e}\n"
@@ -124,7 +131,7 @@ class QdrantManager:
             )
             raise typer.Exit(code=1)
 
-    def add(self, file_data: FileData, quiet: bool = False) -> bool:
+    async def add(self, file_data: FileData, quiet: bool = False) -> bool:
         """
         Add file to Qdrant collection.
         :param file_data: File data.
@@ -153,7 +160,7 @@ class QdrantManager:
             )
 
             try:
-                self.retry_manager.retry(
+                await self.retry_manager.retry_async(
                     func=self.qdrant.upsert,
                     kwargs={
                         "collection_name": self.collection,
@@ -169,7 +176,7 @@ class QdrantManager:
         logger.info(f"({len(file_data.points)}) vector(s) added")
         return True
 
-    def remove(self, file_data: FileData, quiet: bool = False) -> bool:
+    async def remove(self, file_data: FileData, quiet: bool = False) -> bool:
         """
         Remove file from Qdrant collection.
         :param file_data: File data.
@@ -179,7 +186,7 @@ class QdrantManager:
         logger.debug(f"Counting chunks for {format_file(file_data.file_path)}")
 
         try:
-            count_result = self.retry_manager.retry(
+            count_result = await self.retry_manager.retry_async(
                 func=self.qdrant.count,
                 kwargs={
                     "collection_name": self.collection,
@@ -208,7 +215,7 @@ class QdrantManager:
             logger.info(f"- REMOVING ({count}) chunk(s) of {format_file(file_data.file_path)}")
 
         try:
-            self.retry_manager.retry(
+            await self.retry_manager.retry_async(
                 func=self.qdrant.delete,
                 kwargs={
                     "collection_name": self.collection,
@@ -230,7 +237,7 @@ class QdrantManager:
 
         return True
 
-    def change(self, file_data: FileData) -> bool:
+    async def change(self, file_data: FileData) -> bool:
         """
         Change file in Qdrant collection.
         :param file_data: File data.
@@ -238,17 +245,17 @@ class QdrantManager:
         """
         logger.info(f"- CHANGING {format_file(file_data.file_path)}")
 
-        successful_remove = self.remove(file_data, quiet=True)
+        successful_remove = await self.remove(file_data, quiet=True)
         if not successful_remove:
             return False
 
-        successful_add = self.add(file_data, quiet=True)
+        successful_add = await self.add(file_data, quiet=True)
         if not successful_add:
             return False
 
         return True
 
-    def search(self, question: str) -> List[ScoredPoint]:
+    async def search(self, question: str) -> List[ScoredPoint]:
         """
         Get reranked points relevant to the question.
         :param question: Question.
@@ -259,7 +266,7 @@ class QdrantManager:
         vector = self.ai.embed(question)
 
         try:
-            response = self.retry_manager.retry(
+            response = await self.retry_manager.retry_async(
                 func=self.qdrant.query_points,
                 kwargs={
                     "collection_name": self.collection,
@@ -303,7 +310,7 @@ class QdrantManager:
 
         return points
 
-    def _get_points(self, file_path: str, chunk_indices: List[int]) -> List[ScoredPoint]:
+    async def _get_points(self, file_path: str, chunk_indices: List[int]) -> List[ScoredPoint]:
         """
         Get points with matching `file_path` and `chunk_index` in `chunk_indices`.
         :param file_path: File path.
@@ -314,7 +321,7 @@ class QdrantManager:
             return []
 
         try:
-            response = self.retry_manager.retry(
+            response = await self.retry_manager.retry_async(
                 func=self.qdrant.query_points,
                 kwargs={
                     "collection_name": self.collection,
@@ -350,7 +357,7 @@ class QdrantManager:
 
         return points
 
-    def _expand_points(self, points: List[ScoredPoint]) -> List[ScoredPoint]:
+    async def _expand_points(self, points: List[ScoredPoint]) -> List[ScoredPoint]:
         """
         Expand points by adding preceding and following chunks.
         :param points: Points to expand.
@@ -361,7 +368,7 @@ class QdrantManager:
         for point in points:
             model = parse_payload(point.payload)
             points_expanded.extend(
-                self._get_points(
+                await self._get_points(
                     file_path=model.file_path,
                     chunk_indices=[
                         index for index in range(
@@ -375,7 +382,7 @@ class QdrantManager:
             points_expanded.append(point)
 
             points_expanded.extend(
-                self._get_points(
+                await self._get_points(
                     file_path=model.file_path,
                     chunk_indices=[
                         index for index in range(
@@ -416,16 +423,16 @@ class QdrantManager:
 
         return unique_points
 
-    def query(self, question: str) -> Tuple[QuerySchema, str]:
+    async def query(self, question: str) -> Tuple[QuerySchema, str]:
         """
         Get answer to question using RAG.
         :param question: Question.
         :return: (QuerySchema, formatted answer)
         """
-        points = self.search(question=question)
+        points = await self.search(question=question)
 
         if self.expand_chunks_radius > 0:  # Expand points
-            points_expanded = self._expand_points(points)
+            points_expanded = await self._expand_points(points)
             points = self._dedup_points(points_expanded)
             self.cli.format_expanded_deduped_points(points)
 
@@ -440,13 +447,13 @@ class QdrantManager:
 
         return query_result, answer_text
 
-    def get_stats(self) -> Dict[str, int]:
+    async def get_stats(self) -> Dict[str, int]:
         """
         Get stats, e.g. files and chunks counts.
         :return: Dict.
         """
         try:
-            count_result = self.retry_manager.retry(
+            count_result = await self.retry_manager.retry_async(
                 func=self.qdrant.count,
                 kwargs={
                     "collection_name": self.collection,
@@ -459,7 +466,7 @@ class QdrantManager:
             )
 
             # Get unique file paths using scroll with distinct field
-            scroll_result = self.retry_manager.retry(
+            scroll_result = await self.retry_manager.retry_async(
                 func=self.qdrant.scroll,
                 kwargs={
                     "collection_name": self.collection,

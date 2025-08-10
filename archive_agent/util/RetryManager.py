@@ -1,12 +1,13 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
+import asyncio
 import typer
 import time
 import requests
 import traceback
 import logging
-from typing import Callable, Optional, Any, Dict
+from typing import Callable, Optional, Any, Dict, NoReturn
 
 from archive_agent.ai_provider.AiProviderError import AiProviderError
 
@@ -27,6 +28,29 @@ class RetryManager:
 
     Catches common exceptions from OpenAI and requests.
     """
+
+    # Central list of retryable exceptions to avoid duplication in sync/async paths.
+    _RETRY_EXCEPTIONS = (
+        # AiProvider
+        AiProviderError,
+
+        # openai
+        OpenAIError,
+
+        # ollama
+        RequestError, ResponseError,
+
+        # TODO: Handle errors of any newly introduced AI providers
+
+        # Qdrant
+        ResponseHandlingException,
+        UnexpectedResponse,
+        ReadTimeout,
+        TimeoutException,
+
+        # low-level
+        requests.exceptions.RequestException,
+    )
 
     def __init__(
             self,
@@ -81,6 +105,47 @@ class RetryManager:
         self.backoff_delay = min(self.backoff_delay * self.backoff_exponent, self.delay_max)
         self.fail_budget -= 1
 
+    async def apply_predelay_async(self) -> None:
+        """
+        Apply fixed delay before the first attempt asynchronously.
+        """
+        if self.predelay > 0:
+            logger.debug(f"Waiting for {self.predelay} seconds (fixed predelay) …")
+            await asyncio.sleep(self.predelay)
+
+    async def apply_delay_async(self) -> None:
+        """
+        Apply exponential backoff delay between attempts asynchronously.
+        """
+        logger.warning(f"Waiting for {self.backoff_delay} seconds (exponential backoff) …")
+        await asyncio.sleep(self.backoff_delay)
+        self.backoff_delay = min(self.backoff_delay * self.backoff_exponent, self.delay_max)
+        self.fail_budget -= 1
+
+    def _compute_attempt(self) -> int:
+        """
+        Compute the current attempt index (1-based) for logging.
+        """
+        return self.retries - self.fail_budget + 1
+
+    def _log_retry_attempt(self, e: Exception) -> None:
+        """
+        Log a standardized retry attempt message and print a stack for context.
+        """
+        traceback.print_stack()
+        attempt = self._compute_attempt()
+        logger.warning(f"Attempt {attempt} of {self.retries} failed: {e}")
+
+    # noinspection PyMethodMayBeStatic
+    def _abort(self) -> NoReturn:
+        """
+        Log the terminal failure and exit the process with error code 1.
+
+        This function never returns.
+        """
+        logger.error("All attempts failed – not recoverable")
+        raise typer.Exit(code=1)
+
     def retry(self, func: Callable[..., Any], kwargs: Optional[Dict[str, Any]] = None) -> Any:
         """
         Attempt to call the given function until it completes without raising an exception,
@@ -102,35 +167,45 @@ class RetryManager:
                 self.reset_backoff()
                 return result
 
-            except (
-                    # AiProvider
-                    AiProviderError,
-
-                    # openai
-                    OpenAIError,
-
-                    # ollama
-                    RequestError, ResponseError,
-
-                    # TODO: Handle errors of any newly introduced AI providers
-
-                    # Qdrant
-                    ResponseHandlingException,
-                    UnexpectedResponse,
-                    ReadTimeout,
-                    TimeoutException,
-
-                    # low-level
-                    requests.exceptions.RequestException,
-            ) as e:
-                traceback.print_stack()
-                attempt = self.retries - self.fail_budget + 1
-                logger.warning(f"Attempt {attempt} of {self.retries} failed: {e}")
+            # TODO: Handle errors of any newly introduced AI providers
+            except self._RETRY_EXCEPTIONS as e:
+                self._log_retry_attempt(e)
                 self.apply_delay()
 
             except Exception as e:
                 logger.exception(f"Uncaught Exception `{type(e).__name__}`: {e}")
                 raise typer.Exit(code=1)
 
-        logger.error("All attempts failed – not recoverable")
-        raise typer.Exit(code=1)
+        self._abort()
+
+    async def retry_async(self, func: Callable[..., Any], kwargs: Optional[Dict[str, Any]] = None) -> Any:
+        """
+        Asynchronous variant of :meth:`retry` using ``asyncio.sleep`` and awaiting the
+        provided callable.
+
+        :param func: Callable to execute with retries.
+        :param kwargs: Optional keyword arguments passed to the callable.
+        :return: The result returned by the callable.
+        :raises typer.Exit: If all attempts raise exceptions or a non-recoverable exception occurs.
+        """
+        if kwargs is None:
+            kwargs = dict()
+
+        await self.apply_predelay_async()
+
+        while self.fail_budget > 0:
+            try:
+                result = await func(**kwargs)
+                self.reset_backoff()
+                return result
+
+            # TODO: Handle errors of any newly introduced AI providers
+            except self._RETRY_EXCEPTIONS as e:
+                self._log_retry_attempt(e)
+                await self.apply_delay_async()
+
+            except Exception as e:
+                logger.exception(f"Uncaught Exception `{type(e).__name__}`: {e}")
+                raise typer.Exit(code=1)
+
+        self._abort()

@@ -9,6 +9,7 @@ with Informer("Starting…"):
     import logging
     import subprocess
     import json
+    import asyncio
     from typing import List
 
     from archive_agent.core.ContextManager import ContextManager
@@ -257,7 +258,7 @@ def search(
     if question is None:
         question = context.cli.prompt("🧠 Ask Archive Agent…", is_cmd=True)
 
-    _points = context.qdrant.search(question)
+    _points = asyncio.run(context.qdrant.search(question))
 
     context.usage()
 
@@ -296,7 +297,7 @@ def query(
     if question is None:
         question = context.cli.prompt("🧠 Ask Archive Agent…", is_cmd=True)
 
-    _query_result, _answer_text = context.qdrant.query(question)
+    _query_result, _answer_text = asyncio.run(context.qdrant.query(question))
 
     # Handle JSON output options
     json_filename = None

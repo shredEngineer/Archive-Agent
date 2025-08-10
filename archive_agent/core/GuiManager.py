@@ -3,6 +3,7 @@
 
 import logging
 from pathlib import Path
+import asyncio
 
 import streamlit as st
 
@@ -52,7 +53,7 @@ class GuiManager:
         :param question: Question.
         :return: Answer.
         """
-        query_result, answer_text = self.context.qdrant.query(question)
+        query_result, answer_text = asyncio.run(self.context.qdrant.query(question))
         if query_result.is_rejected:
             return f"**Query rejected:** {query_result.rejection_reason}"
         else:
@@ -62,7 +63,7 @@ class GuiManager:
         """
         Render GUI with centered image and search form.
         """
-        stats = self.context.qdrant.get_stats()
+        stats = asyncio.run(self.context.qdrant.get_stats())
         files_count = stats['files_count']
         chunks_count = stats['chunks_count']
 
