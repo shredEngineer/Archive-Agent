@@ -1,35 +1,6 @@
 #!/usr/bin/env -S uv run python
 """
-Qdrant Path Renaming Tool for Archive Agent
-
-This tool allows you to rename file path prefixes in the Qdrant vector database.
-It connects to the currently active Archive Agent profile and collection.
-
-Usage:
-    uv run python qdrant-rename-paths.py
-    OR
-    ./qdrant-rename-paths.py (if executable)
-
-The tool will interactively prompt you for:
-1. Source path prefix to find
-2. Target path prefix to replace with
-3. Confirmation before making changes
-
-Features:
-- Uses existing Archive Agent infrastructure for Qdrant connection
-- Shows preview of changes before execution
-- Safe interactive workflow with multiple confirmation steps
-- Updates all matching file paths in the collection
-
-Safety:
-- Shows preview of changes before execution
-- Allows aborting at any step
-- Validates path prefixes before processing
-
-Limitations:
-- This tool will NOT update the tracked files. You need to update your watchlist using manual search and replace.
-- This tool will NOT rename the `file://`-prefixed names contained in the chunk context headers. Feel free to patch the script if needed.
-
+Qdrant Path Renaming Tool
 """
 
 import sys
@@ -41,19 +12,10 @@ logging.basicConfig(level=logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("qdrant_client").setLevel(logging.WARNING)
 
-try:
-    # noinspection PyUnusedImports
-    from archive_agent.core.ContextManager import ContextManager
-    # noinspection PyUnusedImports
-    from archive_agent.db.QdrantSchema import parse_payload
-    # noinspection PyUnusedImports
-    from qdrant_client.models import Filter, PointStruct
-    # noinspection PyUnusedImports
-    from qdrant_client.http.exceptions import UnexpectedResponse
-except ImportError as _e:
-    print(f"Error importing Archive Agent modules: {_e}")
-    print("Make sure you're running this from the Archive Agent directory.")
-    sys.exit(1)
+from archive_agent.core.ContextManager import ContextManager
+from archive_agent.db.QdrantSchema import parse_payload
+from qdrant_client.models import Filter
+from qdrant_client.http.exceptions import UnexpectedResponse
 
 
 class Colors:

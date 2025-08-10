@@ -848,34 +848,6 @@ Archive Agent implements comprehensive retry logic with exponential backoff to h
 
 This robust retry system ensures reliable operation even with unstable network conditions or intermittent service issues.
 
-### Qdrant Path Renaming Tool
-
-**Archive Agent** includes a dedicated tool for renaming file path prefixes in the Qdrant database:
-
-```bash
-./qdrant-rename-paths.py
-# OR
-uv run python qdrant-rename-paths.py
-```
-
-This interactive tool is useful when:
-- You've moved your tracked files to a new directory structure
-- You need to update file paths after reorganizing your documents
-- You want to bulk-rename path prefixes without re-indexing all files
-
-**Features:**
-- Safe interactive workflow with preview and confirmation steps
-- Connects to your currently active Archive Agent profile
-- Shows matching files before making changes
-- Updates all affected chunks in the Qdrant collection
-- Preserves all embedding data and metadata
-
-💡 **Good to know:** This tool modifies the Qdrant database directly, so ensure you have backups if working with critical data.
-
-📌 **Note:**
-- This tool will **not** update the tracked files. You need to update your watchlist (see [Archive Agent settings](#archive-agent-settings)) using manual search and replace.
-- This tool will **not** rename the `file://`-prefixed names contained in the chunk context headers. Feel free to patch the script if needed.
-
 ### Code testing and analysis
 
 To run unit tests, check types, and check style, run this:
@@ -883,6 +855,31 @@ To run unit tests, check types, and check style, run this:
 ```bash
 ./audit.sh
 ```
+
+---
+
+## Tools
+
+### Qdrant Path Renaming Tool
+
+To bulk-rename file paths in the currently active Qdrant collection, run this:
+
+```bash
+cd tools/
+
+./qdrant-rename-paths.py
+# OR
+uv run python qdrant-rename-paths.py
+```
+
+Useful after moving files or renaming folders when you don't want to run the `update` command again.
+
+📌 **Note:**
+- This tool modifies the Qdrant database directly — **ensure you have backups if working with critical data**.
+- This tool will **not** update the tracked files. You need to update your watchlist (see [Archive Agent settings](#archive-agent-settings)) using manual search and replace.
+- This tool will **not** rename the `file://`-prefixed names contained in the chunk context headers. Feel free to patch the script if needed.
+
+---
 
 ## Known issues
 
