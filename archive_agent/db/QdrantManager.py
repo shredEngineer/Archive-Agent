@@ -30,8 +30,6 @@ from archive_agent.util.format import format_file
 from archive_agent.db.QdrantSchema import parse_payload
 from archive_agent.util.RetryManager import RetryManager
 
-logger = logging.getLogger(__name__)
-
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
@@ -82,13 +80,13 @@ class QdrantManager:
         self.ai_factory = ai_factory
 
         if os.environ.get("ARCHIVE_AGENT_QDRANT_IN_MEMORY", False):
-            logger.info("'ARCHIVE_AGENT_QDRANT_IN_MEMORY' is set; connecting to in-memory Qdrant server.")
+            self.cli.logger.info("'ARCHIVE_AGENT_QDRANT_IN_MEMORY' is set; connecting to in-memory Qdrant server.")
             self.qdrant = AsyncQdrantClient(
                 location=":memory:",
                 timeout=QdrantManager.QDRANT_REQUEST_TIMEOUT_S,
             )
         else:
-            logger.info(f"Connecting to Qdrant server: '{server_url}'")
+            self.cli.logger.info(f"Connecting to Qdrant server: '{server_url}'")
             self.qdrant = AsyncQdrantClient(
                 url=server_url,
                 timeout=QdrantManager.QDRANT_REQUEST_TIMEOUT_S,
@@ -114,7 +112,7 @@ class QdrantManager:
                 kwargs={"collection_name": self.collection}
             )
             if not exists:
-                logger.info(f"Creating new Qdrant collection: '{self.collection}' (vector size: {self.vector_size})")
+                self.cli.logger.info(f"Creating new Qdrant collection: '{self.collection}' (vector size: {self.vector_size})")
                 await retry_manager.retry_async(
                     func=self.qdrant.create_collection,
                     kwargs={
@@ -123,9 +121,9 @@ class QdrantManager:
                     }
                 )
             else:
-                logger.info(f"Connected to Qdrant collection: '{self.collection}'")
+                self.cli.logger.info(f"Connected to Qdrant collection: '{self.collection}'")
         except Exception as e:
-            logger.error(
+            self.cli.logger.error(
                 f"Failed to connect to Qdrant collection: {e}\n"
                 f"Make sure the Qdrant server is running ('./manage-qdrant.sh start')"
             )
@@ -139,10 +137,10 @@ class QdrantManager:
         :return: True if successful, False otherwise.
         """
         if not quiet:
-            logger.info(f"- ADDING {format_file(file_data.file_path)}")
+            self.cli.logger.info(f"- ADDING {format_file(file_data.file_path)}")
 
         if len(file_data.points) == 0:
-            logger.warning(f"Failed to add EMPTY file")
+            self.cli.logger.warning(f"Failed to add EMPTY file")
             return False
 
         num_points_added = 0
@@ -154,7 +152,7 @@ class QdrantManager:
             payload_json = json.dumps([p.model_dump() for p in points_batch])
             payload_bytes = sys.getsizeof(payload_json)
 
-            logger.info(
+            self.cli.logger.info(
                 f"Adding vector(s) [{i + 1} : {i + len(points_batch)}] / ({total_points}), "
                 f"estimated payload size: {payload_bytes / (1024 * 1024):.2f} MiB"
             )
@@ -169,12 +167,12 @@ class QdrantManager:
                     }
                 )
             except Exception as e:
-                logger.exception(f"Qdrant add failed after retries: {e}")
+                self.cli.logger.exception(f"Qdrant add failed after retries: {e}")
                 return False
 
             num_points_added += len(points_batch)
 
-        logger.info(f"({len(file_data.points)}) vector(s) added")
+        self.cli.logger.info(f"({len(file_data.points)}) vector(s) added")
         return True
 
     async def remove(self, file_data: FileData, quiet: bool = False) -> bool:
@@ -184,7 +182,7 @@ class QdrantManager:
         :param quiet: Quiet output if True.
         :return: True if successful, False otherwise.
         """
-        logger.debug(f"Counting chunks for {format_file(file_data.file_path)}")
+        self.cli.logger.debug(f"Counting chunks for {format_file(file_data.file_path)}")
 
         retry_manager = RetryManager(**QdrantManager.QDRANT_RETRY_KWARGS)
         try:
@@ -205,16 +203,16 @@ class QdrantManager:
             )
             count = count_result.count
         except Exception as e:
-            logger.exception(f"Qdrant count failed after retries: {e}")
+            self.cli.logger.exception(f"Qdrant count failed after retries: {e}")
             return False
 
         if count == 0:
             if not quiet:
-                logger.info(f"- NO CHUNKS to remove for {format_file(file_data.file_path)}")
+                self.cli.logger.info(f"- NO CHUNKS to remove for {format_file(file_data.file_path)}")
             return True
 
         if not quiet:
-            logger.info(f"- REMOVING ({count}) chunk(s) of {format_file(file_data.file_path)}")
+            self.cli.logger.info(f"- REMOVING ({count}) chunk(s) of {format_file(file_data.file_path)}")
 
         retry_manager = RetryManager(**QdrantManager.QDRANT_RETRY_KWARGS)
         try:
@@ -235,7 +233,7 @@ class QdrantManager:
                 }
             )
         except Exception as e:
-            logger.exception(f"Qdrant delete failed after retries: {e}")
+            self.cli.logger.exception(f"Qdrant delete failed after retries: {e}")
             return False
 
         return True
@@ -246,7 +244,7 @@ class QdrantManager:
         :param file_data: File data.
         :return: True if successful, False otherwise.
         """
-        logger.info(f"- CHANGING {format_file(file_data.file_path)}")
+        self.cli.logger.info(f"- CHANGING {format_file(file_data.file_path)}")
 
         successful_remove = await self.remove(file_data, quiet=True)
         if not successful_remove:
@@ -282,7 +280,7 @@ class QdrantManager:
                 }
             )
         except Exception as e:
-            logger.exception(f"Qdrant query failed after retries: {e}")
+            self.cli.logger.exception(f"Qdrant query failed after retries: {e}")
             raise typer.Exit(code=1)
 
         points = response.points
@@ -349,7 +347,7 @@ class QdrantManager:
                 }
             )
         except Exception as e:
-            logger.exception(f"Qdrant query failed after retries: {e}")
+            self.cli.logger.exception(f"Qdrant query failed after retries: {e}")
             raise typer.Exit(code=1)
 
         points = sorted(response.points, key=lambda point: parse_payload(point.payload).chunk_index)
@@ -360,7 +358,7 @@ class QdrantManager:
         }
         indices_missing = set(chunk_indices) - indices_found
         if indices_missing:
-            logger.critical(f"⚠️ Missing chunk(s) for {format_file(file_path)}: {sorted(indices_missing)}")
+            self.cli.logger.critical(f"⚠️ Missing chunk(s) for {format_file(file_path)}: {sorted(indices_missing)}")
 
         return points
 
@@ -426,7 +424,7 @@ class QdrantManager:
         if self.cli.VERBOSE_QUERY:
             for file_path, dups in duplicates_by_file.items():
                 if dups:
-                    logger.info(f"Deduplicated chunks for {format_file(file_path)}: {sorted(dups)}")
+                    self.cli.logger.info(f"Deduplicated chunks for {format_file(file_path)}: {sorted(dups)}")
 
         return unique_points
 
@@ -447,7 +445,7 @@ class QdrantManager:
         query_result = await asyncio.to_thread(ai.query, question, points)
 
         if query_result.is_rejected:
-            logger.warning(f"⚠️ Query rejected: \"{query_result.rejection_reason}\"")
+            self.cli.logger.warning(f"⚠️ Query rejected: \"{query_result.rejection_reason}\"")
 
         answer_text = AiQuery.get_answer_text(query_result)
 
@@ -491,7 +489,7 @@ class QdrantManager:
             unique_files = len({parse_payload(point.payload).file_path for point in scroll_result[0]})
 
         except Exception as e:
-            logger.exception(f"Qdrant count failed after retries: {e}")
+            self.cli.logger.exception(f"Qdrant count failed after retries: {e}")
             raise typer.Exit(code=1)
 
         return {

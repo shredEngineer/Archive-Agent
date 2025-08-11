@@ -1,7 +1,6 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import logging
 import asyncio
 
 import typer
@@ -15,8 +14,6 @@ from archive_agent.data.FileData import FileData
 from archive_agent.db.QdrantManager import QdrantManager
 from archive_agent.util.format import format_file
 from archive_agent.watchlist.WatchlistManager import TrackedFiles, WatchlistManager
-
-logger = logging.getLogger(__name__)
 
 
 class CommitManager:
@@ -66,30 +63,30 @@ class CommitManager:
         # Added files
         added_files = self.watchlist.get_diff_files(self.watchlist.DIFF_ADDED)
         if len(added_files) == 0:
-            logger.info(f"No added files to commit")
+            self.cli.logger.info(f"No added files to commit")
         else:
-            logger.info(f"Committing ({len(added_files)}) added file(s)...")
+            self.cli.logger.info(f"Committing ({len(added_files)}) added file(s)...")
             self.commit_diff(added_files)
 
         # Changed files
         changed_files = self.watchlist.get_diff_files(self.watchlist.DIFF_CHANGED)
         if len(changed_files) == 0:
-            logger.info(f"No changed files to commit")
+            self.cli.logger.info(f"No changed files to commit")
         else:
-            logger.info(f"Committing ({len(changed_files)}) changed file(s)...")
+            self.cli.logger.info(f"Committing ({len(changed_files)}) changed file(s)...")
             self.commit_diff(changed_files)
 
         # Removed files
         removed_files = self.watchlist.get_diff_files(self.watchlist.DIFF_REMOVED)
         if len(removed_files) == 0:
-            logger.info(f"No removed files to commit")
+            self.cli.logger.info(f"No removed files to commit")
         else:
-            logger.info(f"Committing ({len(removed_files)}) removed file(s)...")
+            self.cli.logger.info(f"Committing ({len(removed_files)}) removed file(s)...")
 
             for file in removed_files.keys():
-                logger.info(f"- TO BE REMOVED  {format_file(file)}")
+                self.cli.logger.info(f"- TO BE REMOVED  {format_file(file)}")
 
-            logger.warning(
+            self.cli.logger.warning(
                 f"You are about to remove any data associated with "
                 f"({len(removed_files)}) untracked file(s) "
                 f"from the Qdrant database. "
@@ -98,12 +95,12 @@ class CommitManager:
                 f"👉 Delete files from the Qdrant database?"
             )
             if not confirm:
-                logger.warning(f"({len(removed_files)}) untracked file(s) remain in the Qdrant database")
+                self.cli.logger.warning(f"({len(removed_files)}) untracked file(s) remain in the Qdrant database")
             else:
                 self.commit_diff(removed_files)
 
         if len(added_files) > 0 or len(changed_files) > 0 or len(removed_files) > 0:
-            logger.info(f"✅ Commit completed:")
+            self.cli.logger.info(f"✅ Commit completed:")
             self.cli.logger.info(f"- ({len(added_files)}) file(s) added to Qdrant database")
             self.cli.logger.info(f"- ({len(changed_files)}) file(s) updated in Qdrant database")
             self.cli.logger.info(f"- ({len(removed_files)}) file(s) removed from Qdrant database")
@@ -131,7 +128,7 @@ class CommitManager:
         tracked_processable = [file_data for file_data in tracked_file_data if file_data.is_processable()]
 
         for file_data in tracked_unprocessable:
-            logger.warning(f"IGNORING unprocessable {format_file(file_data.file_path)}")
+            self.cli.logger.warning(f"IGNORING unprocessable {format_file(file_data.file_path)}")
             if file_data.file_meta['diff'] == self.watchlist.DIFF_REMOVED:
                 _success = asyncio.run(self.qdrant.remove(file_data))
                 self.watchlist.diff_mark_resolved(file_data)
@@ -147,7 +144,7 @@ class CommitManager:
 
         for file_data, success in processed_results:
             if not success:
-                logger.warning(f"Failed to process {format_file(file_data.file_path)}")
+                self.cli.logger.warning(f"Failed to process {format_file(file_data.file_path)}")
                 continue
 
             if file_data.file_meta['diff'] == self.watchlist.DIFF_ADDED:
