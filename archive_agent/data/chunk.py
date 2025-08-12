@@ -316,20 +316,27 @@ def _aggregate_ranges(reference_ranges: List[SentenceRange]) -> SentenceRange:
     return r_min, r_max
 
 
-def _format_chunk(file_path: str, header: str, body: str) -> str:
+def _format_chunk(_file_path: str, header: str, body: str) -> str:
     """
     Format chunk.
 
-    :param file_path: File path.
+    :param _file_path: File path.
     :param header: Chunk header.
     :param body: Chunk body.
     :return: Formatted chunk text.
     """
     return "\n".join([
-        f"# {format_file(file_path)}",
+
+        # NOTE: Removed in v11.0.0. Use `tools/qdrant-remove-paths-from-context-headers.py` to remove this from pre-v11.0.0.
+        # f"# {format_file(file_path)}",
+
+        # Context header
         f"# {header}",
         f"",
+
+        # Chunk body
         body,
+
     ])
 
 
@@ -426,7 +433,7 @@ def get_chunks_with_reference_ranges(
 
             body = "\n".join(block_of_sentences[r_start - 1:r_end - 1])
             chunk_text = _format_chunk(
-                file_path=file_path,
+                _file_path=file_path,
                 header=chunk_headers[i],
                 body=body,
             )
@@ -455,7 +462,7 @@ def get_chunks_with_reference_ranges(
             logger.info(f"Appending final carry of ({final_chunk_line_count}) lines; final chunk has ({final_chunk_line_count}) lines")
 
         formatted_carry = _format_chunk(
-            file_path=file_path,
+            _file_path=file_path,
             header=last_carry_header,
             body=carry,
         )

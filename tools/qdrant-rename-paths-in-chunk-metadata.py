@@ -1,6 +1,6 @@
 #!/usr/bin/env -S uv run python
 """
-Qdrant Path Renaming Tool
+Rename file paths in chunk metadata
 """
 
 import sys

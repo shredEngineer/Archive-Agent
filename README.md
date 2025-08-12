@@ -156,7 +156,8 @@ graph LR
     * [Code testing and analysis](#code-testing-and-analysis)
     * [Run Qdrant with in-memory storage](#run-qdrant-with-in-memory-storage)
   * [Tools](#tools)
-    * [Qdrant Path Renaming Tool](#qdrant-path-renaming-tool)
+    * [Rename file paths in chunk metadata](#rename-file-paths-in-chunk-metadata)
+    * [Remove file paths from context headers](#remove-file-paths-from-context-headers)
   * [Known issues](#known-issues)
   * [Licensed under GNU GPL v3.0](#licensed-under-gnu-gpl-v30)
   * [Collaborators welcome](#collaborators-welcome)
@@ -363,6 +364,9 @@ PDF documents often contain small/scattered images related to page style/layout 
 See [Archive Agent settings](#archive-agent-settings): `chunk_lines_block`, `chunk_words_target`
 
 💡 **Good to know:** This **smart chunking** improves the accuracy and effectiveness of the retrieval. 
+
+📌 **Note:** Splitting into sentences may take some time for huge documents.
+There is currently no possibility to show the progress of this step.
 
 ---
 
@@ -592,6 +596,8 @@ To bypass the [AI cache](#ai-cache) (vision, chunking, embedding) for this commi
 - File changed:
   - Different file size
   - Different modification date
+
+The Qdrant database is updated after all files have been ingested. 
 
 📌 **Note:** Don't forget to `track` your files first.
 
@@ -884,16 +890,16 @@ export ARCHIVE_AGENT_QDRANT_IN_MEMORY=1
 
 ## Tools
 
-### Qdrant Path Renaming Tool
+### Rename file paths in chunk metadata
 
-To bulk-rename file paths in the currently active Qdrant collection, run this:
+To bulk-rename file paths in chunk metadata in the currently active Qdrant collection, run this:
 
 ```bash
 cd tools/
 
-./qdrant-rename-paths.py
+./qdrant-rename-paths-in-chunk-metadata.py
 # OR
-uv run python qdrant-rename-paths.py
+uv run python qdrant-rename-paths-in-chunk-metadata.py
 ```
 
 Useful after moving files or renaming folders when you don't want to run the `update` command again.
@@ -901,7 +907,23 @@ Useful after moving files or renaming folders when you don't want to run the `up
 📌 **Note:**
 - This tool modifies the Qdrant database directly — **ensure you have backups if working with critical data**.
 - This tool will **not** update the tracked files. You need to update your watchlist (see [Archive Agent settings](#archive-agent-settings)) using manual search and replace.
-- This tool will **not** rename the `file://`-prefixed names contained in the chunk context headers. Feel free to patch the script if needed.
+
+### Remove file paths from context headers
+
+**Archive Agent** < v11.0.0 included file paths in the chunk context headers; this was a bad design decision that led to skewed retrieval.
+
+To bulk-remove all file paths in context headers in the currently active Qdrant collection, run this:
+
+```bash
+cd tools/
+
+./qdrant-remove-paths-from-chunk-headers.py
+# OR
+uv run python qdrant-remove-paths-from-chunk-headers.py
+```
+
+📌 **Note:**
+- This tool modifies the Qdrant database directly — **ensure you have backups if working with critical data**.
 
 ---
 
