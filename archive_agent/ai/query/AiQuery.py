@@ -103,6 +103,8 @@ class AiQuery:
             "    Make them diverse: e.g., seek clarification, explore alternatives, dive deeper, or apply to related scenarios.",
             "    Include at least one explicitly counterfactual or \"What if\" question.",
             "    Each must be self-contained—do NOT reference 'the answer', 'the context', or prior responses.",
+            "    Each must stand alone as an informative, complete response.",
+            "    **In the question itself include all context required to understand it.**"
             "",
             "- `is_rejected`:",
             "    A Boolean flag. Set `is_rejected: true` ONLY if the context has zero relevant information",
