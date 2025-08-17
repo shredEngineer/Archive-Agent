@@ -39,7 +39,7 @@ class AiManager(RetryManager):
         'retries': 10,
     }
 
-    SCHEMA_RETRY_ATTEMPTS = 10
+    SCHEMA_RETRY_ATTEMPTS = 100
 
     def __init__(
             self,
