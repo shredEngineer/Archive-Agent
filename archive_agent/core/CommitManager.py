@@ -60,6 +60,8 @@ class CommitManager:
         """
         Commit all tracked files.
         """
+        self.cli.logger.info(f"⌛ Preparing documents for ingestion...please stand by")
+
         # Added files
         added_files = self.watchlist.get_diff_files(self.watchlist.DIFF_ADDED)
         if len(added_files) == 0:
