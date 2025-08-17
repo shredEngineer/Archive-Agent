@@ -654,9 +654,7 @@ archive-agent query "Which files mention donuts?" --to-json-auto
 # Creates: Which_files_mention_donuts_.json
 ```
 
-The JSON output follows the `QuerySchema` format
-defined in [`AiQuery.py`](archive_agent/ai/query/AiQuery.py) (tap on link)
-and includes the original question, structured query result, and formatted answer text.
+💡 **Good to know:** The JSON output follows the `QuerySchema` format defined in [`AiQuery.py`](archive_agent/ai/query/AiQuery.py).
 
 ### Launch Archive Agent GUI
 
@@ -708,6 +706,8 @@ To bypass the [AI cache](#ai-cache) (embedding, reranking) for this query, pass 
 📌 **Note:** These commands are **read-only**, preventing the AI from changing your Qdrant database.
 
 💡 **Good to know:** Just type `#get_answer_rag` (e.g.) in your IDE or AI extension to call the tool directly.
+
+💡 **Good to know:** The `#get_answer_rag` output follows the `QuerySchema` format defined in [`AiQuery.py`](archive_agent/ai/query/AiQuery.py).
 
 ---
 

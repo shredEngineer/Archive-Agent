@@ -21,9 +21,8 @@ class AnswerItem(BaseModel):
 
 class QuerySchema(BaseModel):
     """
-    THIS IS THE FORMAT THE JSON FILE WILL HAVE WHEN WRITTEN WITH `archive-agent query --to-json ~/answer.json "Which files mention donuts?`
+    This is the format returned by MCP (`#get_answer_rag`) and for JSON output (`--to-json`, `--to-json-auto`).
     """
-
     question_rephrased: str
     answer_list: List[AnswerItem]
     answer_conclusion: str
