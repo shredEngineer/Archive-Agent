@@ -60,14 +60,13 @@ class CommitManager:
         """
         Commit all tracked files.
         """
-        self.cli.logger.info(f"⌛ Preparing documents for ingestion...please stand by")
-
         # Added files
         added_files = self.watchlist.get_diff_files(self.watchlist.DIFF_ADDED)
         if len(added_files) == 0:
             self.cli.logger.info(f"No added files to commit")
         else:
             self.cli.logger.info(f"Committing ({len(added_files)}) added file(s)...")
+            self.cli.logger.info(f"⌛ Preparing documents for ingestion...please stand by")
             self.commit_diff(added_files)
 
         # Changed files
@@ -76,6 +75,7 @@ class CommitManager:
             self.cli.logger.info(f"No changed files to commit")
         else:
             self.cli.logger.info(f"Committing ({len(changed_files)}) changed file(s)...")
+            self.cli.logger.info(f"⌛ Preparing documents for ingestion...please stand by")
             self.commit_diff(changed_files)
 
         # Removed files
