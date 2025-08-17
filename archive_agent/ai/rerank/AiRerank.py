@@ -1,7 +1,7 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-from typing import List
+from typing import List, Tuple
 
 from pydantic import BaseModel, ConfigDict
 
@@ -65,3 +65,72 @@ class AiRerank:
             "",
             "Question:\n\"\"\"\n" + question + "\n\"\"\"",
         ])
+
+    @staticmethod
+    def validate_permutation(original: List[int], reranked: List[int]) -> Tuple[bool, List[int], List[int], List[int]]:
+        """
+        Validate that *reranked* is a permutation of *original*.
+
+        :param original: Original index list.
+        :param reranked: Proposed reranked index list.
+        :returns: Tuple (is_valid, missing, extra, out_of_range)
+                  where:
+                    - is_valid: True iff sorted(original) == sorted(reranked)
+                    - missing: elements in original but not in reranked
+                    - extra:   elements in reranked but not in original
+                    - out_of_range: elements in reranked not in the closed interval [min(original), max(original)]
+        """
+        original_set = set(original)
+        reranked_set = set(reranked)
+
+        missing = sorted(original_set - reranked_set)
+        extra = sorted(reranked_set - original_set)
+
+        if original:
+            lo, hi = min(original), max(original)
+            out_of_range = sorted([i for i in reranked if (i < lo or i > hi)])
+        else:
+            out_of_range = []
+
+        is_valid = (not missing) and (not extra) and (not out_of_range) and (len(reranked) == len(original))
+        return is_valid, missing, extra, out_of_range
+
+    @staticmethod
+    def repair_permutation(original: List[int], reranked: List[int]) -> List[int]:
+        """
+        Attempt to repair a non-permutation rerank result into a valid permutation.
+
+        Strategy
+        --------
+        1) Drop out-of-range indices and duplicates while preserving first occurrence order.
+        2) Remove any indices not present in *original*.
+        3) Append all *missing* indices (those in *original* but missing from *reranked*)
+           in the order they appear in *original*.
+
+        This keeps the LLM's preference ordering as much as possible while ensuring a
+        correct permutation of *original*.
+
+        :param original: Original index list.
+        :param reranked: Proposed reranked index list.
+        :returns: A repaired list that is guaranteed to be a permutation of *original*,
+                  provided *original* itself is a set-like list of unique ints.
+        """
+        original_set = set(original)
+        seen: set[int] = set()
+        lo, hi = (min(original), max(original)) if original else (0, -1)
+
+        # 1) Drop out-of-range & duplicates; 2) remove items not in original
+        filtered: List[int] = []
+        for i in reranked:
+            if i not in original_set:
+                continue
+            if i < lo or i > hi:
+                continue
+            if i in seen:
+                continue
+            seen.add(i)
+            filtered.append(i)
+
+        # 3) Append missing indices in original order
+        missing_tail = [i for i in original if i not in seen]
+        return filtered + missing_tail

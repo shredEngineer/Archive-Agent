@@ -189,13 +189,35 @@ class AiManager(RetryManager):
                 reranked = rerank_result.reranked_indices
                 expected = list(indexed_chunks.keys())
 
-                if sorted(reranked) != sorted(expected):
+                # First, validate strictly
+                is_valid, missing, extra, oob = AiRerank.validate_permutation(expected, reranked)
+                if not is_valid:
                     self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
-                    raise RuntimeError(
-                        f"Reranked indices are not a valid permutation of original indices:\n"
+
+                    # Auto-repair path for production solidity
+                    repaired = AiRerank.repair_permutation(expected, reranked)
+
+                    # Validate again to be absolutely sure
+                    is_valid2, missing2, extra2, oob2 = AiRerank.validate_permutation(expected, repaired)
+                    if not is_valid2:
+                        raise RuntimeError(
+                            "Reranked indices could not be repaired into a valid permutation:\n"
+                            f"Original: {expected}\n"
+                            f"Reranked: {reranked}\n"
+                            f"Missing: {missing} | Extra: {extra} | Out-of-range: {oob}\n"
+                            f"Repair missing: {missing2} | Repair extra: {extra2} | Repair out-of-range: {oob2}"
+                        )
+
+                    # Log the discrepancy and proceed with repaired indices
+                    self.cli.logger.warning(
+                        "⚠️ Auto-repaired invalid rerank permutation.\n"
                         f"Original: {expected}\n"
-                        f"Reranked: {reranked}"
+                        f"Received: {reranked}\n"
+                        f"Repaired: {repaired}\n"
+                        f"Missing: {missing} | Extra: {extra} | Out-of-range: {oob}"
                     )
+                    # Mutate the schema in-place so downstream users see the corrected order.
+                    rerank_result.reranked_indices = repaired
 
                 return rerank_result
 
