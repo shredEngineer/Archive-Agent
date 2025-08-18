@@ -75,7 +75,7 @@ class ConfigManager(StorageManager, AiProviderKeys):
 
         RERANK_CHUNKS_MAX: 30,
 
-        EXPAND_CHUNKS_RADIUS: 2,
+        EXPAND_CHUNKS_RADIUS: 1,
 
         MAX_WORKERS_INGEST: 4,
         MAX_WORKERS_VISION: 16,
