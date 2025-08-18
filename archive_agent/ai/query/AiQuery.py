@@ -4,13 +4,22 @@
 
 import hashlib
 from logging import Logger
-from typing import List
+from typing import List, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict
 from qdrant_client.http.models import ScoredPoint
 
 from archive_agent.util.format import get_point_reference_info
 from archive_agent.db.QdrantSchema import parse_payload
+
+
+# === Reference repair configuration (module-level) ===
+# Enable/disable soft repair of corrupted 16-char hex reference hashes.
+HASH_REPAIR_ENABLED: bool = True
+# Maximum allowed Hamming distance for a repair to be accepted.
+HASH_REPAIR_MAX_DIST: int = 2
+# Hex charset used for validation (lowercase only; inputs are normalized to lowercase).
+_HEX_CHARS: str = "0123456789abcdef"
 
 
 class AnswerItem(BaseModel):
@@ -179,32 +188,82 @@ class AiQuery:
         :param points: Points.
         :return: Query result with reference designators formatted as human-readable reference infos.
         """
-        # Build a mapping: hash -> ScoredPoint
+        # Build a mapping: hash -> ScoredPoint  (store keys lowercase for robustness)
         points_by_hash = {
-            AiQuery.get_point_hash(point): point
+            AiQuery.get_point_hash(point).lower(): point
             for point in points
             if point.payload is not None
         }
 
-        # Extracts 16-char hash from '<<< 0123456789ABCDEF >>>'
+        # Extracts 16-char token from '<<< 0123456789ABCDEF >>>'
         def extract_hash(ref: str) -> str:
-
             # Let's allow some slack from weaker or overloaded LLMs here...
             hash_str = ref.replace("<<<", "").replace(">>>", "").strip()
-
-            if len(hash_str) == 16 and all(c in "0123456789abcdefABCDEF" for c in hash_str):
+            hash_str = hash_str.lower()
+            if len(hash_str) == 16 and all(c in _HEX_CHARS for c in hash_str):
                 return hash_str
-
             logger.critical(f"⚠️ Invalid reference format: '{ref}'")
-            return ref
+            return hash_str  # Return whatever we found; may be repaired below.
+
+        def hamming_distance(a: str, b: str) -> int:
+            """
+            Compute the Hamming distance of two equal-length strings.
+            Preconditions: len(a) == len(b).
+            """
+            return sum((ch1 != ch2) for ch1, ch2 in zip(a, b))
+
+        def try_repair_hash(maybe_hash: str, max_dist: int) -> Optional[str]:
+            """
+            Attempt to repair a corrupted 16-char hash by nearest-neighbor search
+            in Hamming space over known point hashes.
+
+            :param maybe_hash: The (possibly corrupted) 16-char token extracted from the reference.
+            :param max_dist: Maximum Hamming distance allowed for a repair to be accepted.
+            :return: Repaired lowercase hash if confidently matched; otherwise None.
+            """
+            token = (maybe_hash or "").lower()
+            if len(token) != 16:
+                return None
+
+            # Exact match — nothing to repair.
+            if token in points_by_hash:
+                return token
+
+            best: Optional[Tuple[int, str]] = None
+            for candidate in points_by_hash.keys():
+                dist = hamming_distance(token, candidate)
+                if best is None or dist < best[0]:
+                    best = (dist, candidate)
+                    # Early stopping is intentionally conservative; we keep scanning to avoid ties ambiguity.
+
+            if best is None:
+                return None
+
+            dist, winner = best
+            if dist <= max_dist:
+                logger.warning(f"🔧 Repaired reference hash '{maybe_hash}' -> '{winner}' (Hamming distance={dist}).")
+                return winner
+            return None
 
         for answer in query_result.answer_list:
             for i, chunk_ref in enumerate(answer.chunk_ref_list):
                 hash_id = extract_hash(chunk_ref)
-                point = points_by_hash.get(hash_id)
+                point = points_by_hash.get(hash_id.lower())
                 if point is not None:
                     answer.chunk_ref_list[i] = get_point_reference_info(logger, point, verbose=False)
                 else:
+                    # Attempt a soft repair via Hamming-nearest neighbor within a small radius.
+                    repaired_hash: Optional[str] = None
+                    if HASH_REPAIR_ENABLED:
+                        repaired_hash = try_repair_hash(hash_id, max_dist=HASH_REPAIR_MAX_DIST)
+
+                    if repaired_hash is not None:
+                        repaired_point = points_by_hash.get(repaired_hash)
+                        if repaired_point is not None:
+                            answer.chunk_ref_list[i] = get_point_reference_info(logger, repaired_point, verbose=False)
+                            continue
+
+                    # Last resort — keep previous behavior and preserve the token for debugging.
                     answer.chunk_ref_list[i] = f"??? ({hash_id})"
 
         return query_result
