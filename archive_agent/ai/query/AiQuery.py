@@ -135,7 +135,7 @@ class AiQuery:
             "",
             "Context:\n\"\"\"\n" + context + "\n\"\"\"\n\n",
             "Question:\n\"\"\"\n" + question + "\n\"\"\"",
-        ])
+            ])
 
     @staticmethod
     def get_point_hash(point: ScoredPoint) -> str:
@@ -180,13 +180,22 @@ class AiQuery:
         ])
 
     @staticmethod
-    def format_query_references(logger: Logger, query_result: QuerySchema, points: List[ScoredPoint]) -> QuerySchema:
+    def format_query_references(
+            logger: Logger,
+            query_result: QuerySchema,
+            points: List[ScoredPoint],
+    ) -> QuerySchema:
         """
-        Format reference designators in query result as human-readable references infos.
+        Format reference designators in query result as human-readable reference infos.
+
+        Broken/unresolvable references are **discarded** (not replaced with placeholders)
+        and a failure is logged. Soft repairs (Hamming-nearest within the configured
+        radius) are attempted when enabled.
         :param logger: Logger.
         :param query_result: Query result.
         :param points: Points.
-        :return: Query result with reference designators formatted as human-readable reference infos.
+        :return: Query result with reference designators formatted as human-readable
+                 reference infos; invalid references removed.
         """
         # Build a mapping: hash -> ScoredPoint  (store keys lowercase for robustness)
         points_by_hash = {
@@ -241,30 +250,42 @@ class AiQuery:
 
             dist, winner = best
             if dist <= max_dist:
-                logger.warning(f"🔧 Repaired reference hash '{maybe_hash}' -> '{winner}' (Hamming distance={dist}).")
+                logger.warning(
+                    f"🔧 Repaired reference hash '{maybe_hash}' -> '{winner}' (Hamming distance={dist})."
+                )
                 return winner
             return None
 
         for answer in query_result.answer_list:
-            for i, chunk_ref in enumerate(answer.chunk_ref_list):
+            # Build a new list to **discard** broken references instead of emitting '???'.
+            formatted_refs: List[str] = []
+            for chunk_ref in answer.chunk_ref_list:
                 hash_id = extract_hash(chunk_ref)
                 point = points_by_hash.get(hash_id.lower())
                 if point is not None:
-                    answer.chunk_ref_list[i] = get_point_reference_info(logger, point, verbose=False)
-                else:
-                    # Attempt a soft repair via Hamming-nearest neighbor within a small radius.
-                    repaired_hash: Optional[str] = None
-                    if HASH_REPAIR_ENABLED:
-                        repaired_hash = try_repair_hash(hash_id, max_dist=HASH_REPAIR_MAX_DIST)
+                    formatted_refs.append(
+                        get_point_reference_info(logger, point, verbose=False)
+                    )
+                    continue
 
-                    if repaired_hash is not None:
-                        repaired_point = points_by_hash.get(repaired_hash)
-                        if repaired_point is not None:
-                            answer.chunk_ref_list[i] = get_point_reference_info(logger, repaired_point, verbose=False)
-                            continue
+                # Attempt a soft repair via Hamming-nearest neighbor within a small radius.
+                repaired_hash: Optional[str] = None
+                if HASH_REPAIR_ENABLED:
+                    repaired_hash = try_repair_hash(hash_id, max_dist=HASH_REPAIR_MAX_DIST)
 
-                    # Last resort — keep previous behavior and preserve the token for debugging.
-                    answer.chunk_ref_list[i] = f"??? ({hash_id})"
+                if repaired_hash is not None:
+                    repaired_point = points_by_hash.get(repaired_hash)
+                    if repaired_point is not None:
+                        formatted_refs.append(
+                            get_point_reference_info(logger, repaired_point, verbose=False)
+                        )
+                        continue
+
+                # Log and **discard** the unresolved reference token.
+                logger.error(f"❌ Unresolvable reference; discarding token '{hash_id}'.")
+
+            # Overwrite with only successfully resolved (or repaired) references.
+            answer.chunk_ref_list = formatted_refs
 
         return query_result
 
