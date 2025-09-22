@@ -154,6 +154,7 @@ class WatchlistManager(StorageManager):
             self.cli.logger.warning(f"No existing rule for pattern:")
             self.cli.logger.info(f"{pattern}")
 
+    @file_lock("archive_agent_watchlist")
     def patterns(self) -> None:
         """
         Show the list of included / excluded patterns.
@@ -262,6 +263,7 @@ class WatchlistManager(StorageManager):
         """
         return self.data['tracked']
 
+    @file_lock("archive_agent_watchlist")
     def list(self) -> None:
         """
         Show the list of tracked files.
@@ -285,6 +287,7 @@ class WatchlistManager(StorageManager):
             if file_meta['diff'] == diff_option
         }
 
+    @file_lock("archive_agent_watchlist")
     def diff(self) -> None:
         """
         Show the list of changed files.
@@ -314,7 +317,6 @@ class WatchlistManager(StorageManager):
         else:
             self.cli.logger.info("(0) removed file(s)")
 
-    @file_lock("archive_agent_watchlist")
     def diff_mark_resolved(self, file_data: FileData) -> None:
         """
         Mark file in diff as resolved.

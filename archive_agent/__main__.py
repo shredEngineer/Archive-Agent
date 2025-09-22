@@ -323,6 +323,7 @@ def query(
     logger.info("⚡  Process finished")
 
 
+# TODO: Add --to-json and --to-json-auto commands
 @app.command()
 def gui(
     nocache: bool = typer.Option(
@@ -372,6 +373,7 @@ def gui(
     subprocess.run(cmd, check=True)
 
 
+# TODO: Add --to-json and --to-json-auto commands
 @app.command()
 def mcp(
         nocache: bool = typer.Option(

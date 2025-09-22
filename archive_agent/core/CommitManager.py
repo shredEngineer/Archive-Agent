@@ -55,7 +55,7 @@ class CommitManager:
         self.max_workers_vision = max_workers_vision
         self.max_workers_embed = max_workers_embed
 
-    @file_lock("archive_agent_commit")
+    @file_lock("archive_agent_watchlist")
     def commit(self) -> None:
         """
         Commit all tracked files.
