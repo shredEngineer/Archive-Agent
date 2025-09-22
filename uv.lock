@@ -81,7 +81,6 @@ dependencies = [
     { name = "requests" },
     { name = "rich" },
     { name = "spacy" },
-    { name = "st-copy-to-clipboard" },
     { name = "streamlit" },
     { name = "streamlit-extras" },
     { name = "typer" },
@@ -116,7 +115,6 @@ requires-dist = [
     { name = "requests", specifier = ">=2.32.3,<3.0.0" },
     { name = "rich", specifier = ">=14.0.0,<15.0.0" },
     { name = "spacy", specifier = ">=3.8.5,<4.0.0" },
-    { name = "st-copy-to-clipboard", specifier = ">=0.1.2,<0.2" },
     { name = "streamlit", specifier = ">=1.44.1,<2.0.0" },
     { name = "streamlit-extras", specifier = ">=0.4.3,<0.5" },
     { name = "typer", specifier = ">=0.15.2,<0.16.0" },
@@ -2612,19 +2610,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4d/76/c0f64a56b779bfb5c87437687a9970d12dad37b5aea2541823d0c5010818/st_annotated_text-4.0.2.tar.gz", hash = "sha256:b0134dcf734697cc3dbdb11862c4174071e7fb6f365af55a37c710d357fd88a5", size = 7915, upload-time = "2025-01-23T15:09:02.88Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d9/70/f29d4359ddfd1a0afa00065e4dac32bd4931f589185f5f0f499db9aee4fe/st_annotated_text-4.0.2-py3-none-any.whl", hash = "sha256:712c45821f020eccafad3a58c10b9d2d51d449f4db999a06308ecf39a753a4df", size = 9084, upload-time = "2025-01-23T15:09:00.863Z" },
-]
-
-[[package]]
-name = "st-copy-to-clipboard"
-version = "0.1.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "jinja2" },
-    { name = "streamlit" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/3d/6c/bb8ba23b226259974c3a57d122ceccdfd298e6fc3dd9da193716577c8042/st-copy-to-clipboard-0.1.6.tar.gz", hash = "sha256:76634e74384335f64d80469bfe2ca31d15806a140cb89490321764b235acaae6", size = 5046, upload-time = "2024-03-30T16:41:11.581Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/40/9b/aca2dfca2bebe2850f83bb0536bfb8836ad39ec7f8086299ae8a60c41558/st_copy_to_clipboard-0.1.6-py3-none-any.whl", hash = "sha256:2a3eed0beb550548b04ac8a4e12c0fb09726654a15c302acb035454948b01cd1", size = 6024, upload-time = "2024-03-30T16:41:09.414Z" },
 ]
 
 [[package]]

@@ -5,10 +5,11 @@ import logging
 import sys
 from pathlib import Path
 import asyncio
+import json
+import uuid
 
 import streamlit as st
-
-from st_copy_to_clipboard import st_copy_to_clipboard
+from streamlit.components.v1 import html as st_html
 
 from archive_agent.core.ContextManager import ContextManager
 from archive_agent.util.text_util import replace_file_uris_with_markdown
@@ -122,8 +123,100 @@ class GuiManager:
         :param answer: Answer.
         """
         st.markdown(answer)
-        st_copy_to_clipboard(answer, "Copy")
+        GuiManager._render_copy_button(answer, "Copy")
 
+    @staticmethod
+    def _render_copy_button(text: str, label: str = "Copy") -> None:
+        """
+        Render a copy button that uses document.execCommand('copy') only.
+        This works over HTTP/IP without requiring the Clipboard API/HTTPS.
+        Styled to match Streamlit's native button appearance.
+        :param text: Text to copy.
+        :param label: Button label.
+        """
+        # Unique IDs to avoid collisions when multiple buttons render
+        btn_id = f"copy_btn_{uuid.uuid4().hex}"
+
+        payload = json.dumps({"text": text, "label": label})
+        st_html(
+            f"""
+<div class="copy-wrap">
+  <style>
+    .copy-wrap {{ display: inline-block; }}
+    .copy-wrap button {{
+      -webkit-appearance: none;
+      appearance: none;
+      background-color: rgb(255, 255, 255);
+      color: rgb(38, 39, 48);
+      border: 1px solid rgba(49, 51, 63, 0.2);
+      border-radius: 4px;
+      padding: 5px 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }}
+    .copy-wrap button:hover {{
+      background-color: rgb(246, 247, 249);
+      border-color: rgba(49, 51, 63, 0.1);
+    }}
+    .copy-wrap button:active {{
+      background-color: rgb(230, 234, 241);
+      border-color: rgba(49, 51, 63, 0.2);
+    }}
+    .copy-wrap button:focus {{
+      box-shadow: rgba(0, 89, 220, 0.2) 0px 0px 0px 3px;
+      outline: none;
+    }}
+  </style>
+  <button type="button" id="{btn_id}" aria-label="{label}">{label}</button>
+</div>
+<script>
+  (function() {{
+    const data = {payload};
+    const btn = document.getElementById('{btn_id}');
+
+    btn.addEventListener('click', function(e) {{
+      e.preventDefault();
+      e.stopPropagation();
+      try {{
+        const ta = document.createElement('textarea');
+        ta.value = data.text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.top = '-1000px';
+        ta.style.left = '-1000px';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, ta.value.length);
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (ok) {{
+          btn.textContent = 'Copied ✓';
+          setTimeout(function() {{ btn.textContent = data.label; }}, 1500);
+        }} else {{
+          btn.textContent = 'Copy failed';
+          setTimeout(function() {{ btn.textContent = data.label; }}, 1500);
+          window.alert('Copy failed. Please copy manually.');
+        }}
+      }} catch (err) {{
+        btn.textContent = 'Copy failed';
+        setTimeout(function() {{ btn.textContent = data.label; }}, 1500);
+        window.alert('Copy failed. Please copy manually.');
+      }}
+      return false;
+    }});
+  }})();
+</script>
+            """,
+            height=40,  # Adjusted height to fit the button
+        )
 
 if __name__ == '__main__':
     is_nocache = False
