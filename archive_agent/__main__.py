@@ -263,6 +263,7 @@ def search(
     context.usage()
 
 
+# TODO: Make --to-json-auto accept optional path (fallback to cwd) to write files to, update README
 @app.command()
 def query(
         question: str = typer.Argument(None),
@@ -323,7 +324,8 @@ def query(
     logger.info("⚡  Process finished")
 
 
-# TODO: Add --to-json and --to-json-auto commands
+# TODO: Add  --to-json-auto command
+# TODO: Make --to-json-auto accept optional path (fallback to cwd) to write files to, update README
 @app.command()
 def gui(
     nocache: bool = typer.Option(
@@ -373,7 +375,8 @@ def gui(
     subprocess.run(cmd, check=True)
 
 
-# TODO: Add --to-json and --to-json-auto commands
+# TODO: Add  --to-json-auto command
+# TODO: Make --to-json-auto accept optional path (fallback to cwd) to write files to, update README
 @app.command()
 def mcp(
         nocache: bool = typer.Option(
