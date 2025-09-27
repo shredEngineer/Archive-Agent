@@ -26,27 +26,26 @@ class GuiManager:
     GUI manager.
     """
 
-    def __init__(
-            self,
-            invalidate_cache: bool = False,
-            verbose: bool = False,
-            to_json_auto_dir: Optional[Path] = None,
-    ) -> None:
+    def __init__(self) -> None:
         """
-        Initialize GUI manager.
-        :param invalidate_cache: Invalidate cache if enabled, probe cache otherwise.
-        :param verbose: Set CLI verbosity.
-        :param to_json_auto_dir: Optional directory passed via `--to-json-auto` option; answers will be written there.
+        Initialize GUI manager. Ensures ContextManager is created only once.
         """
         st.set_page_config(page_title="Archive Agent", page_icon="⚡", layout="centered")
 
-        self.context = ContextManager(invalidate_cache=invalidate_cache, verbose=verbose, to_json_auto_dir=to_json_auto_dir)
+        # Build ContextManager once and cache in session_state
+        if "context" not in st.session_state:
+            st.session_state.context = ContextManager(
+                invalidate_cache=st.session_state.get("is_nocache", False),
+                verbose=st.session_state.get("is_verbose", False),
+                to_json_auto_dir=st.session_state.get("_to_json_auto_dir", None),
+            )
+
+        self.context: ContextManager = st.session_state.context
 
     def run(self) -> None:
         """
         Run GUI.
         """
-        logger.info("Press CTRL+C to stop the GUI server.")
         self._render_layout()
 
     @staticmethod
@@ -68,14 +67,18 @@ class GuiManager:
 
         if query_result.is_rejected:
             return f"**Query rejected:** {query_result.rejection_reason}"
-
         else:
             if self.context.to_json_auto_dir:
-                json_filename = self.context.to_json_auto_dir / generate_json_filename(question)
+                json_filename = self.context.to_json_auto_dir / generate_json_filename(
+                    question
+                )
                 if json_filename:
-                    write_to_json(json_filename=json_filename, question=question, query_result=query_result.model_dump(),
-                                  answer_text=answer_text)
-
+                    write_to_json(
+                        json_filename=json_filename,
+                        question=question,
+                        query_result=query_result.model_dump(),
+                        answer_text=answer_text,
+                    )
             return self.postprocess_answer_text(answer_text)
 
     def _render_layout(self) -> None:
@@ -83,8 +86,8 @@ class GuiManager:
         Render GUI with centered image and search form.
         """
         stats = asyncio.run(self.context.qdrant.get_stats())
-        files_count = stats['files_count']
-        chunks_count = stats['chunks_count']
+        files_count = stats["files_count"]
+        chunks_count = stats["chunks_count"]
 
         image_path = Path(__file__).parent.parent / "assets" / "Archive-Agent-800x300.png"
 
@@ -110,22 +113,52 @@ class GuiManager:
         with cols[2]:
             st.image(image_path, width=400)
 
-        # The search bar and button in a form, side by side
-        with st.form("search_form"):
-            search_col, button_col = st.columns([5, 1])
-            with search_col:
-                query = st.text_input(
-                    "Ask something…",
-                    label_visibility="collapsed",
-                    placeholder="Ask something…"
-                )
-            with button_col:
-                submitted = st.form_submit_button("⚡", use_container_width=True)
+        # ---- Session state initialization
+        st.session_state.setdefault("busy", False)
+        st.session_state.setdefault("pending_query", None)
+        st.session_state.setdefault("last_answer", None)
+        st.session_state.setdefault("reset_query_input", False)
 
-        if submitted and query:
+        # Handle deferred reset of input field
+        if st.session_state.reset_query_input:
+            st.session_state.query_input = ""
+            st.session_state.reset_query_input = False
+
+        # Search bar and button, side by side
+        search_col, button_col = st.columns([5, 1])
+        with search_col:
+            _query = st.text_input(
+                "Ask something…",
+                label_visibility="collapsed",
+                placeholder="Ask something…",
+                key="query_input",
+                disabled=st.session_state.busy,
+            )
+        with button_col:
+            run_btn = st.button("⚡", use_container_width=True, disabled=st.session_state.busy)
+
+        # On first click: set busy/pending, then rerun so the button shows disabled immediately
+        if run_btn:
+            if not st.session_state.query_input or not st.session_state.query_input.strip():
+                st.warning("Please enter a question.")
+            else:
+                st.session_state.pending_query = st.session_state.query_input.strip()
+                st.session_state.busy = True
+                st.rerun()
+
+        # While busy: execute the pending query once, store answer, reset, and rerun to re-enable UI
+        if st.session_state.busy and st.session_state.pending_query:
             with st.spinner("Thinking..."):
-                result_md: str = self.get_answer(query)
-            self.display_answer(result_md)
+                result_md: str = self.get_answer(st.session_state.pending_query)
+            st.session_state.last_answer = result_md
+            st.session_state.pending_query = None
+            st.session_state.reset_query_input = True  # <-- defer clearing input
+            st.session_state.busy = False
+            st.rerun()
+
+        # Show last answer (persists across reruns)
+        if st.session_state.last_answer:
+            self.display_answer(st.session_state.last_answer)
 
     @staticmethod
     def display_answer(answer: str) -> None:
@@ -145,9 +178,7 @@ class GuiManager:
         :param text: Text to copy.
         :param label: Button label.
         """
-        # Unique IDs to avoid collisions when multiple buttons render
         btn_id = f"copy_btn_{uuid.uuid4().hex}"
-
         payload = json.dumps({"text": text, "label": label})
         st_html(
             f"""
@@ -225,30 +256,34 @@ class GuiManager:
                     }})();
                 </script>
             """,
-            height=40,  # Adjusted height to fit the button
+            height=40,
         )
 
 
-if __name__ == '__main__':
-    is_nocache: bool = False
-    is_verbose: bool = False
-    _to_json_auto_dir: Optional[Path] = None
+if __name__ == "__main__":
+    # Parse CLI args only once and stash in session_state
+    if "cli_parsed" not in st.session_state:
+        is_nocache: bool = False
+        is_verbose: bool = False
+        _to_json_auto_dir: Optional[Path] = None
 
-    args = sys.argv[1:]
-    while args:
-        arg = args.pop(0)
-        if arg == "--nocache":
-            is_nocache = True
-        elif arg == "--verbose":
-            is_verbose = True
-        elif arg == "--to-json-auto":
-            # always expect a path
-            assert args, "Expected path after --to-json-auto"
-            _to_json_auto_dir = Path(args.pop(0)).expanduser().resolve()
+        args = sys.argv[1:]
+        while args:
+            arg = args.pop(0)
+            if arg == "--nocache":
+                is_nocache = True
+            elif arg == "--verbose":
+                is_verbose = True
+            elif arg == "--to-json-auto":
+                assert args, "Expected path after --to-json-auto"
+                _to_json_auto_dir = Path(args.pop(0)).expanduser().resolve()
 
-    gui = GuiManager(
-        invalidate_cache=is_nocache,
-        verbose=is_verbose,
-        to_json_auto_dir=_to_json_auto_dir,
-    )
+        st.session_state.is_nocache = is_nocache
+        st.session_state.is_verbose = is_verbose
+        st.session_state._to_json_auto_dir = _to_json_auto_dir
+        st.session_state.cli_parsed = True
+
+        logger.info("Press CTRL+C to stop the GUI server.")
+
+    gui = GuiManager()
     gui.run()
