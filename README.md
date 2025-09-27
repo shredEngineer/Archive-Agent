@@ -966,6 +966,9 @@ uv run python qdrant-remove-paths-from-chunk-headers.py
   - Because `size` and `mtime` were cleared, we lost the information to detect a restored file.
 
 
+- [ ] Unprocessable files are tracked in the watchlist (and attempted to be deleted from the Qdrant database when untracked again)
+
+
 - [ ] Unprocessable files are shown in the final statistics as being "updated in Qdrant database"
 
 
