@@ -135,7 +135,7 @@ class AiQuery:
             "",
             "Context:\n\"\"\"\n" + context + "\n\"\"\"\n\n",
             "Question:\n\"\"\"\n" + question + "\n\"\"\"",
-            ])
+        ])
 
     @staticmethod
     def get_point_hash(point: ScoredPoint) -> str:

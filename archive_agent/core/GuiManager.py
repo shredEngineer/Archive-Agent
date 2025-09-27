@@ -218,6 +218,7 @@ class GuiManager:
             height=40,  # Adjusted height to fit the button
         )
 
+
 if __name__ == '__main__':
     is_nocache = False
     is_verbose = False

@@ -10,7 +10,8 @@ with Informer("Starting…"):
     import subprocess
     import json
     import asyncio
-    from typing import List
+    from pathlib import Path
+    from typing import List, Optional
 
     from archive_agent.core.ContextManager import ContextManager
 
@@ -263,7 +264,6 @@ def search(
     context.usage()
 
 
-# TODO: Make --to-json-auto accept optional path (fallback to cwd) to write files to, update README
 @app.command()
 def query(
         question: str = typer.Argument(None),
@@ -282,10 +282,13 @@ def query(
             "--to-json",
             help="Write answer to JSON file."
         ),
-        to_json_auto: bool = typer.Option(
-            False,
+        to_json_auto: Optional[str] = typer.Option(
+            None,
             "--to-json-auto",
-            help="Write answer to JSON file with auto-generated filename from question."
+            help="Write answer to JSON file in directory with auto-generated filename from question.",
+            metavar="DIR",
+            is_flag=False,
+            flag_value="."
         ),
 ) -> None:
     """
@@ -305,7 +308,8 @@ def query(
     if to_json:
         json_filename = to_json
     elif to_json_auto:
-        json_filename = generate_json_filename(question)
+        out_dir = Path(to_json_auto).expanduser().resolve()
+        json_filename = str(out_dir / generate_json_filename(question))
 
     if json_filename:
         query_data = {

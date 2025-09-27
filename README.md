@@ -644,15 +644,17 @@ To bypass the [AI cache](#ai-cache) (embedding, reranking) for this query, pass 
 To save the query results to a JSON file, use either:
 
 - `--to-json` with a specific filename:
-```bash
-archive-agent query "Which files mention donuts?" --to-json answer.json
-```
+  ```bash
+  archive-agent query "Which files mention donuts?" --to-json answer.json
+  ```
 
-- `--to-json-auto` to auto-generate a clean filename from the question (max 160 chars, truncated with `[...]` if needed):
-```bash
-archive-agent query "Which files mention donuts?" --to-json-auto
-# Creates: Which_files_mention_donuts_.json
-```
+- `--to-json-auto [DIR]` to auto-generate a clean filename from the question
+  (max 160 chars, truncated with `[...]` if needed)
+  and write to directory `DIR` if provided (defaults to current directory `.`):
+  ```bash
+  archive-agent query "Which files mention donuts?" --to-json-auto Output/
+  # Creates: Output/Which_files_mention_donuts_.json
+  ```
 
 💡 **Good to know:** The JSON output follows the `QuerySchema` format defined in [`AiQuery.py`](archive_agent/ai/query/AiQuery.py).
 
