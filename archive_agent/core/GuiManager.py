@@ -140,80 +140,80 @@ class GuiManager:
         payload = json.dumps({"text": text, "label": label})
         st_html(
             f"""
-<div class="copy-wrap">
-  <style>
-    .copy-wrap {{ display: inline-block; }}
-    .copy-wrap button {{
-      -webkit-appearance: none;
-      appearance: none;
-      background-color: rgb(255, 255, 255);
-      color: rgb(38, 39, 48);
-      border: 1px solid rgba(49, 51, 63, 0.2);
-      border-radius: 4px;
-      padding: 5px 16px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      line-height: 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      white-space: nowrap;
-    }}
-    .copy-wrap button:hover {{
-      background-color: rgb(246, 247, 249);
-      border-color: rgba(49, 51, 63, 0.1);
-    }}
-    .copy-wrap button:active {{
-      background-color: rgb(230, 234, 241);
-      border-color: rgba(49, 51, 63, 0.2);
-    }}
-    .copy-wrap button:focus {{
-      box-shadow: rgba(0, 89, 220, 0.2) 0px 0px 0px 3px;
-      outline: none;
-    }}
-  </style>
-  <button type="button" id="{btn_id}" aria-label="{label}">{label}</button>
-</div>
-<script>
-  (function() {{
-    const data = {payload};
-    const btn = document.getElementById('{btn_id}');
-
-    btn.addEventListener('click', function(e) {{
-      e.preventDefault();
-      e.stopPropagation();
-      try {{
-        const ta = document.createElement('textarea');
-        ta.value = data.text;
-        ta.setAttribute('readonly', '');
-        ta.style.position = 'fixed';
-        ta.style.top = '-1000px';
-        ta.style.left = '-1000px';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        ta.setSelectionRange(0, ta.value.length);
-        const ok = document.execCommand('copy');
-        document.body.removeChild(ta);
-        if (ok) {{
-          btn.textContent = 'Copied ✓';
-          setTimeout(function() {{ btn.textContent = data.label; }}, 1500);
-        }} else {{
-          btn.textContent = 'Copy failed';
-          setTimeout(function() {{ btn.textContent = data.label; }}, 1500);
-          window.alert('Copy failed. Please copy manually.');
-        }}
-      }} catch (err) {{
-        btn.textContent = 'Copy failed';
-        setTimeout(function() {{ btn.textContent = data.label; }}, 1500);
-        window.alert('Copy failed. Please copy manually.');
-      }}
-      return false;
-    }});
-  }})();
-</script>
+                <div class="copy-wrap">
+                    <style>
+                        .copy-wrap {{ display: inline-block; }}
+                        .copy-wrap button {{
+                            -webkit-appearance: none;
+                            appearance: none;
+                            background-color: rgb(255, 255, 255);
+                            color: rgb(38, 39, 48);
+                            border: 1px solid rgba(49, 51, 63, 0.2);
+                            border-radius: 4px;
+                            padding: 5px 16px;
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                            font-size: 14px;
+                            font-weight: 500;
+                            line-height: 20px;
+                            text-align: center;
+                            cursor: pointer;
+                            transition: all 0.2s ease;
+                            white-space: nowrap;
+                        }}
+                        .copy-wrap button:hover {{
+                            background-color: rgb(246, 247, 249);
+                            border-color: rgba(49, 51, 63, 0.1);
+                        }}
+                        .copy-wrap button:active {{
+                            background-color: rgb(230, 234, 241);
+                            border-color: rgba(49, 51, 63, 0.2);
+                        }}
+                        .copy-wrap button:focus {{
+                            box-shadow: rgba(0, 89, 220, 0.2) 0px 0px 0px 3px;
+                            outline: none;
+                        }}
+                    </style>
+                    <button type="button" id="{btn_id}" aria-label="{label}">{label}</button>
+                </div>
+                <script>
+                    (function() {{
+                        const data = {payload};
+                        const btn = document.getElementById('{btn_id}');
+                
+                        btn.addEventListener('click', function(e) {{
+                            e.preventDefault();
+                            e.stopPropagation();
+                            try {{
+                                const ta = document.createElement('textarea');
+                                ta.value = data.text;
+                                ta.setAttribute('readonly', '');
+                                ta.style.position = 'fixed';
+                                ta.style.top = '-1000px';
+                                ta.style.left = '-1000px';
+                                ta.style.opacity = '0';
+                                document.body.appendChild(ta);
+                                ta.focus();
+                                ta.select();
+                                ta.setSelectionRange(0, ta.value.length);
+                                const ok = document.execCommand('copy');
+                                document.body.removeChild(ta);
+                                if (ok) {{
+                                    btn.textContent = 'Copied ✓';
+                                    setTimeout(function() {{ btn.textContent = data.label; }}, 1500);
+                                }} else {{
+                                    btn.textContent = 'Copy failed';
+                                    setTimeout(function() {{ btn.textContent = data.label; }}, 1500);
+                                    window.alert('Copy failed. Please copy manually.');
+                                }}
+                            }} catch (err) {{
+                                btn.textContent = 'Copy failed';
+                                setTimeout(function() {{ btn.textContent = data.label; }}, 1500);
+                                window.alert('Copy failed. Please copy manually.');
+                            }}
+                            return false;
+                        }});
+                    }})();
+                </script>
             """,
             height=40,  # Adjusted height to fit the button
         )
