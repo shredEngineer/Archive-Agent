@@ -47,6 +47,10 @@ class _Task:
     created_seq: float = field(default_factory=time.perf_counter)
     children: List[str] = field(default_factory=list)
     removed: bool = False
+    # Cumulative progress tracking fields
+    cumulative_work: float = 0.0  # Total work completed by this task's children
+    expected_total_weight: float = 0.0  # Expected total weight of all children
+    max_completed: int = 0  # Maximum completed value ever reached (monotonic guarantee)
 
     def ratio(self) -> float:
         """Completion ratio in [0, 1]."""
@@ -66,6 +70,9 @@ class TaskSnapshot(NamedTuple):
     active: bool
     removed: bool
     children: List[str]
+    cumulative_work: float = 0.0
+    expected_total_weight: float = 0.0
+    max_completed: int = 0
 
     @property
     def ratio(self) -> float:
@@ -86,6 +93,8 @@ class _ProgressTracker:
         self.config = config
         self._tasks: Dict[str, _Task] = {}
         self._children: Dict[Optional[str], List[str]] = {None: []}
+        # Track cumulative work contributions from removed tasks
+        self._cumulative_contributions: Dict[str, float] = {}  # parent_key -> cumulative work
         self.lock = threading.RLock()
 
     def start_task(self, name: str, parent: Optional[str], weight: float, total: Optional[int]) -> str:
@@ -100,6 +109,21 @@ class _ProgressTracker:
         self._tasks[key] = task
         self._children.setdefault(parent, []).append(key)
         self._children.setdefault(key, [])
+
+        # Update expected total weight for parent
+        if parent and parent in self._tasks:
+            parent_task = self._tasks[parent]
+            if parent_task.expected_total_weight == 0.0:
+                # First child - calculate expected total weight from all current children
+                parent_task.expected_total_weight = sum(
+                    max(0.0, float(self._tasks[child_key].weight))
+                    for child_key in self._children.get(parent, [])
+                    if child_key in self._tasks
+                )
+            else:
+                # Add this child's weight to expected total
+                parent_task.expected_total_weight += max(0.0, float(weight))
+
         return key
 
     def update_task(self, key: str, advance: int, completed: Optional[int]) -> None:
@@ -139,13 +163,29 @@ class _ProgressTracker:
     def remove_subtree(self, root_key: str) -> None:
         if root_key not in self._tasks:
             return
-        parent = self._tasks[root_key].parent
+
+        task = self._tasks[root_key]
+        parent = task.parent
+
+        # Before removing, preserve this task's contribution to parent's cumulative work
+        if parent and parent in self._tasks:
+            contribution = max(0.0, float(task.weight)) * task.ratio()
+            self._cumulative_contributions.setdefault(parent, 0.0)
+            self._cumulative_contributions[parent] += contribution
+
+        # Recursively remove children
         for child in list(self._children.get(root_key, [])):
             self.remove_subtree(child)
+
+        # Remove from data structures
         self._children.pop(root_key, None)
         if parent in self._children and root_key in self._children[parent]:
             self._children[parent].remove(root_key)
         self._tasks.pop(root_key, None)
+
+        # Recompute parent after removal to apply preserved contribution
+        if parent:
+            self._recompute_ancestors(parent)
 
     def iter_children(self, parent: Optional[str]) -> List[str]:
         kids = list(self._children.get(parent, []))
@@ -173,22 +213,34 @@ class _ProgressTracker:
             parent_task = self._tasks.get(cur)
             if not parent_task:
                 break
+
+            # Calculate cumulative work from current children
+            current_work = 0.0
             kids = self._children.get(cur, [])
-            if kids:
-                w_sum = 0.0
-                acc = 0.0
-                for ck in kids:
-                    ct = self._tasks.get(ck)
-                    if not ct:
-                        continue
-                    w = max(0.0, float(ct.weight))
-                    r = ct.ratio()
-                    w_sum += w
-                    acc += w * r
-                ratio = (acc / w_sum) if w_sum > 0 else 0.0
-                if parent_task.total is None:
-                    parent_task.total = self.config.default_total
-                parent_task.completed = int(round(ratio * parent_task.total))
+            for ck in kids:
+                ct = self._tasks.get(ck)
+                if not ct:
+                    continue
+                w = max(0.0, float(ct.weight))
+                r = ct.ratio()
+                current_work += w * r
+
+            # Add preserved cumulative work from removed children
+            preserved_work = self._cumulative_contributions.get(cur, 0.0)
+            total_work = current_work + preserved_work
+
+            # Calculate progress ratio using expected total weight
+            expected_weight = parent_task.expected_total_weight
+            ratio = min(1.0, total_work / expected_weight) if expected_weight > 0.0 else 0.0
+
+            # Update task progress with monotonic guarantee
+            if parent_task.total is None:
+                parent_task.total = self.config.default_total
+
+            new_completed = int(round(ratio * parent_task.total))
+            parent_task.completed = max(parent_task.max_completed, new_completed)
+            parent_task.max_completed = parent_task.completed
+
             cur = parent_task.parent
 
 
@@ -308,6 +360,9 @@ class ProgressManager:
                 active=task.active,
                 removed=task.removed,
                 children=children,
+                cumulative_work=task.cumulative_work,
+                expected_total_weight=task.expected_total_weight,
+                max_completed=task.max_completed,
             )
 
     def _remove_task_safe(self, task_key: str) -> None:
