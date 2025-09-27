@@ -294,7 +294,9 @@ def query(
     """
     Get answer to question using RAG.
     """
-    context = ContextManager(invalidate_cache=nocache, verbose=verbose)
+    to_json_auto_dir = None if to_json_auto is None else Path(to_json_auto).expanduser().resolve()
+
+    context = ContextManager(invalidate_cache=nocache, verbose=verbose, to_json_auto_dir=to_json_auto_dir)
 
     logger.info("💡 Ask something — be as specific as possible")
 
@@ -307,8 +309,8 @@ def query(
     json_filename = None
     if to_json:
         json_filename = Path(to_json)
-    elif to_json_auto:
-        json_filename = Path(to_json_auto).expanduser().resolve() / generate_json_filename(question)
+    elif to_json_auto and to_json_auto_dir:
+        json_filename = to_json_auto_dir / generate_json_filename(question)
 
     if json_filename:
         write_to_json(json_filename=json_filename, question=question, query_result=_query_result.model_dump(), answer_text=_answer_text)
@@ -355,6 +357,8 @@ def gui(
 
     gui_path = Path(__file__).parent / "core" / "GuiManager.py"
 
+    to_json_auto_dir = None if to_json_auto is None else Path(to_json_auto).expanduser().resolve()
+
     # Collect script-level args
     script_args: List[str] = []
     if nocache:
@@ -363,7 +367,7 @@ def gui(
         script_args.append("--verbose")
     if to_json_auto:
         script_args.append("--to-json-auto")
-        script_args.append(str(Path(to_json_auto).expanduser().resolve()))
+        script_args.append(str(to_json_auto_dir))
 
     # Build command: put `--` before args so Streamlit forwards them to the script
     cmd: List[str] = [sys.executable, "-m", "streamlit", "run", str(gui_path)]
@@ -374,8 +378,6 @@ def gui(
     subprocess.run(cmd, check=True)
 
 
-# TODO: Add  --to-json-auto command
-# TODO: Make --to-json-auto accept optional path (fallback to cwd) to write files to, update README
 @app.command()
 def mcp(
         nocache: bool = typer.Option(
@@ -388,11 +390,21 @@ def mcp(
             "--verbose",
             help="Show additional information (embedding, retrieval, reranking, querying)."
         ),
+        to_json_auto: Optional[str] = typer.Option(
+            None,
+            "--to-json-auto",
+            help="Write answer to JSON file in directory with auto-generated filename from question.",
+            metavar="DIR",
+            is_flag=False,
+            flag_value="."
+        ),
 ) -> None:
     """
     Start MCP server.
     """
-    context = ContextManager(invalidate_cache=nocache, verbose=verbose)
+    to_json_auto_dir = None if to_json_auto is None else Path(to_json_auto).expanduser().resolve()
+
+    context = ContextManager(invalidate_cache=nocache, verbose=verbose, to_json_auto_dir=to_json_auto_dir)
 
     logger.info("💡 MCP is starting…")
 

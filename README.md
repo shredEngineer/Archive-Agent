@@ -691,6 +691,15 @@ To see additional information (embedding, retrieval, reranking, querying), pass 
 
 To bypass the [AI cache](#ai-cache) (embedding, reranking) for this query, pass the `--nocache` option.
 
+To save the query results to JSON files, run this:
+
+- `--to-json-auto [DIR]` to auto-generate clean filenames from the questions
+  (max 160 chars, truncated with `[...]` if needed)
+  and write to directory `DIR` if provided (defaults to current directory `.`; creates directories in path if not existing):
+  ```bash
+  archive-agent mcp --to-json-auto Output/
+  ```
+
 📌 **Note:** Press `CTRL+C` in the console to close the MCP server.
 
 💡 **Good to know:** Use these MCP configurations to let your IDE or AI extension automate **Archive Agent**:

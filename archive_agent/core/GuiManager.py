@@ -40,9 +40,7 @@ class GuiManager:
         """
         st.set_page_config(page_title="Archive Agent", page_icon="⚡", layout="centered")
 
-        self.context = ContextManager(invalidate_cache=invalidate_cache, verbose=verbose)
-
-        self.to_json_auto_dir = to_json_auto_dir
+        self.context = ContextManager(invalidate_cache=invalidate_cache, verbose=verbose, to_json_auto_dir=to_json_auto_dir)
 
     def run(self) -> None:
         """
@@ -72,8 +70,8 @@ class GuiManager:
             return f"**Query rejected:** {query_result.rejection_reason}"
 
         else:
-            if self.to_json_auto_dir:
-                json_filename = self.to_json_auto_dir / generate_json_filename(question)
+            if self.context.to_json_auto_dir:
+                json_filename = self.context.to_json_auto_dir / generate_json_filename(question)
                 if json_filename:
                     write_to_json(json_filename=json_filename, question=question, query_result=query_result.model_dump(),
                                   answer_text=answer_text)

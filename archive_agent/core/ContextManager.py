@@ -30,13 +30,17 @@ class ContextManager:
             profile_name: Optional[str] = None,
             invalidate_cache: bool = False,
             verbose: bool = False,
+            to_json_auto_dir: Optional[Path] = None,
     ):
         """
         Initialize context manager.
         :param profile_name: Optional profile name to create or switch to (or "" to request prompt).
         :param invalidate_cache: Invalidate cache if enabled, probe cache otherwise.
         :param verbose: Set CLI verbosity.
+        :param to_json_auto_dir: Optional directory passed via `--to-json-auto` option; answers will be written there.
         """
+        self.to_json_auto_dir = to_json_auto_dir
+
         self.invalidate_cache = invalidate_cache
 
         settings_path = Path.home() / ".archive-agent-settings"

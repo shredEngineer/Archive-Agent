@@ -2,15 +2,18 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import logging
-from typing import Dict, Any, List, cast, Optional
-
 from archive_agent.core.ContextManager import ContextManager
 
 from archive_agent.ai.query.AiQuery import QuerySchema
 
-from qdrant_client.models import ScoredPoint
 from archive_agent.db.QdrantSchema import parse_payload
+
+from archive_agent.util.json_util import generate_json_filename, write_to_json
+
+from qdrant_client.models import ScoredPoint
+
+import logging
+from typing import Dict, Any, List, cast, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +109,11 @@ async def get_answer_rag(question: str) -> Dict[str, Any]:
     query_result, _answer = await _context.qdrant.query(question)
     query_result = cast(QuerySchema, query_result)
 
+    if _context.to_json_auto_dir:
+        json_filename = _context.to_json_auto_dir / generate_json_filename(question)
+        if json_filename:
+            write_to_json(json_filename=json_filename, question=question, query_result=query_result.model_dump(), answer_text=_answer)
+
     return {
         "question_rephrased":       query_result.question_rephrased,
         "answer_list":              [{"answer": item.answer, "chunk_ref_list": item.chunk_ref_list} for item in query_result.answer_list],
@@ -124,7 +132,12 @@ class McpServer:
     MCP server.
     """
 
-    def __init__(self, context: ContextManager, host: str, port: int):
+    def __init__(
+            self,
+            context: ContextManager,
+            host: str,
+            port: int,
+    ):
         """
         Initialize MCP server.
         :param context: Context manager.
