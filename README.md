@@ -641,7 +641,7 @@ To see additional information (embedding, retrieval, reranking, querying), pass 
 
 To bypass the [AI cache](#ai-cache) (embedding, reranking) for this query, pass the `--nocache` option.
 
-To save the query results to a JSON file, use either:
+To save the query results to a JSON file, run either:
 
 - `--to-json` with a specific filename:
   ```bash
@@ -650,13 +650,11 @@ To save the query results to a JSON file, use either:
 
 - `--to-json-auto [DIR]` to auto-generate a clean filename from the question
   (max 160 chars, truncated with `[...]` if needed)
-  and write to directory `DIR` if provided (defaults to current directory `.`):
+  and write to directory `DIR` if provided (defaults to current directory `.`; creates directories in path if not existing):
   ```bash
   archive-agent query "Which files mention donuts?" --to-json-auto Output/
   # Creates: Output/Which_files_mention_donuts_.json
   ```
-
-💡 **Good to know:** The JSON output follows the `QuerySchema` format defined in [`AiQuery.py`](archive_agent/ai/query/AiQuery.py).
 
 ### Launch Archive Agent GUI
 
@@ -669,6 +667,15 @@ archive-agent gui
 To see additional information (embedding, retrieval, reranking, querying), pass the `--verbose` option.
 
 To bypass the [AI cache](#ai-cache) (embedding, reranking) for this query, pass the `--nocache` option.
+
+To save the query results to JSON files, run this:
+
+- `--to-json-auto [DIR]` to auto-generate clean filenames from the questions
+  (max 160 chars, truncated with `[...]` if needed)
+  and write to directory `DIR` if provided (defaults to current directory `.`; creates directories in path if not existing):
+  ```bash
+  archive-agent gui --to-json-auto Output/
+  ```
 
 📌 **Note:** Press `CTRL+C` in the console to close the GUI server.
 

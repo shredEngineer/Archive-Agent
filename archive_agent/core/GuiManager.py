@@ -1,21 +1,22 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
-import logging
-import sys
-from pathlib import Path
-import asyncio
-import json
-import uuid
+from archive_agent.core.ContextManager import ContextManager
+from archive_agent.util.text_util import replace_file_uris_with_markdown
+from archive_agent.util.json_util import generate_json_filename, write_to_json
+
+from archive_agent import __version__
 
 import streamlit as st
 from streamlit.components.v1 import html as st_html
 
-from archive_agent.core.ContextManager import ContextManager
-from archive_agent.util.text_util import replace_file_uris_with_markdown
-
-from archive_agent import __version__
-
+import logging
+import asyncio
+import sys
+import json
+import uuid
+from pathlib import Path
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -29,15 +30,19 @@ class GuiManager:
             self,
             invalidate_cache: bool = False,
             verbose: bool = False,
+            to_json_auto_dir: Optional[Path] = None,
     ) -> None:
         """
         Initialize GUI manager.
         :param invalidate_cache: Invalidate cache if enabled, probe cache otherwise.
         :param verbose: Set CLI verbosity.
+        :param to_json_auto_dir: Optional directory passed via `--to-json-auto` option; answers will be written there.
         """
         st.set_page_config(page_title="Archive Agent", page_icon="⚡", layout="centered")
 
         self.context = ContextManager(invalidate_cache=invalidate_cache, verbose=verbose)
+
+        self.to_json_auto_dir = to_json_auto_dir
 
     def run(self) -> None:
         """
@@ -62,9 +67,17 @@ class GuiManager:
         :return: Answer.
         """
         query_result, answer_text = asyncio.run(self.context.qdrant.query(question))
+
         if query_result.is_rejected:
             return f"**Query rejected:** {query_result.rejection_reason}"
+
         else:
+            if self.to_json_auto_dir:
+                json_filename = self.to_json_auto_dir / generate_json_filename(question)
+                if json_filename:
+                    write_to_json(json_filename=json_filename, question=question, query_result=query_result.model_dump(),
+                                  answer_text=answer_text)
+
             return self.postprocess_answer_text(answer_text)
 
     def _render_layout(self) -> None:
@@ -179,7 +192,6 @@ class GuiManager:
                     (function() {{
                         const data = {payload};
                         const btn = document.getElementById('{btn_id}');
-                
                         btn.addEventListener('click', function(e) {{
                             e.preventDefault();
                             e.stopPropagation();
@@ -220,13 +232,25 @@ class GuiManager:
 
 
 if __name__ == '__main__':
-    is_nocache = False
-    is_verbose = False
-    for arg in sys.argv[1:]:
+    is_nocache: bool = False
+    is_verbose: bool = False
+    _to_json_auto_dir: Optional[Path] = None
+
+    args = sys.argv[1:]
+    while args:
+        arg = args.pop(0)
         if arg == "--nocache":
             is_nocache = True
         elif arg == "--verbose":
             is_verbose = True
+        elif arg == "--to-json-auto":
+            # always expect a path
+            assert args, "Expected path after --to-json-auto"
+            _to_json_auto_dir = Path(args.pop(0)).expanduser().resolve()
 
-    gui = GuiManager(invalidate_cache=is_nocache, verbose=is_verbose)
+    gui = GuiManager(
+        invalidate_cache=is_nocache,
+        verbose=is_verbose,
+        to_json_auto_dir=_to_json_auto_dir,
+    )
     gui.run()

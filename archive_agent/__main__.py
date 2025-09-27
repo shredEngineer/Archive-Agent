@@ -2,14 +2,14 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 from archive_agent.util.Informer import Informer
-from archive_agent.util.format import format_file, generate_json_filename
+from archive_agent.util.json_util import generate_json_filename, write_to_json
 
 with Informer("Starting…"):
     import typer
     import logging
-    import subprocess
-    import json
     import asyncio
+    import sys
+    import subprocess
     from pathlib import Path
     from typing import List, Optional
 
@@ -306,30 +306,18 @@ def query(
     # Handle JSON output options
     json_filename = None
     if to_json:
-        json_filename = to_json
+        json_filename = Path(to_json)
     elif to_json_auto:
-        out_dir = Path(to_json_auto).expanduser().resolve()
-        json_filename = str(out_dir / generate_json_filename(question))
+        json_filename = Path(to_json_auto).expanduser().resolve() / generate_json_filename(question)
 
     if json_filename:
-        query_data = {
-            "question": question,
-            "query_result": _query_result.model_dump(),
-            "answer_text": _answer_text
-        }
-
-        with open(json_filename, 'w', encoding='utf-8') as f:
-            json.dump(query_data, f, ensure_ascii=False, indent=4)
-
-        logger.info(f"Writing answer to JSON: {format_file(json_filename)}")
+        write_to_json(json_filename=json_filename, question=question, query_result=_query_result.model_dump(), answer_text=_answer_text)
 
     context.usage()
 
     logger.info("⚡  Process finished")
 
 
-# TODO: Add  --to-json-auto command
-# TODO: Make --to-json-auto accept optional path (fallback to cwd) to write files to, update README
 @app.command()
 def gui(
     nocache: bool = typer.Option(
@@ -341,6 +329,14 @@ def gui(
         False,
         "--verbose",
         help="Show additional information (embedding, retrieval, reranking, querying)."
+    ),
+    to_json_auto: Optional[str] = typer.Option(
+        None,
+        "--to-json-auto",
+        help="Write answer to JSON file in directory with auto-generated filename from question.",
+        metavar="DIR",
+        is_flag=False,
+        flag_value="."
     ),
 ) -> None:
     """
@@ -357,11 +353,7 @@ def gui(
     """
     logger.info("💡 GUI is starting…")
 
-    import sys
-    import pathlib
-    import subprocess
-
-    gui_path = pathlib.Path(__file__).parent / "core" / "GuiManager.py"
+    gui_path = Path(__file__).parent / "core" / "GuiManager.py"
 
     # Collect script-level args
     script_args: List[str] = []
@@ -369,6 +361,9 @@ def gui(
         script_args.append("--nocache")
     if verbose:
         script_args.append("--verbose")
+    if to_json_auto:
+        script_args.append("--to-json-auto")
+        script_args.append(str(Path(to_json_auto).expanduser().resolve()))
 
     # Build command: put `--` before args so Streamlit forwards them to the script
     cmd: List[str] = [sys.executable, "-m", "streamlit", "run", str(gui_path)]
