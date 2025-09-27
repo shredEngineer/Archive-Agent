@@ -660,6 +660,8 @@ To save the query results to a JSON file, run either:
   # Creates: Output/Which_files_mention_donuts_.json
   ```
 
+📌 **Note:** As of **Archive Agent** v12.2.0, a corresponding Markdown file (`.md`) containing the answer is also created when using the `--to-json` or `--to-json-auto` options. (There is currently no way to opt out of this.)   
+
 ### Launch Archive Agent GUI
 
 To launch the **Archive Agent** GUI in your browser, run this:
@@ -680,6 +682,8 @@ To save the query results to JSON files, run this:
   ```bash
   archive-agent gui --to-json-auto Output/
   ```
+
+📌 **Note:** As of **Archive Agent** v12.2.0, corresponding Markdown files (`.md`) containing the answers are also created when using the `--to-json-auto` option. (There is currently no way to opt out of this.)   
 
 📌 **Note:** Press `CTRL+C` in the console to close the GUI server.
 
@@ -703,6 +707,8 @@ To save the query results to JSON files, run this:
   ```bash
   archive-agent mcp --to-json-auto Output/
   ```
+
+📌 **Note:** As of **Archive Agent** v12.2.0, corresponding Markdown files (`.md`) containing the answers are also created when using the `--to-json-auto` option. (There is currently no way to opt out of this.)
 
 📌 **Note:** Press `CTRL+C` in the console to close the MCP server.
 

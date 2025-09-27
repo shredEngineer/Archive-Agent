@@ -39,13 +39,16 @@ def generate_json_filename(question: str, max_length: int = 160) -> str:
     return f"{clean_question}.json"
 
 
-def write_to_json(json_filename: Path, question: str, query_result: Dict[str, Any], answer_text: str):
+def write_to_json(json_filename: Path, question: str, query_result: Dict[str, Any], answer_text: str) -> None:
     """
     Write query data to JSON.
+    NOTE: As of v12.2.0, a corresponding Markdown file (`.md`) containing the answer is also created.
+
     :param json_filename: JSON filename.
     :param question: Question.
     :param query_result: Query result.
     :param answer_text: Answer text.
+    :return: None
     """
     query_data = {
         "question": question,
@@ -55,7 +58,15 @@ def write_to_json(json_filename: Path, question: str, query_result: Dict[str, An
 
     json_filename.parent.mkdir(parents=True, exist_ok=True)
 
+    # Write JSON file
     with open(json_filename, 'w', encoding='utf-8') as f:
         json.dump(query_data, f, ensure_ascii=False, indent=4)
 
     logger.info(f"Writing answer to JSON: {format_file(json_filename)}")
+
+    # Write Markdown file with same base name
+    md_filename = json_filename.with_suffix(".md")
+    with open(md_filename, 'w', encoding='utf-8') as f:
+        f.write(answer_text)
+
+    logger.info(f"Writing answer to Markdown: {format_file(md_filename)}")
