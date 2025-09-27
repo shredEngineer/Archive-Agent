@@ -966,6 +966,9 @@ uv run python qdrant-remove-paths-from-chunk-headers.py
   - Because `size` and `mtime` were cleared, we lost the information to detect a restored file.
 
 
+- [ ] Unprocessable files are shown in the final statistics as being "updated in Qdrant database"
+
+
 - [ ] AI vision is employed on empty images as well, even though they could be easily detected locally and skipped. 
 
 
