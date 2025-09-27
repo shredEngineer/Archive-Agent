@@ -56,9 +56,10 @@ class CommitManager:
         self.max_workers_embed = max_workers_embed
 
     @file_lock("archive_agent_watchlist")
-    def commit(self) -> None:
+    def commit(self, confirm_delete: bool) -> None:
         """
         Commit all tracked files.
+        :param confirm_delete: Automatically confirm deleting untracked files from the database.
         """
         # Added files
         added_files = self.watchlist.get_diff_files(self.watchlist.DIFF_ADDED)
@@ -88,14 +89,22 @@ class CommitManager:
             for file in removed_files.keys():
                 self.cli.logger.info(f"- TO BE REMOVED  {format_file(file)}")
 
-            self.cli.logger.warning(
-                f"You are about to remove any data associated with "
-                f"({len(removed_files)}) untracked file(s) "
-                f"from the Qdrant database. "
-            )
-            confirm = typer.confirm(
-                f"👉 Delete files from the Qdrant database?"
-            )
+            if confirm_delete:
+                self.cli.logger.warning(
+                    f"Removing any data associated with "
+                    f"({len(removed_files)}) untracked file(s) "
+                    f"from the Qdrant database."
+                )
+                confirm = True
+            else:
+                self.cli.logger.warning(
+                    f"You are about to remove any data associated with "
+                    f"({len(removed_files)}) untracked file(s) "
+                    f"from the Qdrant database."
+                )
+                confirm = typer.confirm(
+                    f"👉 Delete files from the Qdrant database?"
+                )
             if not confirm:
                 self.cli.logger.warning(f"({len(removed_files)}) untracked file(s) remain in the Qdrant database")
             else:

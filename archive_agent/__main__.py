@@ -187,6 +187,11 @@ def commit(
             "--verbose",
             help="Show additional information (vision, chunking, embedding)."
         ),
+        confirm_delete: bool = typer.Option(
+            False,
+            "--confirm-delete",
+            help="Automatically confirm deleting untracked files from the database."
+        ),
 ) -> None:
     """
     Sync changed files with the Qdrant database.
@@ -195,7 +200,7 @@ def commit(
 
     logger.info("💡 Always track your files first ('archive-agent track')")
 
-    context.committer.commit()
+    context.committer.commit(confirm_delete=confirm_delete)
 
     context.usage()
 
@@ -217,6 +222,11 @@ def update(
             "--verbose",
             help="Show additional information (vision, chunking, embedding)."
         ),
+        confirm_delete: bool = typer.Option(
+            False,
+            "--confirm-delete",
+            help="Automatically confirm deleting untracked files from the database."
+        ),
 ) -> None:
     """
     `track` and then `commit` in one go.
@@ -225,7 +235,7 @@ def update(
 
     context.watchlist.track()
 
-    context.committer.commit()
+    context.committer.commit(confirm_delete=confirm_delete)
 
     context.usage()
 

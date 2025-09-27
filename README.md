@@ -590,6 +590,8 @@ To see additional information (vision, chunking, embedding), pass the `--verbose
 
 To bypass the [AI cache](#ai-cache) (vision, chunking, embedding) for this commit, pass the `--nocache` option.
 
+To automatically confirm deleting untracked files from the database, pass the `--confirm-delete` option.
+
 💡 **Good to know:** Changes are triggered by:
 - File added
 - File removed
@@ -612,6 +614,8 @@ archive-agent update
 To see additional information (vision, chunking, embedding), pass the `--verbose` option.
 
 To bypass the [AI cache](#ai-cache) (vision, chunking, embedding) for this commit, pass the `--nocache` option.
+
+To automatically confirm deleting untracked files from the database, pass the `--confirm-delete` option.
 
 ### Search your files
 
