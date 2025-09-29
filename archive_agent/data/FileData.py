@@ -163,7 +163,7 @@ class FileData:
         :return: VisionSchema result or None if failed.
         """
         if image.mode != "RGB":
-            self.logger.info(f"Converted image from '{image.mode}' to 'RGB'")
+            self.logger.debug(f"Converted image from '{image.mode}' to 'RGB'")
             image = image.convert("RGB")
 
         image_possibly_resized = image_resize_safe(image=image, logger=self.logger, verbose=self.ai.cli.VERBOSE_VISION)
