@@ -110,9 +110,10 @@ class _ProgressTracker:
         self._children.setdefault(parent, []).append(key)
         self._children.setdefault(key, [])
 
-        # Update expected total weight for parent
+        # Update expected total weight for parent (only if not explicitly set)
         if parent and parent in self._tasks:
             parent_task = self._tasks[parent]
+            # Only auto-calculate if expected_total_weight hasn't been explicitly set
             if parent_task.expected_total_weight == 0.0:
                 # First child - calculate expected total weight from all current children
                 parent_task.expected_total_weight = sum(
@@ -120,9 +121,17 @@ class _ProgressTracker:
                     for child_key in self._children.get(parent, [])
                     if child_key in self._tasks
                 )
-            else:
-                # Add this child's weight to expected total
-                parent_task.expected_total_weight += max(0.0, float(weight))
+            elif parent_task.expected_total_weight > 0.0:
+                # Only add if we're in auto-calculation mode (not explicitly set)
+                # Check if this looks like auto-calculated vs explicit by seeing if it matches current children
+                current_auto_weight = sum(
+                    max(0.0, float(self._tasks[child_key].weight))
+                    for child_key in self._children.get(parent, [])
+                    if child_key in self._tasks and child_key != key  # exclude the new child
+                )
+                if abs(parent_task.expected_total_weight - current_auto_weight) < 0.001:
+                    # This looks auto-calculated, so add the new child's weight
+                    parent_task.expected_total_weight += max(0.0, float(weight))
 
         return key
 
@@ -159,6 +168,13 @@ class _ProgressTracker:
         if not task or task.removed:
             return
         task.active = True
+
+    def set_expected_children(self, key: str, expected_count: int, child_weight: float = 1.0) -> None:
+        """Set expected total weight for a parent task to prevent race conditions during concurrent child creation."""
+        task = self._tasks.get(key)
+        if not task or task.removed:
+            return
+        task.expected_total_weight = max(0.0, float(expected_count * child_weight))
 
     def remove_subtree(self, root_key: str) -> None:
         if root_key not in self._tasks:
@@ -327,6 +343,11 @@ class ProgressManager:
     def activate_task(self, task_key: str) -> None:
         with self._tracker.lock:
             self._tracker.activate_task(task_key)
+
+    def set_expected_children(self, task_key: str, expected_count: int, child_weight: float = 1.0) -> None:
+        """Set expected total weight for a parent task to prevent race conditions during concurrent child creation."""
+        with self._tracker.lock:
+            self._tracker.set_expected_children(task_key, expected_count, child_weight)
 
     @contextmanager
     def task(self, name: str, parent: Optional[str] = None,

@@ -44,6 +44,8 @@ class IngestionManager:
         with self.cli.progress_context(self.progress_manager) as (progress_manager, _):
             # Create overall files task as root of hierarchy
             overall_files_progress_key = progress_manager.start_task("Files", total=len(files))
+            # Set expected children count to prevent race condition in progress calculation
+            progress_manager.set_expected_children(overall_files_progress_key, len(files))
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 # Create ProgressInfo for each file processing task
