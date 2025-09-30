@@ -64,6 +64,7 @@ def _printer_thread_target(
     Pulls items from a queue and prints them to the live console.
     Also, periodically refreshes the live display.
     """
+    logger = logging.getLogger("ai.cli.printer")
     while True:
         try:
             item = q.get(timeout=0.1)  # Timeout to allow for periodic refresh
@@ -73,12 +74,20 @@ def _printer_thread_target(
             if isinstance(item, LogRecord):
                 rich_handler.handle(item)
             else:
-                live.console.print(item)
+                try:
+                    live.console.print(item)
+                except Exception as e:
+                    logger.error(f"Failed to render output: {type(e).__name__}: {e}")
             q.task_done()
         except queue.Empty:
             pass  # Timeout occurred, just refresh the display
+        except Exception as e:
+            logger.error(f"Printer thread error: {type(e).__name__}: {e}")
 
-        live.update(get_renderable())
+        try:
+            live.update(get_renderable())
+        except Exception as e:
+            logger.error(f"Live update error: {type(e).__name__}: {e}")
 
 
 class CliManager:
