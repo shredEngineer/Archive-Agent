@@ -3,7 +3,7 @@
 
 from typing import List
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class Entity(BaseModel):
@@ -12,6 +12,12 @@ class Entity(BaseModel):
 
     model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false — DO NOT REMOVE THIS
 
+    @field_validator('name', 'description')
+    @classmethod
+    def strip_newlines(cls, v: str) -> str:
+        """Strip newlines from entity fields to ensure single-line output."""
+        return ' '.join(v.splitlines()).strip()
+
 
 class Relation(BaseModel):
     subject: str
@@ -19,6 +25,12 @@ class Relation(BaseModel):
     object: str
 
     model_config = ConfigDict(extra='forbid')  # Ensures additionalProperties: false — DO NOT REMOVE THIS
+
+    @field_validator('subject', 'predicate', 'object')
+    @classmethod
+    def strip_newlines(cls, v: str) -> str:
+        """Strip newlines from relation fields to ensure single-line output."""
+        return ' '.join(v.splitlines()).strip()
 
 
 class VisionSchema(BaseModel):
@@ -31,3 +43,9 @@ class VisionSchema(BaseModel):
     relations: List[Relation]
 
     answer: str
+
+    @field_validator('answer')
+    @classmethod
+    def strip_newlines(cls, v: str) -> str:
+        """Strip newlines from answer field to ensure single-line output."""
+        return ' '.join(v.splitlines()).strip()
