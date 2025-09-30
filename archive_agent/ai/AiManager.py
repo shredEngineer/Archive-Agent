@@ -5,6 +5,7 @@ import json
 from enum import Enum
 from typing import cast, Dict, List, Optional
 
+from openai import BadRequestError
 from qdrant_client.http.models import ScoredPoint
 
 from archive_agent.ai.AiResult import AiResult
@@ -40,6 +41,7 @@ class AiManager(RetryManager):
     }
 
     SCHEMA_RETRY_ATTEMPTS = 100
+    EMBED_TRUNCATION_ATTEMPTS = 10
 
     def __init__(
             self,
@@ -151,12 +153,43 @@ class AiManager(RetryManager):
         :param text: Text.
         :return: Embedding vector.
         """
-        callback = lambda: self.ai_provider.embed_callback(text)
+        original_text = text
+        original_word_count = len(text.split())
 
-        result: AiResult = self.cli.format_ai_embed(callback=lambda: self.retry(callback), text=text)
-        self.ai_usage_stats['embed'] += result.total_tokens
-        assert result.embedding is not None
-        return result.embedding
+        for truncation_attempt in range(AiManager.EMBED_TRUNCATION_ATTEMPTS + 1):
+            callback = lambda: self.ai_provider.embed_callback(text)
+
+            try:
+                result: AiResult = self.cli.format_ai_embed(callback=lambda: self.retry(callback), text=text)
+                self.ai_usage_stats['embed'] += result.total_tokens
+                assert result.embedding is not None
+                return result.embedding
+            except BadRequestError as e:
+                error_body = getattr(e, 'body', {})
+                error_message = error_body.get('message', '') if isinstance(error_body, dict) else str(e)
+
+                # Check for token limit error (rare case: chunk exceeds embedding model token limit)
+                if "maximum context length" in error_message and truncation_attempt < AiManager.EMBED_TRUNCATION_ATTEMPTS:
+                    # Progressive truncation: 10% per attempt (last resort for oversized chunks)
+                    truncation_percent = (truncation_attempt + 1) * 10
+                    keep_percent = 100 - truncation_percent
+
+                    # Truncate by words
+                    words = original_text.split()
+                    truncated_word_count = int(len(words) * keep_percent / 100)
+                    text = " ".join(words[:truncated_word_count])
+
+                    self.cli.logger.warning(
+                        f"⚠️ Chunk exceeded embedding token limit (truncation attempt {truncation_attempt + 1}). "
+                        f"Truncating {truncation_percent}% ({original_word_count} → {truncated_word_count} words) and retrying... "
+                        f"Please check your config to avoid this error."
+                    )
+                    continue  # Retry with truncated text
+
+                # Re-raise if not a token limit error or max attempts reached
+                raise
+
+        raise RuntimeError(f"Failed to embed after {AiManager.EMBED_TRUNCATION_ATTEMPTS} truncation attempts")
 
     def rerank(self, question: str, indexed_chunks: Dict[int, str]) -> RerankSchema:
         """

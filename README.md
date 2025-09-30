@@ -363,7 +363,9 @@ PDF documents often contain small/scattered images related to page style/layout 
 
 See [Archive Agent settings](#archive-agent-settings): `chunk_lines_block`, `chunk_words_target`
 
-💡 **Good to know:** This **smart chunking** improves the accuracy and effectiveness of the retrieval. 
+💡 **Good to know:** This **smart chunking** improves the accuracy and effectiveness of the retrieval.
+
+📌 **Note:** In rare cases where a chunk exceeds the embedding model's token limit (typically 8192 tokens), **Archive Agent** automatically truncates it as a last resort with progressive 10% reductions (up to 10 attempts) until it fits. 
 
 📌 **Note:** Splitting into sentences may take some time for huge documents.
 There is currently no possibility to show the progress of this step.
