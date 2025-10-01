@@ -73,7 +73,7 @@ class ConfigManager(StorageManager, AiProviderKeys):
         RETRIEVE_SCORE_MIN: .1,
         RETRIEVE_CHUNKS_MAX: 60,
 
-        RERANK_CHUNKS_MAX: 12,
+        RERANK_CHUNKS_MAX: 15,
 
         EXPAND_CHUNKS_RADIUS: 1,
 
