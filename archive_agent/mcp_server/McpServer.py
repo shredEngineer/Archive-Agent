@@ -25,6 +25,7 @@ from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.routing import Mount, Route
 import uvicorn
+import anyio
 
 
 mcp = FastMCP("Archive-Agent")
@@ -112,7 +113,12 @@ async def get_answer_rag(question: str) -> Dict[str, Any]:
     if _context.to_json_auto_dir:
         json_filename = _context.to_json_auto_dir / generate_json_filename(question)
         if json_filename:
-            write_to_json(json_filename=json_filename, question=question, query_result=query_result.model_dump(), answer_text=_answer)
+            write_to_json(
+                json_filename=json_filename,
+                question=question,
+                query_result=query_result.model_dump(),
+                answer_text=_answer,
+            )
 
     return {
         "question_rephrased":       query_result.question_rephrased,
@@ -156,16 +162,21 @@ class McpServer:
 
         async def handle_sse(request: Request) -> None:
             # noinspection PyProtectedMember
-            async with sse.connect_sse(
-                    request.scope,
-                    request.receive,
-                    request._send,
-            ) as (read_stream, write_stream):
-                await mcp_server.run(
-                    read_stream,
-                    write_stream,
-                    mcp_server.create_initialization_options(),
-                )
+            try:
+                async with sse.connect_sse(
+                        request.scope,
+                        request.receive,
+                        request._send,
+                ) as (read_stream, write_stream):
+                    await mcp_server.run(
+                        read_stream,
+                        write_stream,
+                        mcp_server.create_initialization_options(),
+                    )
+            except anyio.BrokenResourceError:
+                logger.info("SSE client disconnected")
+            except Exception:
+                logger.exception("Unhandled error in SSE handler")
 
         self.app = Starlette(
             debug=True,
