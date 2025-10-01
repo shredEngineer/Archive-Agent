@@ -28,7 +28,7 @@ from archive_agent.core.CacheManager import CacheManager
 GPT_5_REASONING_CHUNK = {"effort": "minimal"}
 GPT_5_VERBOSITY_CHUNK = "low"
 
-GPT_5_REASONING_QUERY = {"effort": "low"}
+GPT_5_REASONING_QUERY = {"effort": "low"}  # WARNING: "high" effort takes  F O R E V E R
 GPT_5_VERBOSITY_QUERY = "high"
 
 GPT_5_REASONING_VISION = {"effort": "minimal"}
