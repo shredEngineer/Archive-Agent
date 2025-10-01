@@ -161,8 +161,9 @@ class McpServer:
         sse = SseServerTransport("/messages/")
 
         async def handle_sse(request: Request) -> None:
-            # noinspection PyProtectedMember
+            # noinspection PyProtectedMember,PyBroadException
             try:
+                # noinspection PyProtectedMember
                 async with sse.connect_sse(
                         request.scope,
                         request.receive,

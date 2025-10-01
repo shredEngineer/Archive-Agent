@@ -69,7 +69,7 @@ graph LR
   %% Ingestion Pipeline
   subgraph Ingestion
     A[<b>Track and Commit Files</b><br>Supports Profiles] --> B[<b>Ingest Files</b><br>Automatic OCR Strategy<br>Image Entity Extraction]
-    B --> C[<b>Semantic Chunking</b><br>with Context Headers<br>Lines per Block: 100<br>Words per Chunk: 200<br>Model: gpt-4.1-2025-04-14]
+    B --> C[<b>Semantic Chunking</b><br>with Context Headers<br>Lines per Block: 100<br>Words per Chunk: 200]
     C --> D[<b>Embed Chunks</b><br>Model: text-embedding-3-large<br>Vector Size: 3072]
     D --> E[<b>Store Chunks</b><br>Local Qdrant database]
   end
@@ -79,9 +79,9 @@ graph LR
     F[<b>Ask Question</b>] --> G[<b>Embed Question</b><br>Model: text-embedding-3-large]
     G --> H[<b>Retrieve Nearest Chunks</b><br>Score Min: 0.1<br>Chunks Max: 40]
     E --> H
-    H --> I[<b>Rerank by Relevance</b><br>Chunks Max: 30<br>Model: gpt-4.1-2025-04-14]
+    H --> I[<b>Rerank by Relevance</b><br>Chunks Max: 30]
     I --> J[<b>Expand Context</b><br>Chunks Radius: 2]
-    J --> K[<b>Generate Answer</b><br>Model: gpt-4.1-2025-04-14<br>Temperature: 1.1]
+    J --> K[<b>Generate Answer</b>]
     K --> L[<b>Get Answer</b><br>in CLI, GUI, MCP]
   end
 ```
@@ -811,7 +811,11 @@ The profile configuration is contained in the profile folder as `config.json`.
 | `ai_model_query`       | AI model used for queries                                                                        |
 | `ai_model_vision`      | AI model used for vision (`""` disables vision)                                                  |
 | `ai_vector_size`       | Vector size of embeddings (used for Qdrant collection)                                           |
-| `ai_temperature_query` | Temperature of the query model                                                                   |
+| `ai_temperature_query` | Temperature of the query model (ignored for GPT-5)                                               |
+
+📌 **Note:** When using GPT-5 (default as of **Archive Agent** v14.0.0), `ai_temperature_query` is ignored.
+GPT-5 reasoning effort and verbosity are currently not available in the configuration,
+but may be customized directly inside `OpenAiProvider.py`.
 
 📌 **Note:** Since `max_workers_vision` and `max_workers_embed` requests are processed in parallel **per file**,
 and `max_workers_ingest` files are processed in parallel, the total number of requests multiplies quickly.
@@ -999,6 +1003,9 @@ uv run python qdrant-remove-paths-from-chunk-headers.py
 
 
 - [ ] The behaviour of handling unprocessable files is not customizable yet. Should the user be prompted? Should the entire file be rejected? **Unprocessable images are currently tolerated and replaced by `[Unprocessable image]`.** 
+
+
+- [ ] GPT-5 reasoning effort and verbosity are currently not available in the configuration.
 
 ---
 

@@ -22,6 +22,45 @@ from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 from archive_agent.core.CacheManager import CacheManager
 
 
+# ----------------------------------------------------------------------
+# GPT-5 defaults (per operation)
+# ----------------------------------------------------------------------
+GPT_5_REASONING_CHUNK = {"effort": "minimal"}
+GPT_5_VERBOSITY_CHUNK = "low"
+
+GPT_5_REASONING_QUERY = {"effort": "low"}
+GPT_5_VERBOSITY_QUERY = "medium"
+
+GPT_5_REASONING_VISION = {"effort": "minimal"}
+GPT_5_VERBOSITY_VISION = "low"
+
+GPT_5_REASONING_RERANK = {"effort": "minimal"}
+GPT_5_VERBOSITY_RERANK = "low"
+
+
+def _extract_text_from_response(response: Any) -> str:
+    """
+    Extract the JSON text payload from an OpenAI response.
+    Works across GPT-4.1 and GPT-5 response formats.
+    """
+    # noinspection PyBroadException
+    try:
+        # Case 1: GPT-4.1 style (output[0].content[0].text)
+        if hasattr(response.output[0], "content"):
+            content_item = response.output[0].content[0]
+            if hasattr(content_item, "text") and content_item.text:
+                return content_item.text
+    except Exception:
+        pass
+
+    # Case 2: GPT-5 style (no .content, use .output_text)
+    if getattr(response, "output_text", None):
+        return response.output_text
+
+    formatted_response = json.dumps(response.__dict__, indent=2, default=str)
+    raise AiProviderError(f"Missing JSON: Could not extract text from response\n{formatted_response}")
+
+
 class OpenAiProvider(AiProvider):
     """
     OpenAI provider.
@@ -35,14 +74,6 @@ class OpenAiProvider(AiProvider):
             params: AiProviderParams,
             server_url: str,
     ):
-        """
-        Initialize OpenAI provider.
-        :param logger: Logger.
-        :param cache: Cache manager.
-        :param invalidate_cache: Invalidate cache if enabled, probe cache otherwise.
-        :param params: AI provider parameters.
-        :param server_url: Server URL.
-        """
         AiProvider.__init__(
             self,
             logger=logger,
@@ -62,16 +93,42 @@ class OpenAiProvider(AiProvider):
 
         self.client = OpenAI(base_url=self.server_url)
 
+    def _responses_create(self, model: str, op: str, **kwargs: Any) -> Any:
+        """
+        Wrapper around client.responses.create that omits unsupported params
+        for GPT-5 and applies hardcoded defaults for reasoning/verbosity.
+        """
+        if model.startswith("gpt-5"):
+            # Drop unsupported fields
+            kwargs.pop("temperature", None)
+            kwargs.pop("top_p", None)
+            kwargs.pop("logprobs", None)
+
+            # Apply per-operation defaults
+            if op == "chunk":
+                kwargs.setdefault("reasoning", GPT_5_REASONING_CHUNK)
+                if "text" in kwargs and isinstance(kwargs["text"], dict):
+                    kwargs["text"].setdefault("verbosity", GPT_5_VERBOSITY_CHUNK)
+            elif op == "query":
+                kwargs.setdefault("reasoning", GPT_5_REASONING_QUERY)
+                if "text" in kwargs and isinstance(kwargs["text"], dict):
+                    kwargs["text"].setdefault("verbosity", GPT_5_VERBOSITY_QUERY)
+            elif op == "vision":
+                kwargs.setdefault("reasoning", GPT_5_REASONING_VISION)
+                if "text" in kwargs and isinstance(kwargs["text"], dict):
+                    kwargs["text"].setdefault("verbosity", GPT_5_VERBOSITY_VISION)
+            elif op == "rerank":
+                kwargs.setdefault("reasoning", GPT_5_REASONING_RERANK)
+                if "text" in kwargs and isinstance(kwargs["text"], dict):
+                    kwargs["text"].setdefault("verbosity", GPT_5_VERBOSITY_RERANK)
+
+        return self.client.responses.create(model=model, **kwargs)
+
     def _perform_chunk_callback(self, prompt: str) -> AiResult:
-        """
-        Chunk callback.
-        :param prompt: Prompt.
-        :return: AI result.
-        :raises AiProviderError: On error.
-        """
         # noinspection PyTypeChecker
-        response = self.client.responses.create(
+        response = self._responses_create(
             model=self.params.model_chunk,
+            op="chunk",
             temperature=0,
             input=[
                 {
@@ -99,11 +156,7 @@ class OpenAiProvider(AiProvider):
         if getattr(response, 'refusal', None):
             raise AiProviderError(f"Chunk refusal\n{formatted_response}")
 
-        # Pyright: We know this is always a text response in our use-case.
-        content_item = response.output[0].content[0]  # type: ignore[reportAttributeAccessIssue]
-        json_raw = getattr(content_item, 'text', None)
-        if json_raw is None:
-            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})\n{formatted_response}")
+        json_raw = _extract_text_from_response(response)
         try:
             parsed_schema = ChunkSchema.model_validate_json(json_raw)
         except Exception as e:
@@ -116,12 +169,6 @@ class OpenAiProvider(AiProvider):
         )
 
     def _perform_embed_callback(self, text: str) -> AiResult:
-        """
-        Embed callback.
-        :param text: Text.
-        :return: AI result.
-        :raises AiProviderError: On error.
-        """
         response = self.client.embeddings.create(
             input=text,
             model=self.params.model_embed,
@@ -132,15 +179,10 @@ class OpenAiProvider(AiProvider):
         )
 
     def _perform_rerank_callback(self, prompt: str) -> AiResult:
-        """
-        Rerank callback.
-        :param prompt: Prompt.
-        :return: AI result.
-        :raises AiProviderError: On error.
-        """
         # noinspection PyTypeChecker
-        response = self.client.responses.create(
+        response = self._responses_create(
             model=self.params.model_rerank,
+            op="rerank",
             temperature=0,
             input=[
                 {
@@ -168,11 +210,7 @@ class OpenAiProvider(AiProvider):
         if getattr(response, 'refusal', None):
             raise AiProviderError(f"Rerank refusal\n{formatted_response}")
 
-        # Pyright: We know this is always a text response in our use-case.
-        content_item = response.output[0].content[0]  # type: ignore[reportAttributeAccessIssue]
-        json_raw = getattr(content_item, 'text', None)
-        if json_raw is None:
-            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})\n{formatted_response}")
+        json_raw = _extract_text_from_response(response)
         try:
             parsed_schema = RerankSchema.model_validate_json(json_raw)
         except Exception as e:
@@ -185,15 +223,10 @@ class OpenAiProvider(AiProvider):
         )
 
     def _perform_query_callback(self, prompt: str) -> AiResult:
-        """
-        Query callback.
-        :param prompt: Prompt.
-        :return: AI result.
-        :raises AiProviderError: On error.
-        """
         # noinspection PyTypeChecker
-        response = self.client.responses.create(
+        response = self._responses_create(
             model=self.params.model_query,
+            op="query",
             temperature=self.params.temperature_query,
             input=[
                 {
@@ -221,11 +254,7 @@ class OpenAiProvider(AiProvider):
         if getattr(response, 'refusal', None):
             raise AiProviderError(f"Query refusal\n{formatted_response}")
 
-        # Pyright: We know this is always a text response in our use-case.
-        content_item = response.output[0].content[0]  # type: ignore[reportAttributeAccessIssue]
-        json_raw = getattr(content_item, 'text', None)
-        if json_raw is None:
-            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})\n{formatted_response}")
+        json_raw = _extract_text_from_response(response)
         try:
             parsed_schema = QuerySchema.model_validate_json(json_raw)
         except Exception as e:
@@ -238,16 +267,10 @@ class OpenAiProvider(AiProvider):
         )
 
     def _perform_vision_callback(self, prompt: str, image_base64: str) -> AiResult:
-        """
-        Vision callback.
-        :param prompt: Prompt.
-        :param image_base64: Image as UTF-8 encoded Base64 string.
-        :return: AI result.
-        :raises AiProviderError: On error.
-        """
         # noinspection PyTypeChecker
-        response = self.client.responses.create(
+        response = self._responses_create(
             model=self.params.model_vision,
+            op="vision",
             input=cast(Any, [
                 {
                     "role": "user",
@@ -309,11 +332,7 @@ class OpenAiProvider(AiProvider):
                 )
             )
 
-        # Pyright: We know this is always a text response in our use-case.
-        content_item = response.output[0].content[0]  # type: ignore[reportAttributeAccessIssue]
-        json_raw = getattr(content_item, 'text', None)
-        if json_raw is None:
-            raise AiProviderError(f"Missing JSON: No text found in response content ({content_item!r})\n{formatted_response}")
+        json_raw = _extract_text_from_response(response)
         try:
             parsed_schema = VisionSchema.model_validate_json(json_raw)
         except Exception as e:
