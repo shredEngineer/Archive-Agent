@@ -1007,6 +1007,9 @@ uv run python qdrant-remove-paths-from-chunk-headers.py
 
 - [ ] GPT-5 reasoning effort and verbosity are currently not available in the configuration.
 
+
+- [ ] GUI sometimes doesn't react on first button click, needs a second one. (Should migrate to use NiceGUI instead of Streamlit.)
+
 ---
 
 ## Licensed under GNU GPL v3.0
