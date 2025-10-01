@@ -29,7 +29,7 @@ GPT_5_REASONING_CHUNK = {"effort": "minimal"}
 GPT_5_VERBOSITY_CHUNK = "low"
 
 GPT_5_REASONING_QUERY = {"effort": "low"}
-GPT_5_VERBOSITY_QUERY = "medium"
+GPT_5_VERBOSITY_QUERY = "high"
 
 GPT_5_REASONING_VISION = {"effort": "minimal"}
 GPT_5_VERBOSITY_VISION = "low"
