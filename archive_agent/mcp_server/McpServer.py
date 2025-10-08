@@ -24,6 +24,7 @@ from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.routing import Mount, Route
+from starlette.responses import PlainTextResponse
 import uvicorn
 import anyio
 
@@ -160,8 +161,8 @@ class McpServer:
         mcp_server = mcp._mcp_server
         sse = SseServerTransport("/messages/")
 
-        async def handle_sse(request: Request) -> None:
-            # noinspection PyProtectedMember,PyBroadException
+        async def handle_sse(request: Request) -> PlainTextResponse:
+            # noinspection PyBroadException
             try:
                 # noinspection PyProtectedMember
                 async with sse.connect_sse(
@@ -178,6 +179,8 @@ class McpServer:
                 logger.info("SSE client disconnected")
             except Exception:
                 logger.exception("Unhandled error in SSE handler")
+
+            return PlainTextResponse("ok")
 
         self.app = Starlette(
             debug=True,
