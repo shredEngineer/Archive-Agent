@@ -170,6 +170,8 @@ class McpServer:
                         request.receive,
                         request._send,
                 ) as (read_stream, write_stream):
+                    # Give client time to send initialize request before other messages arrive
+                    await anyio.sleep(0.25)
                     await mcp_server.run(
                         read_stream,
                         write_stream,
@@ -177,6 +179,11 @@ class McpServer:
                     )
             except anyio.BrokenResourceError:
                 logger.info("SSE client disconnected")
+            except RuntimeError as e:
+                if "initialization" in str(e).lower():
+                    logger.warning(f"Initialization timing issue (harmless): {e}")
+                else:
+                    logger.exception("Runtime error in SSE handler")
             except Exception:
                 logger.exception("Unhandled error in SSE handler")
 
