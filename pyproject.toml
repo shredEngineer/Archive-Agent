@@ -25,7 +25,7 @@ dependencies = [
     "pymupdf4llm>=0.0.21,<0.0.22",
     "fastapi>=0.115.12,<0.116",
     "uvicorn>=0.34.2,<0.35",
-    "mcp>=1.6.0,<1.7",
+    "mcp==1.8.1",
     "ollama>=0.4.8,<0.5",
     "streamlit-extras>=0.4.3,<0.5",
 ]
