@@ -12,7 +12,7 @@ from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.core.CliManager import CliManager
 from archive_agent.db.QdrantManager import QdrantManager
 import archive_agent.db.QdrantManager as qdrant_module
-from archive_agent.util import knee_detection
+from archive_agent.util.knee_detection import find_score_cutoff_index
 
 
 class FakeAi:
@@ -109,37 +109,51 @@ def _make_query_schema():
 
 def test_search_applies_knee_cutoff_before_rerank(monkeypatch):
     points = [
-        _make_point(0.9, 0, "chunk-0"),
-        _make_point(0.8, 1, "chunk-1"),
-        _make_point(0.7, 2, "chunk-2"),
-        _make_point(0.6, 3, "chunk-3"),
+        _make_point(0.95, 0, "chunk-0"),
+        _make_point(0.94, 1, "chunk-1"),
+        _make_point(0.93, 2, "chunk-2"),
+        _make_point(0.10, 3, "chunk-3"),
+        _make_point(0.09, 4, "chunk-4"),
+        _make_point(0.08, 5, "chunk-5"),
     ]
-    ai = FakeAi(rerank_indices=[1, 0])
-    manager = _make_manager(monkeypatch, points, ai)
+    knee_cutoff = find_score_cutoff_index([p.score for p in points], min_chunks=1)
+    assert knee_cutoff is not None
+    assert knee_cutoff < len(points)
 
-    monkeypatch.setattr(knee_detection, "find_score_cutoff_index", lambda scores, min_chunks=1: 2)
+    rerank_indices = list(range(knee_cutoff - 1, -1, -1))
+    ai = FakeAi(rerank_indices=rerank_indices)
+    manager = _make_manager(monkeypatch, points, ai)
 
     result = asyncio.run(manager.search("what is tested"))
 
-    assert result == [points[1], points[0]]
-    assert ai.rerank_calls == [{0: "chunk-0", 1: "chunk-1"}]
+    assert result == [points[i] for i in rerank_indices]
+    assert ai.rerank_calls == [
+        {index: points[index].payload["chunk_text"] for index in range(knee_cutoff)}
+    ]
 
 
 def test_search_without_knee_cutoff_keeps_points(monkeypatch):
     points = [
         _make_point(0.9, 0, "chunk-0"),
-        _make_point(0.8, 1, "chunk-1"),
-        _make_point(0.7, 2, "chunk-2"),
+        _make_point(0.85, 1, "chunk-1"),
+        _make_point(0.8, 2, "chunk-2"),
+        _make_point(0.75, 3, "chunk-3"),
+        _make_point(0.7, 4, "chunk-4"),
+        _make_point(0.65, 5, "chunk-5"),
     ]
-    ai = FakeAi(rerank_indices=[2, 0, 1])
-    manager = _make_manager(monkeypatch, points, ai)
+    knee_cutoff = find_score_cutoff_index([p.score for p in points], min_chunks=1)
+    assert knee_cutoff is None
 
-    monkeypatch.setattr(knee_detection, "find_score_cutoff_index", lambda scores, min_chunks=1: None)
+    rerank_indices = list(range(len(points)))
+    ai = FakeAi(rerank_indices=rerank_indices)
+    manager = _make_manager(monkeypatch, points, ai)
 
     result = asyncio.run(manager.search("what is tested"))
 
-    assert result == [points[2], points[0], points[1]]
-    assert ai.rerank_calls == [{0: "chunk-0", 1: "chunk-1", 2: "chunk-2"}]
+    assert result == [points[i] for i in rerank_indices]
+    assert ai.rerank_calls == [
+        {i: points[i].payload["chunk_text"] for i in range(len(points))}
+    ]
 
 
 def test_expand_points_fetches_neighbors(monkeypatch):
