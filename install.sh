@@ -6,6 +6,9 @@
 # Exit on any error
 set -e
 
+# Unset conda environment variables to prevent uv conflicts
+unset CONDA_DEFAULT_ENV CONDA_PREFIX
+
 # Script permissions
 chmod +x archive-agent.sh
 chmod +x audit.sh
