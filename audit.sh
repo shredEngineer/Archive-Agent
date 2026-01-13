@@ -6,8 +6,11 @@
 # Exit on any error
 set -e
 
-uv run pytest
+# Unset conda environment variables to prevent uv conflicts
+unset CONDA_DEFAULT_ENV CONDA_PREFIX
 
-uv run pyright
+uv run pytest --cov=archive_agent --cov-report=term-missing
+
+PYRIGHT_PYTHON_FORCE_VERSION=latest uv run pyright
 
 uv run pycodestyle archive_agent tests

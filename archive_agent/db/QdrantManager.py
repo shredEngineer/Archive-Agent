@@ -287,6 +287,28 @@ class QdrantManager:
 
         self.cli.format_retrieved_points(points)
 
+        # Adaptive cutoff: reduce points if clear score drop-off detected
+        if len(points) > 1:
+            from archive_agent.util.knee_detection import find_score_cutoff_index
+            scores = [p.score for p in points]
+            knee_cutoff = find_score_cutoff_index(scores, min_chunks=1)
+
+            if knee_cutoff is not None and knee_cutoff < len(points):
+                # Reconcile with retrieve_score_min: never keep chunks that
+                # would have been filtered by score threshold semantics
+                final_cutoff = knee_cutoff
+                for i in range(knee_cutoff):
+                    if points[i].score < self.retrieve_score_min:
+                        final_cutoff = i
+                        break
+
+                if final_cutoff > 0:
+                    original_count = len(points)
+                    points = points[:final_cutoff]
+                    self.cli.logger.debug(
+                        f"Knee cutoff applied: {original_count} → {len(points)} chunks"
+                    )
+
         if len(points) > 1:  # Rerank points
 
             indexed_chunks = {

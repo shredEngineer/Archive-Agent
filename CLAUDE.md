@@ -35,6 +35,9 @@ Archive Agent is an intelligent file indexer with powerful AI search (RAG engine
 ## Testing and Quality Assurance
 
 ### Primary Testing Command
+
+**Conda/Miniconda Compatibility Note**: All scripts (`install.sh`, `audit.sh`, `archive-agent.sh`) automatically unset conda environment variables (`CONDA_DEFAULT_ENV` and `CONDA_PREFIX`) to prevent conflicts with `uv`. When conda is active, `uv` incorrectly resolves to the conda Python environment instead of the project's `.venv`, causing missing dependency errors. The `unset` statements at the beginning of each script resolve this automatically without requiring users to deactivate conda.
+
 **ALWAYS run the audit script for ANY code changes or testing:**
 ```bash
 ./audit.sh
