@@ -9,8 +9,8 @@ set -e
 # Unset conda environment variables to prevent uv conflicts
 unset CONDA_DEFAULT_ENV CONDA_PREFIX
 
-uv run pytest
+uv run pytest --cov=archive_agent --cov-report=term-missing
 
-uv run pyright
+PYRIGHT_PYTHON_FORCE_VERSION=latest uv run pyright
 
 uv run pycodestyle archive_agent tests

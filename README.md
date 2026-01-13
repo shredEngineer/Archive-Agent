@@ -1010,6 +1010,8 @@ uv run python qdrant-remove-paths-from-chunk-headers.py
 
 - [ ] GUI sometimes doesn't react on first button click, needs a second one. (Should migrate to use NiceGUI instead of Streamlit.)
 
+- [ ] Test coverage gaps (core retrieval path): `archive_agent/db/QdrantManager.py` ~54% coverage; `archive_agent/ai/query/AiQuery.py` ~57% coverage; `archive_agent/core/CliManager.py` ~37% coverage. Missing areas include reference repair paths, CLI formatting branches, and edge-case retrieval flows.
+
 ---
 
 ## Licensed under GNU GPL v3.0
