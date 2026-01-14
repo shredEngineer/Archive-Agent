@@ -389,8 +389,18 @@ To ensure that every chunk can be traced back to its origin, **Archive Agent** m
 - The question is turned into a vector using AI embeddings.
 - Points with similar vectors are retrieved from the Qdrant database.
 - Only chunks of points with sufficient score are kept.
+- If `retrieve_knee_enable` is enabled, an adaptive cutoff trims low-relevance chunks when there is a clear score drop-off.
 
-See [Archive Agent settings](#archive-agent-settings): `retrieve_score_min`, `retrieve_chunks_max`
+See [Archive Agent settings](#archive-agent-settings): `retrieve_score_min`, `retrieve_chunks_max`, `retrieve_knee_enable`, `retrieve_knee_sensitivity`, `retrieve_knee_min_chunks`
+
+📌 **Note:** Adaptive cutoff uses the Kneedle algorithm on the sorted similarity scores. Set a higher
+`retrieve_knee_sensitivity` to make the cutoff more conservative, and use `retrieve_knee_min_chunks`
+to enforce a minimum floor.
+
+💡 **Tuning tips:**
+- If retrieval feels too short or misses context, increase `retrieve_knee_min_chunks` (e.g., `3`–`5`) or raise `retrieve_knee_sensitivity`.
+- If retrieval feels too long or noisy, lower `retrieve_knee_sensitivity` slightly (e.g., `0.8`–`1.0`) or reduce `retrieve_knee_min_chunks`.
+- If you want to disable the adaptive cutoff entirely, set `retrieve_knee_enable` to `false`.
 
 ---
 
@@ -798,6 +808,9 @@ The profile configuration is contained in the profile folder as `config.json`.
 | `qdrant_collection`    | Name of the Qdrant collection                                                                    |
 | `retrieve_score_min`   | Minimum similarity score of retrieved chunks (`0`...`1`)                                         |
 | `retrieve_chunks_max`  | Maximum number of retrieved chunks                                                               |
+| `retrieve_knee_enable` | Adaptive cutoff for retrieval (`true` enables knee-based cutoff, `false` disables it)            |
+| `retrieve_knee_sensitivity` | Knee detection sensitivity (Kneedle `S` parameter; higher = more conservative)             |
+| `retrieve_knee_min_chunks`  | Minimum number of chunks to keep when adaptive cutoff is applied                           |
 | `rerank_chunks_max`    | Number of top chunks to keep after reranking                                                     |
 | `expand_chunks_radius` | Number of preceding and following chunks to prepend and append to each reranked chunk            |
 | `max_workers_ingest`   | Maximum number of files to process in parallel, creating one thread for each file                |

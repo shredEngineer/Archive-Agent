@@ -4,6 +4,8 @@
 from pathlib import Path
 from typing import Optional, Type
 
+import typer
+
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.ai_provider.AiProviderParams import AiProviderParams
 from archive_agent.profile.ProfileManager import ProfileManager
@@ -86,6 +88,22 @@ class ContextManager:
             server_url=self.config.data[self.config.AI_SERVER_URL],
         )
 
+        try:
+            retrieve_knee_sensitivity = float(self.config.data[self.config.RETRIEVE_KNEE_SENSITIVITY])
+        except (TypeError, ValueError):
+            self.cli.logger.error(
+                f"Invalid retrieve_knee_sensitivity: {self.config.data[self.config.RETRIEVE_KNEE_SENSITIVITY]}"
+            )
+            raise typer.Exit(code=1)
+
+        try:
+            retrieve_knee_min_chunks = int(self.config.data[self.config.RETRIEVE_KNEE_MIN_CHUNKS])
+        except (TypeError, ValueError):
+            self.cli.logger.error(
+                f"Invalid retrieve_knee_min_chunks: {self.config.data[self.config.RETRIEVE_KNEE_MIN_CHUNKS]}"
+            )
+            raise typer.Exit(code=1)
+
         self.qdrant = QdrantManager(
             cli=self.cli,
             ai_factory=self.ai_factory,
@@ -94,6 +112,9 @@ class ContextManager:
             vector_size=self.config.data[self.config.AI_VECTOR_SIZE],
             retrieve_score_min=self.config.data[self.config.RETRIEVE_SCORE_MIN],
             retrieve_chunks_max=self.config.data[self.config.RETRIEVE_CHUNKS_MAX],
+            retrieve_knee_enable=str(self.config.data[self.config.RETRIEVE_KNEE_ENABLE]).lower().strip() == "true",
+            retrieve_knee_sensitivity=retrieve_knee_sensitivity,
+            retrieve_knee_min_chunks=retrieve_knee_min_chunks,
             rerank_chunks_max=self.config.data[self.config.RERANK_CHUNKS_MAX],
             expand_chunks_radius=self.config.data[self.config.EXPAND_CHUNKS_RADIUS],
         )

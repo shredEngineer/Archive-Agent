@@ -59,6 +59,9 @@ class QdrantManager:
             vector_size: int,
             retrieve_score_min: float,
             retrieve_chunks_max: int,
+            retrieve_knee_enable: bool,
+            retrieve_knee_sensitivity: float,
+            retrieve_knee_min_chunks: int,
             rerank_chunks_max: int,
             expand_chunks_radius: int,
 
@@ -72,6 +75,9 @@ class QdrantManager:
         :param vector_size: Vector size.
         :param retrieve_score_min: Minimum score of retrieved chunks (`0`...`1`).
         :param retrieve_chunks_max: Maximum number of retrieved chunks.
+        :param retrieve_knee_enable: Enable adaptive knee-based cutoff on retrieval.
+        :param retrieve_knee_sensitivity: Knee detection sensitivity (Kneedle S parameter).
+        :param retrieve_knee_min_chunks: Minimum chunks to keep when knee cutoff is applied.
         :param rerank_chunks_max: Number of top chunks to keep after reranking.
         :param expand_chunks_radius: Number of preceding and following chunks to prepend and append to each reranked chunk.
         """
@@ -96,10 +102,37 @@ class QdrantManager:
         self.vector_size = vector_size
         self.retrieve_score_min = retrieve_score_min
         self.retrieve_chunks_max = retrieve_chunks_max
+        self.retrieve_knee_enable = retrieve_knee_enable
+        self.retrieve_knee_sensitivity = retrieve_knee_sensitivity
+        self.retrieve_knee_min_chunks = retrieve_knee_min_chunks
         self.rerank_chunks_max = rerank_chunks_max
         self.expand_chunks_radius = expand_chunks_radius
+        self._validate_knee_config()
 
         asyncio.run(self.async_connect())
+
+    def _validate_knee_config(self) -> None:
+        """
+        Validate adaptive cutoff settings.
+        """
+        if self.retrieve_knee_sensitivity <= 0:
+            self.cli.logger.error(
+                f"Invalid retrieve_knee_sensitivity: {self.retrieve_knee_sensitivity} (must be > 0)"
+            )
+            raise typer.Exit(code=1)
+
+        if self.retrieve_knee_min_chunks < 1:
+            self.cli.logger.error(
+                f"Invalid retrieve_knee_min_chunks: {self.retrieve_knee_min_chunks} (must be >= 1)"
+            )
+            raise typer.Exit(code=1)
+
+        if self.retrieve_knee_min_chunks > self.retrieve_chunks_max:
+            self.cli.logger.error(
+                f"Invalid retrieve_knee_min_chunks: {self.retrieve_knee_min_chunks} "
+                f"(cannot exceed retrieve_chunks_max: {self.retrieve_chunks_max})"
+            )
+            raise typer.Exit(code=1)
 
     async def async_connect(self) -> None:
         """
@@ -287,11 +320,23 @@ class QdrantManager:
 
         self.cli.format_retrieved_points(points)
 
+        if self.cli.VERBOSE_RETRIEVAL:
+            self.cli.format_knee_cutoff_settings(
+                enabled=self.retrieve_knee_enable,
+                sensitivity=self.retrieve_knee_sensitivity,
+                min_chunks=self.retrieve_knee_min_chunks,
+            )
+
         # Adaptive cutoff: reduce points if clear score drop-off detected
-        if len(points) > 1:
+        if self.retrieve_knee_enable and len(points) > 1:
             from archive_agent.util.knee_detection import find_score_cutoff_index
             scores = [p.score for p in points]
-            knee_cutoff = find_score_cutoff_index(scores, min_chunks=1)
+            min_chunks = max(1, min(self.retrieve_knee_min_chunks, len(points)))
+            knee_cutoff = find_score_cutoff_index(
+                scores,
+                min_chunks=min_chunks,
+                sensitivity=self.retrieve_knee_sensitivity,
+            )
 
             if knee_cutoff is not None and knee_cutoff < len(points):
                 # Reconcile with retrieve_score_min: never keep chunks that
@@ -305,9 +350,20 @@ class QdrantManager:
                 if final_cutoff > 0:
                     original_count = len(points)
                     points = points[:final_cutoff]
-                    self.cli.logger.debug(
-                        f"Knee cutoff applied: {original_count} → {len(points)} chunks"
+                    self.cli.format_knee_cutoff(
+                        original_count=original_count,
+                        final_count=len(points),
+                        cutoff_index=final_cutoff,
                     )
+                elif self.cli.VERBOSE_RETRIEVAL:
+                    self.cli.format_knee_cutoff_skipped("cutoff below minimum threshold")
+            elif self.cli.VERBOSE_RETRIEVAL:
+                self.cli.format_knee_cutoff_skipped("no knee detected")
+        elif self.cli.VERBOSE_RETRIEVAL:
+            if not self.retrieve_knee_enable:
+                self.cli.format_knee_cutoff_skipped("disabled by config")
+            else:
+                self.cli.format_knee_cutoff_skipped("not enough points for knee detection")
 
         if len(points) > 1:  # Rerank points
 

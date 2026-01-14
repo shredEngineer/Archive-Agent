@@ -41,6 +41,9 @@ class ConfigManager(StorageManager, AiProviderKeys):
 
     RETRIEVE_SCORE_MIN = 'retrieve_score_min'
     RETRIEVE_CHUNKS_MAX = 'retrieve_chunks_max'
+    RETRIEVE_KNEE_ENABLE = 'retrieve_knee_enable'
+    RETRIEVE_KNEE_SENSITIVITY = 'retrieve_knee_sensitivity'
+    RETRIEVE_KNEE_MIN_CHUNKS = 'retrieve_knee_min_chunks'
 
     RERANK_CHUNKS_MAX = 'rerank_chunks_max'
 
@@ -51,7 +54,7 @@ class ConfigManager(StorageManager, AiProviderKeys):
     MAX_WORKERS_EMBED = 'max_workers_embed'
 
     DEFAULT_CONFIG = {
-        CONFIG_VERSION: 12,  # TODO:  DON'T FORGET TO UPDATE BOTH  `CONFIG_VERSION`  AND  `upgrade()`
+        CONFIG_VERSION: 13,  # TODO:  DON'T FORGET TO UPDATE BOTH  `CONFIG_VERSION`  AND  `upgrade()`
 
         MCP_SERVER_HOST: "127.0.0.1",
         MCP_SERVER_PORT: 8008,
@@ -72,6 +75,9 @@ class ConfigManager(StorageManager, AiProviderKeys):
 
         RETRIEVE_SCORE_MIN: .1,
         RETRIEVE_CHUNKS_MAX: 60,
+        RETRIEVE_KNEE_ENABLE: "true",
+        RETRIEVE_KNEE_SENSITIVITY: 1.0,
+        RETRIEVE_KNEE_MIN_CHUNKS: 1,
 
         RERANK_CHUNKS_MAX: 15,
 
@@ -282,6 +288,17 @@ class ConfigManager(StorageManager, AiProviderKeys):
         if version < 12:
             self._set_version(12)
             self._add_option(self.MCP_SERVER_HOST)
+            upgraded = True
+
+        # Option(s) added in v13:
+        # - `retrieve_knee_enable`
+        # - `retrieve_knee_sensitivity`
+        # - `retrieve_knee_min_chunks`
+        if version < 13:
+            self._set_version(13)
+            self._add_option(self.RETRIEVE_KNEE_ENABLE)
+            self._add_option(self.RETRIEVE_KNEE_SENSITIVITY)
+            self._add_option(self.RETRIEVE_KNEE_MIN_CHUNKS)
             upgraded = True
 
         return upgraded

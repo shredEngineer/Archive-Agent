@@ -454,6 +454,37 @@ class CliManager:
             if CliManager.VERBOSE_RETRIEVAL:
                 self.format_chunk(parse_payload(point.payload).chunk_text)
 
+    def format_knee_cutoff(self, original_count: int, final_count: int, cutoff_index: int) -> None:
+        """
+        Format adaptive cutoff information.
+        :param original_count: Original number of retrieved chunks.
+        :param final_count: Chunks kept after cutoff.
+        :param cutoff_index: Exclusive cutoff index.
+        """
+        self.logger.info(
+            f"✅ Adaptive cutoff applied: {original_count} -> {final_count} chunk(s) "
+            f"(cutoff index {cutoff_index})"
+        )
+
+    def format_knee_cutoff_settings(self, enabled: bool, sensitivity: float, min_chunks: int) -> None:
+        """
+        Format adaptive cutoff settings.
+        :param enabled: Whether adaptive cutoff is enabled.
+        :param sensitivity: Knee detection sensitivity.
+        :param min_chunks: Minimum chunks to keep after cutoff.
+        """
+        self.logger.info(
+            f"ℹ️ Adaptive cutoff settings: enabled={enabled}, "
+            f"sensitivity={sensitivity}, min_chunks={min_chunks}"
+        )
+
+    def format_knee_cutoff_skipped(self, reason: str) -> None:
+        """
+        Format adaptive cutoff skip message.
+        :param reason: Reason for skipping cutoff.
+        """
+        self.logger.info(f"ℹ️ Adaptive cutoff skipped: {reason}")
+
     def format_reranked_points(self, points: List[ScoredPoint]) -> None:
         """
         Format chunks of reranked points.

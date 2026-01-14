@@ -86,6 +86,9 @@ def _make_manager(monkeypatch, points, ai):
         vector_size=1,
         retrieve_score_min=0.1,
         retrieve_chunks_max=10,
+        retrieve_knee_enable=True,
+        retrieve_knee_sensitivity=1.0,
+        retrieve_knee_min_chunks=1,
         rerank_chunks_max=10,
         expand_chunks_radius=0,
     )
