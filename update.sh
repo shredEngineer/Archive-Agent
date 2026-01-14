@@ -13,10 +13,16 @@ echo "'---------------------'"
 git pull
 
 echo ""
-echo ".-----------------------."
-echo "| Install Archive Agent |"
-echo "'-----------------------'"
-./install.sh
+echo ".---------------------."
+echo "| Install environment |"
+echo "'---------------------'"
+uv sync --extra dev
+
+echo ""
+echo ".---------------------."
+echo "| Install spaCy model |"
+echo "'---------------------'"
+uv run python -m spacy download en_core_web_md
 
 echo ""
 echo ".-------------------------------------."
