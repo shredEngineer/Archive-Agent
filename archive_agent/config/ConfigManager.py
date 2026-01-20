@@ -74,12 +74,12 @@ class ConfigManager(StorageManager, AiProviderKeys):
         QDRANT_COLLECTION: "archive-agent",
 
         RETRIEVE_SCORE_MIN: .1,
-        RETRIEVE_CHUNKS_MAX: 60,
+        RETRIEVE_CHUNKS_MAX: 30,
         RETRIEVE_KNEE_ENABLE: "true",
         RETRIEVE_KNEE_SENSITIVITY: 1.0,
         RETRIEVE_KNEE_MIN_CHUNKS: 1,
 
-        RERANK_CHUNKS_MAX: 15,
+        RERANK_CHUNKS_MAX: 8,
 
         EXPAND_CHUNKS_RADIUS: 1,
 

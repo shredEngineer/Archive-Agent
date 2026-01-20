@@ -79,6 +79,7 @@ logging.basicConfig(
             rich_tracebacks=True,
             highlighter=CustomLogHighlighter(),
             show_path=False,  # Enable this for file:line traceback
+            omit_repeated_times=False,
         )
     ]
 )

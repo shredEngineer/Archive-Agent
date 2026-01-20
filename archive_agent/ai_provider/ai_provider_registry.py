@@ -16,11 +16,11 @@ ai_provider_registry = {
         "defaults": {
             AiProviderKeys.AI_PROVIDER: "openai",
             AiProviderKeys.AI_SERVER_URL: "https://api.openai.com/v1",
-            AiProviderKeys.AI_MODEL_CHUNK: "gpt-5-2025-08-07",
+            AiProviderKeys.AI_MODEL_CHUNK: "gpt-5-mini-2025-08-07",
             AiProviderKeys.AI_MODEL_EMBED: "text-embedding-3-large",  # the good stuff
-            AiProviderKeys.AI_MODEL_RERANK: "gpt-5-2025-08-07",
-            AiProviderKeys.AI_MODEL_QUERY: "gpt-5-2025-08-07",
-            AiProviderKeys.AI_MODEL_VISION: "gpt-5-2025-08-07",
+            AiProviderKeys.AI_MODEL_RERANK: "gpt-5-mini-2025-08-07",
+            AiProviderKeys.AI_MODEL_QUERY: "gpt-5.1-turbo-2026-01-10",
+            AiProviderKeys.AI_MODEL_VISION: "gpt-5.1-turbo-2026-01-10",
             AiProviderKeys.AI_VECTOR_SIZE: 3072,
             AiProviderKeys.AI_TEMPERATURE_QUERY: 1.1,  # slightly creative but valid (ignored for GPT-5)
         },
