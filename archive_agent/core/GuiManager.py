@@ -113,50 +113,31 @@ class GuiManager:
         with cols[2]:
             st.image(image_path, width=400)
 
-        # ---- Session state initialization
-        st.session_state.setdefault("busy", False)
-        st.session_state.setdefault("pending_query", None)
-        st.session_state.setdefault("last_answer", None)
-        st.session_state.setdefault("reset_query_input", False)
+        # Session state: only need to track the last answer
+        if "last_answer" not in st.session_state:
+            st.session_state.last_answer = None
 
-        # Handle deferred reset of input field
-        if st.session_state.reset_query_input:
-            st.session_state.query_input = ""
-            st.session_state.reset_query_input = False
+        # Search form - handles Enter key natively, clears input on submit
+        with st.form("search_form", clear_on_submit=True):
+            search_col, button_col = st.columns([5, 1])
+            with search_col:
+                query = st.text_input(
+                    "Ask something…",
+                    label_visibility="collapsed",
+                    placeholder="Ask something…",
+                )
+            with button_col:
+                submitted = st.form_submit_button("⚡", use_container_width=True)
 
-        # Search bar and button, side by side
-        search_col, button_col = st.columns([5, 1])
-        with search_col:
-            _query = st.text_input(
-                "Ask something…",
-                label_visibility="collapsed",
-                placeholder="Ask something…",
-                key="query_input",
-                disabled=st.session_state.busy,
-            )
-        with button_col:
-            run_btn = st.button("⚡", use_container_width=True, disabled=st.session_state.busy)
-
-        # On first click: set busy/pending, then rerun so the button shows disabled immediately
-        if run_btn:
-            if not st.session_state.query_input or not st.session_state.query_input.strip():
-                st.warning("Please enter a question.")
-            else:
-                st.session_state.pending_query = st.session_state.query_input.strip()
-                st.session_state.busy = True
-                st.rerun()
-
-        # While busy: execute the pending query once, store answer, reset, and rerun to re-enable UI
-        if st.session_state.busy and st.session_state.pending_query:
+        # Process query on submit
+        if submitted and query and query.strip():
             with st.spinner("Thinking..."):
-                result_md: str = self.get_answer(st.session_state.pending_query)
-            st.session_state.last_answer = result_md
-            st.session_state.pending_query = None
-            st.session_state.reset_query_input = True  # <-- defer clearing input
-            st.session_state.busy = False
-            st.rerun()
+                try:
+                    st.session_state.last_answer = self.get_answer(query.strip())
+                except Exception as e:
+                    st.session_state.last_answer = f"**Error:** {e}"
 
-        # Show last answer (persists across reruns)
+        # Display last answer
         if st.session_state.last_answer:
             self.display_answer(st.session_state.last_answer)
 
