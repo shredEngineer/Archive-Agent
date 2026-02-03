@@ -740,6 +740,7 @@ To save the query results to JSON files, run this:
 | `get_patterns`      | `patterns`                | None        | Synchronous    | Get the list of included / excluded patterns.   |
 | `get_files_tracked` | `track` and then `list`   | None        | Synchronous    | Get the list of tracked files.                  |
 | `get_files_changed` | `track` and then `diff`   | None        | Synchronous    | Get the list of changed files.                  |
+| `get_chunk_headers` | None                      | `file_path` | Asynchronous   | Get list of chunk headers for a file.           |
 | `get_search_result` | `search`                  | `question`  | Asynchronous   | Get the list of files relevant to the question. |
 | `get_answer_rag`    | `query`                   | `question`  | Asynchronous   | Get answer to question using RAG.               |
 
@@ -748,6 +749,8 @@ To save the query results to JSON files, run this:
 💡 **Good to know:** Just type `#get_answer_rag` (e.g.) in your IDE or AI extension to call the tool directly.
 
 💡 **Good to know:** The `#get_answer_rag` output follows the `QuerySchema` format defined in [`AiQuery.py`](archive_agent/ai/query/AiQuery.py).
+
+💡 **Good to know:** The `#get_chunk_headers` tool provides a quick overview of a document's structure by returning all chunk headers (semantic summaries) for a given file. This is useful for understanding document contents without retrieving full text.
 
 ---
 

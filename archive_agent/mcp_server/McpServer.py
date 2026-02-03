@@ -93,6 +93,60 @@ async def get_search_result(question: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
+async def get_chunk_headers(file_path: str) -> Dict[str, Any]:
+    """
+    Get the list of chunk headers for a specific file.
+    Provides a quick overview of the document's contents structure.
+    :param file_path: Path to the file.
+    :return: {
+        "file_path": str,
+        "chunks_total": int,
+        "chunks": [{"chunk_index": int, "header": str, "page_range": List[int] | None, "line_range": List[int] | None}]
+    }.
+    """
+    global _context
+    assert _context is not None  # makes pyright happy
+    points = await _context.qdrant.get_chunks_by_file(file_path)
+
+    if not points:
+        return {
+            "file_path": file_path,
+            "chunks_total": 0,
+            "chunks": [],
+        }
+
+    chunks_data = []
+    for point in points:
+        payload = parse_payload(point.payload)
+        header = _extract_header_from_chunk_text(payload.chunk_text)
+        chunks_data.append({
+            "chunk_index": payload.chunk_index,
+            "header": header,
+            "page_range": payload.page_range,
+            "line_range": payload.line_range,
+        })
+
+    return {
+        "file_path": file_path,
+        "chunks_total": len(chunks_data),
+        "chunks": chunks_data,
+    }
+
+
+def _extract_header_from_chunk_text(chunk_text: str) -> str:
+    """
+    Extract header from formatted chunk text.
+    Chunk format is: "# <header>\\n\\n<body>"
+    :param chunk_text: The full chunk text.
+    :return: The header string (without "# " prefix), or empty string if not found.
+    """
+    lines = chunk_text.split('\n')
+    if lines and lines[0].startswith('# '):
+        return lines[0][2:]  # Remove "# " prefix
+    return ""
+
+
+@mcp.tool()
 async def get_answer_rag(question: str) -> Dict[str, Any]:
     """
     Get answer to question using RAG.

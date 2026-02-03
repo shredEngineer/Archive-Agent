@@ -531,6 +531,37 @@ class QdrantManager:
 
         return query_result, answer_text
 
+    async def get_chunks_by_file(self, file_path: str) -> List[ScoredPoint]:
+        """
+        Get all chunks for a specific file, sorted by chunk_index.
+        :param file_path: File path to query.
+        :return: List of points sorted by chunk_index.
+        """
+        retry_manager = RetryManager(**QdrantManager.QDRANT_RETRY_KWARGS)
+        try:
+            response = await retry_manager.retry_async(
+                func=self.qdrant.query_points,
+                kwargs={
+                    "collection_name": self.collection,
+                    "query_filter": Filter(
+                        must=[
+                            FieldCondition(
+                                key='file_path',
+                                match=MatchValue(value=file_path),
+                            ),
+                        ],
+                    ),
+                    "with_payload": True,
+                    "limit": 10000,  # Large limit to get all chunks
+                }
+            )
+        except Exception as e:
+            self.cli.logger.exception(f"Qdrant query failed after retries: {e}")
+            return []
+
+        points = sorted(response.points, key=lambda point: parse_payload(point.payload).chunk_index)
+        return points
+
     async def get_stats(self) -> Dict[str, int]:
         """
         Get stats, e.g. files and chunks counts.

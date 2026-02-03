@@ -212,3 +212,35 @@ def test_query_uses_search_results_and_formats_answer(monkeypatch):
     assert result_schema == query_schema
     assert "Answer about retrieval." in answer_text
     assert ai.query_calls == [("question", points)]
+
+
+def test_get_chunks_by_file_returns_sorted_points(monkeypatch):
+    """Test that get_chunks_by_file returns points sorted by chunk_index."""
+    from archive_agent.db.QdrantSchema import parse_payload
+
+    # Create points in non-sorted order
+    points = [
+        _make_point(0.9, 2, "chunk-2"),
+        _make_point(0.8, 0, "chunk-0"),
+        _make_point(0.7, 1, "chunk-1"),
+    ]
+    ai = FakeAi(rerank_indices=[])
+    manager = _make_manager(monkeypatch, points, ai)
+
+    result = asyncio.run(manager.get_chunks_by_file("/tmp/test.txt"))
+
+    # Should be sorted by chunk_index
+    assert len(result) == 3
+    assert parse_payload(result[0].payload).chunk_index == 0
+    assert parse_payload(result[1].payload).chunk_index == 1
+    assert parse_payload(result[2].payload).chunk_index == 2
+
+
+def test_get_chunks_by_file_returns_empty_for_nonexistent_file(monkeypatch):
+    """Test that get_chunks_by_file returns empty list for non-existent file."""
+    ai = FakeAi(rerank_indices=[])
+    manager = _make_manager(monkeypatch, [], ai)
+
+    result = asyncio.run(manager.get_chunks_by_file("/nonexistent/file.txt"))
+
+    assert result == []
