@@ -1047,10 +1047,3 @@ See [LICENSE](LICENSE) for details.
 
 ## Collaborators welcome
 You are invited to contribute to this open source project! Feel free to [file issues](https://github.com/shredEngineer/Archive-Agent/issues) and [submit pull requests](https://github.com/shredEngineer/Archive-Agent/pulls) anytime.
-
----
-
-## Learn about Archive Agent
-
-([Tap to open external link to YouTube playlist](https://youtube.com/playlist?list=PLK0uOAnKcdRQSYnV32GHqV8ZAnKstJ-GU&si=QH4MfEmreVEXoa-q))  
-[![YouTube: Archive Agent (Playlist)](archive_agent/assets/Thumbnail-GOCCWwI25EI.jpg)](https://youtube.com/playlist?list=PLK0uOAnKcdRQSYnV32GHqV8ZAnKstJ-GU&si=QH4MfEmreVEXoa-q)  
