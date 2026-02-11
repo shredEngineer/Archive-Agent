@@ -163,7 +163,6 @@ graph LR
   * [Known issues](#known-issues)
   * [Licensed under GNU GPL v3.0](#licensed-under-gnu-gpl-v30)
   * [Collaborators welcome](#collaborators-welcome)
-  * [Learn about Archive Agent](#learn-about-archive-agent)
 <!-- TOC -->
 
 ---
