@@ -42,6 +42,7 @@
 
 - **Supports many AI providers and MCP** 
 - [OpenAI](https://platform.openai.com/docs/overview) or compatible API ¹ for best performance
+- [OpenRouter](https://openrouter.ai/) for access to 400+ models from all providers
 - [Ollama](https://ollama.com/) and [LM Studio](https://lmstudio.ai/) for best privacy (local LLM)
 - Integrates with your workflow** via a built-in [MCP](https://modelcontextprotocol.io/introduction) server.
 
@@ -113,6 +114,7 @@ graph LR
     * [Ubuntu / Linux Mint](#ubuntu--linux-mint)
   * [AI provider setup](#ai-provider-setup)
     * [OpenAI provider setup](#openai-provider-setup)
+    * [OpenRouter provider setup](#openrouter-provider-setup)
     * [Ollama provider setup](#ollama-provider-setup)
     * [LM Studio provider setup](#lm-studio-provider-setup)
   * [Which files are processed](#which-files-are-processed)
@@ -218,7 +220,7 @@ The `install.sh` script will execute the following steps:
 
 - Remote APIs *(higher performance and cost, less privacy)*:
   - **OpenAI**: Requires an OpenAI API key.
-
+  - **OpenRouter**: Requires an OpenRouter API key. Access to 400+ models.
 
 - Local APIs *(lower performance and cost, best privacy)*:
   - **Ollama**: Requires Ollama running locally.
@@ -241,6 +243,32 @@ echo "export OPENAI_API_KEY='sk-...'" >> ~/.bashrc && source ~/.bashrc
 This will persist the export for the current user.
 
 💡 **Good to know:** [OpenAI won't use your data for training.](https://platform.openai.com/docs/guides/your-data)
+
+### OpenRouter provider setup
+
+If the OpenRouter provider is selected, **Archive Agent** requires an OpenRouter API key.
+
+[OpenRouter](https://openrouter.ai/) provides a unified API to access 400+ models from many providers (OpenAI, Google, Anthropic, Meta, and more) through a single endpoint.
+
+To export your [OpenRouter API key](https://openrouter.ai/settings/keys), replace `sk-or-...` with your actual key and run this once:
+
+```bash
+echo "export OPENROUTER_API_KEY='sk-or-...'" >> ~/.bashrc && source ~/.bashrc
+```
+
+This will persist the export for the current user.
+
+With the default [Archive Agent Settings](#archive-agent-settings), these OpenRouter models are used:
+
+| Task | Default Model | Input/Output Cost |
+|------|---------------|-------------------|
+| Chunk | `google/gemini-2.5-flash-lite` | $0.10 / $0.40 per M tokens |
+| Rerank | `google/gemini-2.5-flash-lite` | $0.10 / $0.40 per M tokens |
+| Query | `google/gemini-2.5-flash` | $0.30 / $2.50 per M tokens |
+| Vision | `google/gemini-2.5-flash` | $0.30 / $2.50 per M tokens |
+| Embed | `openai/text-embedding-3-large` | $0.13 per M tokens |
+
+💡 **Good to know:** You can customize the models in the [Archive Agent settings](#archive-agent-settings). OpenRouter supports [structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs), [embeddings](https://openrouter.ai/docs/api/reference/embeddings), and [vision](https://openrouter.ai/docs/guides/overview/multimodal/overview) across many models. Browse all available models at [openrouter.ai/models](https://openrouter.ai/models).
 
 ### Ollama provider setup
 

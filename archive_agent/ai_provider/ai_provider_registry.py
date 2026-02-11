@@ -4,6 +4,7 @@
 from archive_agent.ai_provider.AiProviderKeys import AiProviderKeys
 
 from archive_agent.ai_provider.OpenAiProvider import OpenAiProvider
+from archive_agent.ai_provider.OpenRouterProvider import OpenRouterProvider
 from archive_agent.ai_provider.OllamaProvider import OllamaProvider
 from archive_agent.ai_provider.LMStudioProvider import LMStudioProvider
 
@@ -23,6 +24,21 @@ ai_provider_registry = {
             AiProviderKeys.AI_MODEL_VISION: "gpt-5.1-turbo-2026-01-10",
             AiProviderKeys.AI_VECTOR_SIZE: 3072,
             AiProviderKeys.AI_TEMPERATURE_QUERY: 1.1,  # slightly creative but valid (ignored for GPT-5)
+        },
+    },
+
+    "openrouter": {
+        "class": OpenRouterProvider,
+        "defaults": {
+            AiProviderKeys.AI_PROVIDER: "openrouter",
+            AiProviderKeys.AI_SERVER_URL: "https://openrouter.ai/api/v1",
+            AiProviderKeys.AI_MODEL_CHUNK: "google/gemini-2.5-flash-lite",
+            AiProviderKeys.AI_MODEL_EMBED: "openai/text-embedding-3-large",
+            AiProviderKeys.AI_MODEL_RERANK: "google/gemini-2.5-flash-lite",
+            AiProviderKeys.AI_MODEL_QUERY: "google/gemini-2.5-flash",
+            AiProviderKeys.AI_MODEL_VISION: "google/gemini-2.5-flash",
+            AiProviderKeys.AI_VECTOR_SIZE: 3072,
+            AiProviderKeys.AI_TEMPERATURE_QUERY: 1.0,
         },
     },
 
@@ -57,5 +73,6 @@ ai_provider_registry = {
     },
 
     # TODO: Add Gemini, Grok, Claude providers
+    # NOTE: OpenRouter provider above gives access to 400+ models from all providers
 
 }
