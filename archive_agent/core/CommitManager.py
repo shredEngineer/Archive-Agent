@@ -2,6 +2,7 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import asyncio
+import time
 
 import typer
 
@@ -151,20 +152,28 @@ class CommitManager:
             fd for fd in tracked_processable if fd.file_meta['diff'] == self.watchlist.DIFF_REMOVED
         ]
 
+        ingest_t0 = time.monotonic()
         processed_results = self.ingestion.process_files_parallel(files_to_process_in_parallel)
+        self.cli.logger.info(f"Ingestion completed in {time.monotonic() - ingest_t0:.1f}s")
 
+        qdrant_t0 = time.monotonic()
         for file_data, success in processed_results:
             if not success:
                 self.cli.logger.warning(f"Failed to process {format_file(file_data.file_path)}")
                 continue
 
+            db_t0 = time.monotonic()
             if file_data.file_meta['diff'] == self.watchlist.DIFF_ADDED:
                 if asyncio.run(self.qdrant.add(file_data)):
                     self.watchlist.diff_mark_resolved(file_data)
             elif file_data.file_meta['diff'] == self.watchlist.DIFF_CHANGED:
                 if asyncio.run(self.qdrant.change(file_data)):
                     self.watchlist.diff_mark_resolved(file_data)
+            self.cli.logger.info(f"Qdrant update for {format_file(file_data.file_path)} in {time.monotonic() - db_t0:.1f}s")
 
         for file_data in files_to_process_sequentially:
+            db_t0 = time.monotonic()
             if asyncio.run(self.qdrant.remove(file_data)):
                 self.watchlist.diff_mark_resolved(file_data)
+            self.cli.logger.info(f"Qdrant remove for {format_file(file_data.file_path)} in {time.monotonic() - db_t0:.1f}s")
+        self.cli.logger.info(f"All Qdrant operations completed in {time.monotonic() - qdrant_t0:.1f}s")

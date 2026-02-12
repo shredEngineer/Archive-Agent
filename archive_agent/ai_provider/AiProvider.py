@@ -3,6 +3,7 @@
 
 import json
 import hashlib
+import time
 from logging import Logger
 from abc import ABC, abstractmethod
 from typing import Callable, cast
@@ -69,7 +70,10 @@ class AiProvider(ABC):
             ai_result.total_tokens = 0  # Cached result consumed no tokens
             return ai_result
 
+        t0 = time.monotonic()
         result: AiResult = callback(**callback_kwargs)
+        elapsed = time.monotonic() - t0
+        self.logger.info(f"API call '{cache_key_prefix}' completed in {elapsed:.1f}s")
 
         # Cache write.
         self.cache[cache_key] = result

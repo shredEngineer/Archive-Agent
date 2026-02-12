@@ -6,6 +6,7 @@
 
 import json
 import logging
+import time
 from logging import Logger
 import queue
 import threading
@@ -53,6 +54,9 @@ class QueueHandler(Handler):
         self.record_queue.put(record)
 
 
+_LIVE_UPDATE_INTERVAL_S = 0.1
+
+
 def _printer_thread_target(
         live: Live,
         q: queue.Queue,
@@ -62,12 +66,16 @@ def _printer_thread_target(
     """
     The target function for the printer thread.
     Pulls items from a queue and prints them to the live console.
-    Also, periodically refreshes the live display.
+    Refreshes the live display at most every _LIVE_UPDATE_INTERVAL_S seconds
+    to prevent rendering from becoming the bottleneck.
     """
     logger = logging.getLogger("ai.cli.printer")
+    last_update = time.monotonic()
+    last_backlog_warn = 0.0
+    items_processed = 0
     while True:
         try:
-            item = q.get(timeout=0.1)  # Timeout to allow for periodic refresh
+            item = q.get(timeout=_LIVE_UPDATE_INTERVAL_S)
             if item is None:  # Sentinel value to signal thread to exit
                 break
 
@@ -79,15 +87,54 @@ def _printer_thread_target(
                 except Exception as e:
                     logger.error(f"Failed to render output: {type(e).__name__}: {e}")
             q.task_done()
+            items_processed += 1
+
+            # Drain additional pending items without blocking (batch processing)
+            while True:
+                try:
+                    item = q.get_nowait()
+                    if item is None:  # Sentinel value to signal thread to exit
+                        # Process remaining items, then update one final time and exit
+                        try:
+                            live.update(get_renderable())
+                        except Exception as e:
+                            logger.error(f"Live update error: {type(e).__name__}: {e}")
+                        return
+                    if isinstance(item, LogRecord):
+                        rich_handler.handle(item)
+                    else:
+                        try:
+                            live.console.print(item)
+                        except Exception as e:
+                            logger.error(f"Failed to render output: {type(e).__name__}: {e}")
+                    q.task_done()
+                    items_processed += 1
+                except queue.Empty:
+                    break
+
+            # Periodic backlog warning (every 5 seconds)
+            now = time.monotonic()
+            qsize = q.qsize()
+            if qsize > 50 and now - last_backlog_warn > 5.0:
+                rich_handler.handle(logging.LogRecord(
+                    name="ai.cli.printer", level=logging.WARNING,
+                    pathname="", lineno=0, msg=f"Printer queue backlog: ({qsize}) items pending, ({items_processed}) processed",
+                    args=None, exc_info=None
+                ))
+                last_backlog_warn = now
         except queue.Empty:
             pass  # Timeout occurred, just refresh the display
         except Exception as e:
             logger.error(f"Printer thread error: {type(e).__name__}: {e}")
 
-        try:
-            live.update(get_renderable())
-        except Exception as e:
-            logger.error(f"Live update error: {type(e).__name__}: {e}")
+        # Throttled live display update: at most every _LIVE_UPDATE_INTERVAL_S
+        now = time.monotonic()
+        if now - last_update >= _LIVE_UPDATE_INTERVAL_S:
+            try:
+                live.update(get_renderable())
+            except Exception as e:
+                logger.error(f"Live update error: {type(e).__name__}: {e}")
+            last_update = now
 
 
 class CliManager:

@@ -4,6 +4,7 @@
 
 from archive_agent import __version__
 
+import time
 import uuid
 from typing import List, Optional, Dict, Callable, Any
 
@@ -288,7 +289,10 @@ class FileData:
         :return: True if successful, False otherwise.
         """
 
+        file_t0 = time.monotonic()
+
         # PHASE 1: Document Decoding and Image Processing
+        phase_t0 = time.monotonic()
         vision_progress_key = None
         if is_pdf_document(self.file_path) or is_binary_document(self.file_path):
             # Use generic interface - create child task under file
@@ -309,18 +313,26 @@ class FileData:
         if vision_progress_key is not None:
             progress_manager.complete_task(vision_progress_key)
 
+        self.logger.info(f"Phase 1 (decode/vision) completed in {time.monotonic() - phase_t0:.1f}s")
+
         # Decoder may fail, e.g. on I/O error, exhausted AI attempts, …
         if doc_content is None:
             self.logger.warning(f"Failed to decode document")
             return False
 
         # PHASE 2: Sentence Extraction and AI Chunking
+        phase_t0 = time.monotonic()
         doc_content.strip_lines()
 
         # Use preprocessing and NLP (spaCy) to split text into sentences, keeping track of references.
         if self.ai.cli.VERBOSE_CHUNK:
             self.logger.info(f"Extracting sentences across ({len(doc_content.lines)}) lines")
+        nlp_t0 = time.monotonic()
         sentences_with_reference_ranges = get_sentences_with_reference_ranges(doc_content)
+        self.logger.info(
+            f"Sentence extraction completed in {time.monotonic() - nlp_t0:.1f}s "
+            f"({len(sentences_with_reference_ranges)} sentences)"
+        )
 
         # Create chunking phase - use generic interface
         has_vision = is_pdf_document(self.file_path) or is_binary_document(self.file_path)
@@ -345,6 +357,8 @@ class FileData:
         # Complete chunking phase
         progress_manager.complete_task(chunking_progress_key)
 
+        self.logger.info(f"Phase 2 (chunking) completed in {time.monotonic() - phase_t0:.1f}s ({len(chunks)} chunks)")
+
         # PHASE 3: Reference Range Analysis and Point Creation Setup
         is_page_based = doc_content.pages_per_line is not None
 
@@ -356,6 +370,7 @@ class FileData:
             reference_total_info = f"{max_line}"
 
         # Create embedding phase - use generic interface
+        phase_t0 = time.monotonic()
         embedding_weight = 0.33 if has_vision else 0.50
         embedding_progress_key = progress_manager.start_task(
             "Embedding", parent=file_progress_key, weight=embedding_weight, total=len(chunks)
@@ -413,5 +428,8 @@ class FileData:
 
         # Complete embedding phase
         progress_manager.complete_task(embedding_progress_key)
+
+        self.logger.info(f"Phase 3+4 (embedding) completed in {time.monotonic() - phase_t0:.1f}s ({len(self.points)} points)")
+        self.logger.info(f"File processing completed in {time.monotonic() - file_t0:.1f}s")
 
         return True

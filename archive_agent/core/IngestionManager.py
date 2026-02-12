@@ -4,6 +4,7 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 import concurrent.futures
+import time
 from typing import List, Tuple
 
 from archive_agent.core.CliManager import CliManager
@@ -83,7 +84,11 @@ class IngestionManager:
             parent=overall_progress_info.parent_key
         )
 
+        t0 = time.monotonic()
+        self.cli.logger.info(f"[{format_filename_short(file_data.file_path)}] Starting file processing")
         success = file_data.process(overall_progress_info.progress_manager, file_progress_key)
+        elapsed = time.monotonic() - t0
+        self.cli.logger.info(f"[{format_filename_short(file_data.file_path)}] Finished in {elapsed:.1f}s (success={success})")
         overall_progress_info.progress_manager.complete_task(file_progress_key)
 
         return file_data, success

@@ -3,6 +3,7 @@
 
 from logging import Logger
 import re
+import time
 from typing import List, Tuple, Optional, Callable
 
 from dataclasses import dataclass
@@ -379,6 +380,11 @@ def get_chunks_with_reference_ranges(
 
     blocks_of_sentences = _group_blocks_of_sentences(sentences, chunk_lines_block)
 
+    logger.info(
+        f"Chunking ({len(sentences)}) sentences in ({len(blocks_of_sentences)}) blocks "
+        f"for {format_file(file_path)}"
+    )
+
     # Set progress total based on total sentences (more meaningful than block count)
     progress_info.progress_manager.set_total(progress_info.parent_key, len(sentences_with_references))
 
@@ -387,6 +393,7 @@ def get_chunks_with_reference_ranges(
     carry_reference_ranges: Optional[List[SentenceRange]] = None
     last_carry_header: Optional[str] = None
 
+    chunk_t0 = time.monotonic()
     idx = 0
     for block_index, block_of_sentences in enumerate(blocks_of_sentences):
         block_len = len(block_of_sentences)
@@ -446,6 +453,12 @@ def get_chunks_with_reference_ranges(
 
         # Update progress after processing each block (advance by number of sentences processed)
         progress_info.progress_manager.update_task(progress_info.parent_key, advance=block_len)
+
+        block_elapsed = time.monotonic() - chunk_t0
+        logger.info(
+            f"Chunked block ({block_index + 1}) / ({len(blocks_of_sentences)}) "
+            f"({len(chunks_with_ranges)} chunks so far, {block_elapsed:.1f}s elapsed)"
+        )
 
     if carry:
         assert last_carry_header is not None, "Internal error: carry exists but no header was recorded"

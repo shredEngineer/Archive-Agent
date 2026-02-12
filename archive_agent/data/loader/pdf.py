@@ -71,20 +71,20 @@ def load_pdf_document(
     :param progress_info: Progress tracking information
     :return: Document content if successful, None otherwise.
     """
-    doc: PdfDocument = create_pdf_document(file_path)
-
-    analyzing_progress_key = progress_info.progress_manager.start_task(
-        "PDF Analyzing", parent=progress_info.parent_key, total=len(list(doc))
-    )
-    # Vision AI progress key will be created later when we know the number of vision requests
-
     if verbose:
         logger.info("Acquiring PDF analyzing lock...")
 
-    # Use module-level lock to serialize PyMuPDF analyzing operations across all threads
-    # This allows vision/chunking/embedding phases to run in parallel while
-    # ensuring only one PDF analyzing phase executes at a time
+    # Use module-level lock to serialize ALL PyMuPDF operations across all threads.
+    # PyMuPDF explicitly does not support multithreading - even fitz.open() and
+    # page iteration must be serialized. Vision/chunking/embedding phases still
+    # run in parallel after the lock is released.
     with _PDF_ANALYZING_LOCK:
+        doc: PdfDocument = create_pdf_document(file_path)
+
+        analyzing_progress_key = progress_info.progress_manager.start_task(
+            "PDF Analyzing", parent=progress_info.parent_key, total=len(list(doc))
+        )
+
         page_contents = get_pdf_page_contents(
             logger=logger,
             verbose=verbose,
@@ -95,6 +95,8 @@ def load_pdf_document(
 
     if verbose:
         logger.info("PDF analyzing complete - lock released")
+
+    # Vision AI progress key will be created later when we know the number of vision requests
 
     # Complete analyzing sub-task
     progress_info.progress_manager.complete_task(analyzing_progress_key)
