@@ -130,11 +130,11 @@ class RetryManager:
 
     def _log_retry_attempt(self, e: Exception) -> None:
         """
-        Log a standardized retry attempt message and print a stack for context.
+        Log a standardized retry attempt message with stack context.
         """
-        traceback.print_stack()
         attempt = self._compute_attempt()
         logger.warning(f"Attempt {attempt} of {self.retries} failed: {e}")
+        logger.debug("Retry context:\n%s", "".join(traceback.format_stack()))
 
     # noinspection PyMethodMayBeStatic
     def _abort(self) -> NoReturn:
