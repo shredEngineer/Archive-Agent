@@ -259,13 +259,13 @@ This will persist the export for the current user.
 
 With the default [Archive Agent Settings](#archive-agent-settings), these OpenRouter models are used:
 
-| Task | Default Model | Input/Output Cost |
-|------|---------------|-------------------|
-| Chunk | `google/gemini-2.5-flash-lite` | $0.10 / $0.40 per M tokens |
-| Rerank | `google/gemini-2.5-flash-lite` | $0.10 / $0.40 per M tokens |
-| Query | `google/gemini-2.5-flash` | $0.30 / $2.50 per M tokens |
-| Vision | `google/gemini-2.5-flash` | $0.30 / $2.50 per M tokens |
-| Embed | `openai/text-embedding-3-large` | $0.13 per M tokens |
+| Task   | Default Model                   | Input/Output Cost          |
+|--------|---------------------------------|----------------------------|
+| Chunk  | `google/gemini-2.5-flash-lite`  | $0.10 / $0.40 per M tokens |
+| Rerank | `google/gemini-2.5-flash-lite`  | $0.10 / $0.40 per M tokens |
+| Query  | `google/gemini-2.5-flash`       | $0.30 / $2.50 per M tokens |
+| Vision | `google/gemini-2.5-flash`       | $0.30 / $2.50 per M tokens |
+| Embed  | `openai/text-embedding-3-large` | $0.13 per M tokens         |
 
 💡 **Good to know:** You can customize the models in the [Archive Agent settings](#archive-agent-settings). OpenRouter supports [structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs), [embeddings](https://openrouter.ai/docs/api/reference/embeddings), and [vision](https://openrouter.ai/docs/guides/overview/multimodal/overview) across many models. Browse all available models at [openrouter.ai/models](https://openrouter.ai/models).
 
@@ -823,38 +823,38 @@ The profile configuration is contained in the profile folder as `config.json`.
 
 💡 **Good to know:** Use the `switch` CLI command to switch to a new or existing profile (see [Create or switch profile](#create-or-switch-profile)).
 
-| Key                    | Description                                                                                      |
-|------------------------|--------------------------------------------------------------------------------------------------|
-| `config_version`       | Config version                                                                                   |
-| `mcp_server_host`      | MCP server host (default `http://127.0.0.1`; set to `http://0.0.0.0` to expose in LAN)           |
-| `mcp_server_port`      | MCP server port (default `8008`)                                                                 |
-| `ocr_strategy`         | OCR strategy in [`DecoderSettings.py`](archive_agent/config/DecoderSettings.py)                  |
-| `ocr_auto_threshold`   | Minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict` |
-| `image_ocr`            | Image handling: `true` enables OCR, `false` disables it.                                         |
-| `image_entity_extract` | Image handling: `true` enables entity extraction, `false` disables it.                           |
-| `chunk_lines_block`    | Number of lines per block for chunking                                                           |
-| `chunk_words_target`   | Target number of words per chunk                                                                 |
-| `qdrant_server_url`    | URL of the Qdrant server                                                                         |
-| `qdrant_collection`    | Name of the Qdrant collection                                                                    |
-| `retrieve_score_min`   | Minimum similarity score of retrieved chunks (`0`...`1`)                                         |
-| `retrieve_chunks_max`  | Maximum number of retrieved chunks                                                               |
-| `retrieve_knee_enable` | Adaptive cutoff for retrieval (`true` enables knee-based cutoff, `false` disables it)            |
-| `retrieve_knee_sensitivity` | Knee detection sensitivity (Kneedle `S` parameter; higher = more conservative)             |
-| `retrieve_knee_min_chunks`  | Minimum number of chunks to keep when adaptive cutoff is applied                           |
-| `rerank_chunks_max`    | Number of top chunks to keep after reranking                                                     |
-| `expand_chunks_radius` | Number of preceding and following chunks to prepend and append to each reranked chunk            |
-| `max_workers_ingest`   | Maximum number of files to process in parallel, creating one thread for each file                |
-| `max_workers_vision`   | Maxmimum number of parallel vision requests **per file**, creating one thread per request        |
-| `max_workers_embed`    | Maxmimum number of parallel embedding requests **per file**, creating one thread per request     |
-| `ai_provider`          | AI provider in [`ai_provider_registry.py`](archive_agent/ai_provider/ai_provider_registry.py)    |
-| `ai_server_url`        | AI server URL                                                                                    |
-| `ai_model_chunk`       | AI model used for chunking                                                                       |
-| `ai_model_embed`       | AI model used for embedding                                                                      |
-| `ai_model_rerank`      | AI model used for reranking                                                                      |
-| `ai_model_query`       | AI model used for queries                                                                        |
-| `ai_model_vision`      | AI model used for vision (`""` disables vision)                                                  |
-| `ai_vector_size`       | Vector size of embeddings (used for Qdrant collection)                                           |
-| `ai_temperature_query` | Temperature of the query model (ignored for GPT-5)                                               |
+| Key                         | Description                                                                                       |
+|-----------------------------|---------------------------------------------------------------------------------------------------|
+| `config_version`            | Config version                                                                                    |
+| `mcp_server_host`           | MCP server host (default `http://127.0.0.1`; set to `http://0.0.0.0` to expose in LAN)            |
+| `mcp_server_port`           | MCP server port (default `8008`)                                                                  |
+| `ocr_strategy`              | OCR strategy in [`DecoderSettings.py`](archive_agent/config/DecoderSettings.py)                   |
+| `ocr_auto_threshold`        | Minimum number of characters for `auto` OCR strategy to resolve to `relaxed` instead of `strict`  |
+| `image_ocr`                 | Image handling: `true` enables OCR, `false` disables it.                                          |
+| `image_entity_extract`      | Image handling: `true` enables entity extraction, `false` disables it.                            |
+| `chunk_lines_block`         | Number of lines per block for chunking                                                            |
+| `chunk_words_target`        | Target number of words per chunk                                                                  |
+| `qdrant_server_url`         | URL of the Qdrant server                                                                          |
+| `qdrant_collection`         | Name of the Qdrant collection                                                                     |
+| `retrieve_score_min`        | Minimum similarity score of retrieved chunks (`0`...`1`)                                          |
+| `retrieve_chunks_max`       | Maximum number of retrieved chunks                                                                |
+| `retrieve_knee_enable`      | Adaptive cutoff for retrieval (`true` enables knee-based cutoff, `false` disables it)             |
+| `retrieve_knee_sensitivity` | Knee detection sensitivity (Kneedle `S` parameter; higher = more conservative)                    |
+| `retrieve_knee_min_chunks`  | Minimum number of chunks to keep when adaptive cutoff is applied                                  |
+| `rerank_chunks_max`         | Number of top chunks to keep after reranking                                                      |
+| `expand_chunks_radius`      | Number of preceding and following chunks to prepend and append to each reranked chunk             |
+| `max_workers_ingest`        | Maximum number of files to process in parallel, creating one thread for each file                 |
+| `max_workers_vision`        | Maxmimum number of parallel vision requests **per file**, creating one thread per request         |
+| `max_workers_embed`         | Maxmimum number of parallel embedding requests **per file**, creating one thread per request      |
+| `ai_provider`               | AI provider in [`ai_provider_registry.py`](archive_agent/ai_provider/ai_provider_registry.py)     |
+| `ai_server_url`             | AI server URL                                                                                     |
+| `ai_model_chunk`            | AI model used for chunking                                                                        |
+| `ai_model_embed`            | AI model used for embedding                                                                       |
+| `ai_model_rerank`           | AI model used for reranking                                                                       |
+| `ai_model_query`            | AI model used for queries                                                                         |
+| `ai_model_vision`           | AI model used for vision (`""` disables vision)                                                   |
+| `ai_vector_size`            | Vector size of embeddings (used for Qdrant collection)                                            |
+| `ai_temperature_query`      | Temperature of the query model (ignored for GPT-5)                                                |
 
 📌 **Note:** When using GPT-5 (default as of **Archive Agent** v14.0.0), `ai_temperature_query` is ignored.
 GPT-5 reasoning effort and verbosity are currently not available in the configuration,
@@ -1045,7 +1045,7 @@ uv run python qdrant-remove-paths-from-chunk-headers.py
 - [ ] HTML document images are not supported.
 
 
-- [ ] The behaviour of handling unprocessable files is not customizable yet. Should the user be prompted? Should the entire file be rejected? **Unprocessable images are currently tolerated and replaced by `[Unprocessable image]`.** 
+- [ ] The behavior of handling unprocessable files is not customizable yet. Should the user be prompted? Should the entire file be rejected? **Unprocessable images are currently tolerated and replaced by `[Unprocessable image]`.** 
 
 
 - [ ] GPT-5 reasoning effort and verbosity are currently not available in the configuration.
