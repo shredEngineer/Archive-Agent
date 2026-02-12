@@ -84,8 +84,8 @@ class ConfigManager(StorageManager, AiProviderKeys):
         EXPAND_CHUNKS_RADIUS: 1,
 
         MAX_WORKERS_INGEST: 4,
-        MAX_WORKERS_VISION: 16,
-        MAX_WORKERS_EMBED: 16,
+        MAX_WORKERS_VISION: 4,
+        MAX_WORKERS_EMBED: 4,
 
         # deferred to `_prompt_ai_provider`
         AiProviderKeys.AI_PROVIDER: "",

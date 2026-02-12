@@ -3,6 +3,7 @@
 
 from logging import Logger
 import re
+from concurrent.futures import ProcessPoolExecutor
 import time
 from typing import List, Tuple, Optional, Callable
 
@@ -22,6 +23,7 @@ from archive_agent.util.text_util import splitlines_exact
 from archive_agent.core.ProgressManager import ProgressInfo
 
 SentenceRange = Tuple[int, int]
+SentenceBoundary = Tuple[str, int, int]  # (text, start_char, end_char)
 
 
 @dataclass
@@ -53,19 +55,18 @@ def _normalize_inline_whitespace(text: str) -> str:
 
 def _extract_paragraph_sentences_with_reference_ranges(
         paragraph_doc_content: DocumentContent,
-        nlp: Language
+        sentence_boundaries: List[SentenceBoundary],
 ) -> List[SentenceWithRange]:
     """
-    Process a single paragraph block: Normalize, sentencize, and compute ranges.
+    Map pre-computed sentence boundaries to reference ranges.
     :param paragraph_doc_content: Document content (single paragraph).
-    :param nlp: spaCy NLP pipeline.
+    :param sentence_boundaries: Sentence boundaries from spaCy subprocess.
     :return: List of SentenceWithRange for the block.
     """
     paragraph_lines = paragraph_doc_content.lines
     paragraph_references = paragraph_doc_content.get_per_line_references()
 
     normalized_lines = [_normalize_inline_whitespace(line) for line in paragraph_lines]
-    para_text = " ".join(normalized_lines)
 
     line_starts: Optional[List[int]] = None
     if paragraph_references:
@@ -73,17 +74,12 @@ def _extract_paragraph_sentences_with_reference_ranges(
         for norm_line in normalized_lines[:-1]:
             line_starts.append(line_starts[-1] + len(norm_line) + 1)
 
-    doc = nlp(para_text)
-
     block_sentences: List[SentenceWithRange] = []
 
-    for sentence in doc.sents:
-        sentence_text = sentence.text.strip()
+    for sent_text, start_char, end_char in sentence_boundaries:
+        sentence_text = sent_text.strip()
 
         if sentence_text and paragraph_references and line_starts:
-            start_char = sentence.start_char
-            end_char = sentence.end_char
-
             start_line_idx = bisect.bisect_right(line_starts, start_char) - 1
             start_line_idx = min(start_line_idx, len(paragraph_lines) - 1)
 
@@ -136,22 +132,57 @@ def _spacy_markdown_sentence_fixer(doc: Doc) -> Doc:
     return doc
 
 
+_nlp_cache: Optional[Language] = None
+
+
 def _get_nlp() -> Language:
     """
-    Get NLP model for sentence splitting.
+    Get NLP model for sentence splitting (cached).
     :return: spaCy language model.
     """
-    nlp = spacy.load("en_core_web_md", disable=["parser"])
+    global _nlp_cache
+    if _nlp_cache is not None:
+        return _nlp_cache
+
+    # Use blank English pipeline - only tokenizer + sentencizer needed.
+    nlp = spacy.blank("en")
 
     nlp.max_length = 100_000_000
 
-    if not nlp.has_pipe("sentencizer"):
-        nlp.add_pipe("sentencizer")
+    nlp.add_pipe("sentencizer")
+    nlp.add_pipe("_spacy_markdown_sentence_fixer", after="sentencizer")
 
-    if not nlp.has_pipe("_spacy_markdown_sentence_fixer"):
-        nlp.add_pipe("_spacy_markdown_sentence_fixer", after="sentencizer")
-
+    _nlp_cache = nlp
     return nlp
+
+
+def _spacy_tokenize_paragraphs(para_texts: List[str]) -> List[List[SentenceBoundary]]:
+    """
+    Run spaCy tokenization in a subprocess with its own GIL.
+    The Cython tokenizer holds the GIL without releasing it, starving the printer
+    thread and all other workers. Running in a subprocess isolates the GIL contention.
+    :param para_texts: Paragraph texts to tokenize.
+    :return: Sentence boundaries per paragraph: [(text, start_char, end_char), ...].
+    """
+    nlp = _get_nlp()
+    return [
+        [(sent.text, sent.start_char, sent.end_char) for sent in nlp(text).sents]
+        for text in para_texts
+    ]
+
+
+_spacy_executor: Optional[ProcessPoolExecutor] = None
+
+
+def _get_spacy_executor() -> ProcessPoolExecutor:
+    """
+    Get or create the subprocess executor for spaCy tokenization.
+    :return: ProcessPoolExecutor with a single worker subprocess.
+    """
+    global _spacy_executor
+    if _spacy_executor is None:
+        _spacy_executor = ProcessPoolExecutor(max_workers=1)
+    return _spacy_executor
 
 
 def _extract_paragraphs(doc_content: DocumentContent) -> List[DocumentContent]:
@@ -221,20 +252,32 @@ def _extract_paragraphs(doc_content: DocumentContent) -> List[DocumentContent]:
 
 def _extract_sentences_with_reference_ranges(
         paragraphs_doc_content: List[DocumentContent],
-        nlp: Language,
 ) -> List[SentenceWithRange]:
+    # Prepare paragraph texts for batch tokenization in subprocess
+    para_texts: List[str] = []
+    for paragraph_doc_content in paragraphs_doc_content:
+        normalized_lines = [_normalize_inline_whitespace(line) for line in paragraph_doc_content.lines]
+        para_texts.append(" ".join(normalized_lines))
+
+    # Run spaCy in subprocess (own GIL - doesn't starve main process)
+    future = _get_spacy_executor().submit(_spacy_tokenize_paragraphs, para_texts)
+    all_sentence_boundaries: List[List[SentenceBoundary]] = future.result()
+
+    # Map sentence boundaries to reference ranges (main process, GIL-friendly)
     sentences_with_reference_ranges: List[SentenceWithRange] = []
 
-    for paragraph_index, paragraph_doc_content in enumerate(paragraphs_doc_content):
+    for paragraph_index, (paragraph_doc_content, sentence_boundaries) in enumerate(
+        zip(paragraphs_doc_content, all_sentence_boundaries)
+    ):
 
         if paragraph_index > 0:
             # Insert paragraph delimiter: empty sentence with zero range.
-            # (Unit tests are sentitive to this logic)
+            # (Unit tests are sensitive to this logic)
             sentences_with_reference_ranges.append(SentenceWithRange("", (0, 0)))
 
         paragraph_sentences_with_reference_ranges = _extract_paragraph_sentences_with_reference_ranges(
             paragraph_doc_content=paragraph_doc_content,
-            nlp=nlp,
+            sentence_boundaries=sentence_boundaries,
         )
 
         sentences_with_reference_ranges.extend(paragraph_sentences_with_reference_ranges)
@@ -242,17 +285,16 @@ def _extract_sentences_with_reference_ranges(
     return sentences_with_reference_ranges
 
 
-# noinspection PyDefaultArgument
 def get_sentences_with_reference_ranges(doc_content: DocumentContent) -> List[SentenceWithRange]:
     """
     Use preprocessing and NLP (spaCy) to split text into sentences, keeping track of reference ranges.
     Processes text with paragraph and sentence handling, inferring ranges from provided references (lines or pages).
+    spaCy runs in a subprocess to avoid GIL starvation of the printer thread and other workers.
     :param doc_content: Document content.
     :return: List of SentenceWithRange (text and range pairs).
     """
     return _extract_sentences_with_reference_ranges(
         paragraphs_doc_content=_extract_paragraphs(doc_content),
-        nlp=_get_nlp(),
     )
 
 

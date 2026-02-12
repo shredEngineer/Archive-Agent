@@ -327,6 +327,7 @@ class FileData:
         # Use preprocessing and NLP (spaCy) to split text into sentences, keeping track of references.
         if self.ai.cli.VERBOSE_CHUNK:
             self.logger.info(f"Extracting sentences across ({len(doc_content.lines)}) lines")
+        self.logger.info("Submitting spaCy tokenization to subprocess...")
         nlp_t0 = time.monotonic()
         sentences_with_reference_ranges = get_sentences_with_reference_ranges(doc_content)
         self.logger.info(
