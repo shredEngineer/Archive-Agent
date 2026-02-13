@@ -113,7 +113,7 @@ class AiManager(RetryManager):
                 self.ai_usage_stats['chunk'] += result.total_tokens
 
                 if result.parsed_schema is None:
-                    self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
+                    self.ai_provider.invalidate_last_cached()
                     raise RuntimeError("No parsed schema returned")
 
                 chunk_result = cast(ChunkSchema, result.parsed_schema)
@@ -121,22 +121,22 @@ class AiManager(RetryManager):
                 chunk_headers = chunk_result.get_chunk_headers()
 
                 if len(chunk_start_lines) != len(chunk_headers):
-                    self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
+                    self.ai_provider.invalidate_last_cached()
                     raise RuntimeError(
                         f"Mismatch: "
                         f"chunk_start_lines[{len(chunk_start_lines)}] != headers[{len(chunk_headers)}]"
                     )
 
                 if len(chunk_start_lines) == 0:
-                    self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
+                    self.ai_provider.invalidate_last_cached()
                     raise RuntimeError(f"Missing chunk start lines: {chunk_start_lines}")
 
                 if chunk_start_lines[0] != 1:
-                    self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
+                    self.ai_provider.invalidate_last_cached()
                     raise RuntimeError(f"First chunk must start at line 1: {chunk_start_lines}")
 
                 if not 0 < any(chunk_start_lines) <= len(sentences):
-                    self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
+                    self.ai_provider.invalidate_last_cached()
                     raise RuntimeError(f"Invalid line numbers: {chunk_start_lines}")
 
                 return chunk_result
@@ -147,7 +147,7 @@ class AiManager(RetryManager):
                 self.cli.logger.exception(f"Chunking error: {e}")
                 continue  # Retry
 
-        self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
+        self.ai_provider.invalidate_last_cached()
         raise RuntimeError("Failed to recover from chunking errors")
 
     def embed(self, text: str) -> List[float]:
@@ -211,14 +211,14 @@ class AiManager(RetryManager):
                 self.ai_usage_stats['rerank'] += result.total_tokens
 
                 if result.parsed_schema is None:
-                    self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
+                    self.ai_provider.invalidate_last_cached()
                     raise RuntimeError("No parsed schema returned")
 
                 rerank_result = cast(RerankSchema, result.parsed_schema)
 
                 ai_is_stupid = rerank_result.reranked_indices == [0]  # Let's allow some slack from weaker or overloaded LLMs here...
                 if rerank_result.is_rejected or ai_is_stupid:
-                    self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
+                    self.ai_provider.invalidate_last_cached()
                     self.cli.logger.critical(f"⚠️ Reranking context rejected: \"{rerank_result.rejection_reason}\"")
                     return rerank_result
 
@@ -228,7 +228,7 @@ class AiManager(RetryManager):
                 # First, validate strictly
                 is_valid, missing, extra, oob = AiRerank.validate_permutation(expected, reranked)
                 if not is_valid:
-                    self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
+                    self.ai_provider.invalidate_last_cached()
 
                     # Auto-repair path for production solidity
                     repaired = AiRerank.repair_permutation(expected, reranked)
@@ -263,7 +263,7 @@ class AiManager(RetryManager):
                 self.cli.logger.exception(f"Reranking error: {e}")
                 continue  # Retry
 
-        self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
+        self.ai_provider.invalidate_last_cached()
         raise RuntimeError("Failed to recover from reranking errors")
 
     def query(self, question: str, points: List[ScoredPoint]) -> QuerySchema:
@@ -284,7 +284,7 @@ class AiManager(RetryManager):
         query_result = AiQuery.format_query_references(logger=self.cli.logger, query_result=query_result, points=points)
 
         if query_result.is_rejected:
-            self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
+            self.ai_provider.invalidate_last_cached()
 
         return query_result
 
@@ -312,7 +312,7 @@ class AiManager(RetryManager):
         vision_result = cast(VisionSchema, result.parsed_schema)
 
         if vision_result.is_rejected:
-            self.ai_provider.cache.pop()  # REMOVE bad AI result from cache
+            self.ai_provider.invalidate_last_cached()
 
         return vision_result
 

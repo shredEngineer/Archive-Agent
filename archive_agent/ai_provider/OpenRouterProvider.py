@@ -63,6 +63,7 @@ class OpenRouterProvider(AiProvider):
         self.client = OpenAI(
             base_url=self.server_url,
             api_key=openrouter_api_key,
+            timeout=AiProvider.AI_REQUEST_TIMEOUT_S,
         )
 
     def _perform_chunk_callback(self, prompt: str) -> AiResult:

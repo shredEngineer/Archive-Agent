@@ -49,7 +49,7 @@ class LMStudioProvider(AiProvider):
             server_url=server_url,
         )
 
-        self.client = OpenAI(base_url=self.server_url, api_key="lm-studio")
+        self.client = OpenAI(base_url=self.server_url, api_key="lm-studio", timeout=AiProvider.AI_REQUEST_TIMEOUT_S)
 
     def _perform_chunk_callback(self, prompt: str) -> AiResult:
         """

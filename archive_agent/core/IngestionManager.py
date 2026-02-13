@@ -7,6 +7,8 @@ import concurrent.futures
 import time
 from typing import List, Tuple
 
+import typer
+
 from archive_agent.core.CliManager import CliManager
 from archive_agent.data.FileData import FileData
 from archive_agent.core.ProgressManager import ProgressInfo
@@ -59,6 +61,11 @@ class IngestionManager:
                     file_data = future_to_filedata[future]
                     try:
                         processed_results.append(future.result())
+                    except typer.Exit:
+                        self.cli.logger.error(
+                            f"Fatal error processing {format_file(file_data.file_path)} — all retries exhausted"
+                        )
+                        processed_results.append((file_data, False))
                     except Exception as exc:
                         self.cli.logger.error(f"An exception occurred while processing {format_file(file_data.file_path)}: {exc}")
                         processed_results.append((file_data, False))
@@ -86,9 +93,12 @@ class IngestionManager:
 
         t0 = time.monotonic()
         self.cli.logger.info(f"[{format_filename_short(file_data.file_path)}] Starting file processing")
-        success = file_data.process(overall_progress_info.progress_manager, file_progress_key)
-        elapsed = time.monotonic() - t0
-        self.cli.logger.info(f"[{format_filename_short(file_data.file_path)}] Finished in {elapsed:.1f}s (success={success})")
-        overall_progress_info.progress_manager.complete_task(file_progress_key)
+        success = False
+        try:
+            success = file_data.process(overall_progress_info.progress_manager, file_progress_key)
+        finally:
+            elapsed = time.monotonic() - t0
+            self.cli.logger.info(f"[{format_filename_short(file_data.file_path)}] Finished in {elapsed:.1f}s (success={success})")
+            overall_progress_info.progress_manager.complete_task(file_progress_key)
 
         return file_data, success

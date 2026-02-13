@@ -49,7 +49,7 @@ class OllamaProvider(AiProvider):
             server_url=server_url,
         )
 
-        self.client = OllamaClient(host=self.server_url)
+        self.client = OllamaClient(host=self.server_url, timeout=AiProvider.AI_REQUEST_TIMEOUT_S)
 
     def _perform_chunk_callback(self, prompt: str) -> AiResult:
         """

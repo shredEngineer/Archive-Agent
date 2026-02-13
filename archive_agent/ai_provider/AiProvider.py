@@ -7,7 +7,7 @@ import re
 import time
 from logging import Logger
 from abc import ABC, abstractmethod
-from typing import Callable, cast
+from typing import Callable, Optional, cast
 
 from archive_agent.ai.AiResult import AiResult
 from archive_agent.core.CacheManager import CacheManager
@@ -19,6 +19,8 @@ class AiProvider(ABC):
     """
     AI provider.
     """
+
+    AI_REQUEST_TIMEOUT_S = 120
 
     def __init__(
             self,
@@ -46,6 +48,8 @@ class AiProvider(ABC):
         self.server_url = server_url
 
         self.supports_vision = self.params.model_vision != ""
+
+        self._last_cache_key: Optional[str] = None
 
     @staticmethod
     def _sanitize_json(json_raw: str) -> str:
@@ -75,6 +79,7 @@ class AiProvider(ABC):
         params_str = self.params.get_static_cache_key()
         cache_str = f"{cache_key_prefix}:{callback_kwargs_str}:{params_str}"
         cache_key = hashlib.sha256(cache_str.encode('utf-8')).hexdigest()
+        self._last_cache_key = cache_key
 
         cached_result = self.cache.get(key=cache_key, display_key=cache_key_prefix)
         if cached_result is not None:
@@ -91,6 +96,18 @@ class AiProvider(ABC):
         self.cache[cache_key] = result
 
         return result
+
+    def invalidate_last_cached(self) -> None:
+        """
+        Delete the last cached result by its specific key.
+        Thread-safe: each worker thread owns a dedicated AiProvider instance,
+        so _last_cache_key is never shared between threads.
+        """
+        if self._last_cache_key is not None:
+            try:
+                del self.cache[self._last_cache_key]
+            except KeyError:
+                pass
 
     @abstractmethod
     def _perform_chunk_callback(self, prompt) -> AiResult:

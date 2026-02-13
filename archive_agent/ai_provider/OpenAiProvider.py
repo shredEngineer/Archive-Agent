@@ -91,7 +91,7 @@ class OpenAiProvider(AiProvider):
             )
             raise typer.Exit(code=1)
 
-        self.client = OpenAI(base_url=self.server_url)
+        self.client = OpenAI(base_url=self.server_url, timeout=AiProvider.AI_REQUEST_TIMEOUT_S)
 
     def _responses_create(self, model: str, op: str, **kwargs: Any) -> Any:
         """

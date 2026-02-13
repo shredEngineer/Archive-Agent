@@ -67,18 +67,3 @@ class CacheManager:
 
     def __delitem__(self, key):
         del self.cache[key]
-
-    def pop(self) -> object:
-        """
-        Pop the last touched key from the cache, delete it, and return its value.
-        :return: The value associated with the last touched key.
-        :raises KeyError: If the cache is empty.
-        """
-        try:
-            key = next(reversed(self.cache))
-        except StopIteration:
-            raise KeyError("Cache is empty.")
-
-        value = self.cache[key]
-        del self.cache[key]
-        return value

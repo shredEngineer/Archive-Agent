@@ -177,11 +177,11 @@ _spacy_executor: Optional[ProcessPoolExecutor] = None
 def _get_spacy_executor() -> ProcessPoolExecutor:
     """
     Get or create the subprocess executor for spaCy tokenization.
-    :return: ProcessPoolExecutor for spaCy tokenization subprocesses.
+    :return: ProcessPoolExecutor with a single worker subprocess.
     """
     global _spacy_executor
     if _spacy_executor is None:
-        _spacy_executor = ProcessPoolExecutor()
+        _spacy_executor = ProcessPoolExecutor(max_workers=1)
     return _spacy_executor
 
 

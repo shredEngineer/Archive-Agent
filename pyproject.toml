@@ -1,6 +1,6 @@
 [project]
 name = "archive-agent"
-version = "19.1.0"
+version = "20.0.0"
 description = "Find your files with natural language and ask questions."
 authors = [
     { name = "Dr.-Ing. Paul Wilhelm", email = "paul@wilhelm.dev" },
