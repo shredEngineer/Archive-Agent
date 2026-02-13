@@ -227,9 +227,10 @@ class CliManager:
         try:
             yield
         finally:
-            # Signal the printer thread to exit and wait for it to finish processing the queue.
+            # Signal the printer thread to exit and wait for it to drain the queue.
+            # Timeout prevents stall when Rich highlighting is slow on a backlog of messages.
             q.put(None)
-            printer_thread.join()
+            printer_thread.join(timeout=5.0)
 
             # Restore the original logger handlers.
             self.logger.handlers = original_handlers
