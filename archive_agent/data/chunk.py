@@ -177,11 +177,11 @@ _spacy_executor: Optional[ProcessPoolExecutor] = None
 def _get_spacy_executor() -> ProcessPoolExecutor:
     """
     Get or create the subprocess executor for spaCy tokenization.
-    :return: ProcessPoolExecutor with a single worker subprocess.
+    :return: ProcessPoolExecutor for spaCy tokenization subprocesses.
     """
     global _spacy_executor
     if _spacy_executor is None:
-        _spacy_executor = ProcessPoolExecutor(max_workers=1)
+        _spacy_executor = ProcessPoolExecutor()
     return _spacy_executor
 
 
@@ -434,6 +434,7 @@ def get_chunks_with_reference_ranges(
     carry: Optional[str] = None
     carry_reference_ranges: Optional[List[SentenceRange]] = None
     last_carry_header: Optional[str] = None
+    failed_blocks = 0
 
     chunk_t0 = time.monotonic()
     idx = 0
@@ -461,8 +462,21 @@ def get_chunks_with_reference_ranges(
         range_stop = block_sentence_reference_ranges[-1] if block_sentence_reference_ranges else (0, 0)
         logger.debug(f"Chunking block {block_index + 1}: {len(block_of_sentences)} sentences, range {range_start} to {range_stop}")
 
-        ai = ai_factory.get_ai()
-        chunk_result: ChunkSchema = chunk_callback(ai, block_of_sentences)
+        try:
+            ai = ai_factory.get_ai()
+            chunk_result: ChunkSchema = chunk_callback(ai, block_of_sentences)
+        except Exception as e:
+            failed_blocks += 1
+            logger.critical(
+                f"BLOCK SKIPPED: Chunking failed for block ({block_index + 1}) / ({len(blocks_of_sentences)}) "
+                f"of {format_file(file_path)} — ({len(block_of_sentences)}) sentences lost: {e}"
+            )
+            carry = None
+            carry_reference_ranges = None
+            last_carry_header = None
+            progress_info.progress_manager.update_task(progress_info.parent_key, advance=block_len)
+            continue
+
         chunk_start_lines = chunk_result.get_chunk_start_lines()
         chunk_headers = chunk_result.get_chunk_headers()
         ranges = _chunk_start_to_ranges(start_lines=chunk_start_lines, total_lines=len(block_of_sentences))
@@ -500,6 +514,12 @@ def get_chunks_with_reference_ranges(
         logger.info(
             f"Chunked block ({block_index + 1}) / ({len(blocks_of_sentences)}) "
             f"({len(chunks_with_ranges)} chunks so far, {block_elapsed:.1f}s elapsed)"
+        )
+
+    if failed_blocks > 0:
+        logger.critical(
+            f"INCOMPLETE INGESTION: ({failed_blocks}) of ({len(blocks_of_sentences)}) blocks failed chunking "
+            f"for {format_file(file_path)} — re-run with a different model or smaller block size"
         )
 
     if carry:

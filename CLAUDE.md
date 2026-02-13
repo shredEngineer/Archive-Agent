@@ -313,6 +313,7 @@ Archive Agent implements comprehensive parallel processing across major operatio
   - Comprehensive progress tracking based on sentences processed (not blocks processed)
   - Maintains semantic coherence and prevents chunk fragmentation
   - Infrastructure exists for future parallelization opportunities (ChunkProcessor pattern ready)
+  - **Block-Level Error Resilience**: If AI chunking fails for a block (e.g., model token limit exceeded, malformed response after all retries), the block is SKIPPED and the file continues processing. Failed blocks are logged as `BLOCK SKIPPED` errors with sentence counts, and a final `INCOMPLETE INGESTION` summary is logged per file. Carry state is reset so subsequent blocks start fresh. This prevents a single problematic block from losing an entire file's worth of chunks.
 
 ### Key Architectural Insights
 

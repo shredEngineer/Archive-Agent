@@ -41,7 +41,7 @@ class AiManager(RetryManager):
         'retries': 10,
     }
 
-    SCHEMA_RETRY_ATTEMPTS = 100
+    SCHEMA_RETRY_ATTEMPTS = 10
     EMBED_TRUNCATION_ATTEMPTS = 10
 
     def __init__(
