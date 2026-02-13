@@ -932,14 +932,16 @@ If you miss something or spot bad patterns, feel free to contribute and refactor
 
 ### Network and Retry Handling
 
-Archive Agent implements comprehensive retry logic with exponential backoff to handle transient failures:
+Archive Agent implements comprehensive retry logic with exponential backoff and intelligent failure detection:
 
-- **AI Provider Operations**: 10 retries with exponential backoff (max 60s delay) for network timeouts and API errors.
-- **Database Operations**: 10 retries with exponential backoff (max 10s delay) for Qdrant connection issues  .
-- **Schema Validation**: Additional 10 linear retry attempts for AI response parsing failures with cache invalidation.
-- **Dual-Layer Strategy**: Network-level retries handle infrastructure failures, while schema-level retries handle AI response quality issues.
+- **AI Provider Operations**: 10 retries with exponential backoff (max 60s delay) for network timeouts and API errors
+- **Database Operations**: 10 retries with exponential backoff (max 10s delay) for Qdrant connection issues
+- **Schema Validation**: 10 retry attempts for AI response parsing failures with cache invalidation on each failure
+- **MAX_TOKENS Detection**: Instant skip when model hits token limit (no wasted retries on guaranteed truncation)
+- **Block-Level Resilience**: Failed chunking blocks are skipped with CRITICAL logs, file processing continues
+- **Dual-Layer Strategy**: Network-level retries handle infrastructure failures, schema-level retries handle AI response quality
 
-This robust retry system ensures reliable operation even with unstable network conditions or intermittent service issues.
+All parallel processors (chunking, vision, embedding) properly propagate fatal errors instead of silently continuing with corrupted data.
 
 ### Code testing and analysis
 

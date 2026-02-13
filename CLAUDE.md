@@ -691,6 +691,52 @@ All Qdrant database operations use a dedicated `RetryManager` instance:
 
 ---
 
+## Failure Mode Handling
+
+Archive Agent implements consistent, predictable failure modes across all operations with proper error propagation and resilience guarantees.
+
+### Exception Hierarchy
+
+**`AiProviderError` (retryable)**: Network errors, API errors, transient failures. Caught by `RetryManager._RETRY_EXCEPTIONS` tuple for exponential backoff retry.
+
+**`AiProviderMaxTokensError` (non-retryable)**: Model hit `max_tokens` limit, response truncated. Not in retry tuple — propagates immediately. Detected via `finish_reason='length'` check in all 4 provider operations (chunk/rerank/query/vision). Retrying the same input will always produce the same truncation — skip instantly.
+
+**`typer.Exit` (fatal)**: All retries exhausted, operation cannot continue. Raised by `RetryManager._abort()` after 10 attempts. Must propagate to terminate process. **CRITICAL**: All parallel processors (VisionProcessor, EmbedProcessor, chunking loop) have explicit `except typer.Exit: raise` handlers to prevent swallowing.
+
+### Block-Level Resilience (Chunking Only)
+
+Chunking uses block-level error handling to maximize data recovery:
+- **Per-Block Try/Except**: Each block (group of sentences) wrapped in try/except
+- **On Failure**: Block skipped, logged as `CRITICAL: BLOCK SKIPPED`, carry state reset
+- **File Continues**: Subsequent blocks process normally, partial file ingestion completes
+- **Summary Logging**: `CRITICAL: INCOMPLETE INGESTION` logged at end with block count
+
+Vision and embedding do NOT have block-level resilience — failures propagate as `typer.Exit` to ensure data integrity (partial vision results would corrupt document structure).
+
+### Retry Configuration
+
+All operations use consistent retry counts:
+- **Network Retries**: 10 attempts via `RetryManager` (AI_RETRY_KWARGS)
+- **Schema Retries**: 10 attempts in `AiManager` (SCHEMA_RETRY_ATTEMPTS, reduced from 100 in v18.5.0)
+- **MAX_TOKENS**: 0 retries (instant skip via `AiProviderMaxTokensError`)
+
+### Default Worker Counts
+
+- `MAX_WORKERS_INGEST`: 4 (file-level parallelism)
+- `MAX_WORKERS_VISION`: 4 (image processing parallelism)
+- `MAX_WORKERS_EMBED`: 4 (chunk embedding parallelism)
+- spaCy subprocess pool: Auto-scales to CPU count (via `ProcessPoolExecutor()` default)
+
+All configurable via profile settings.
+
+### Logging Severity Conventions
+
+- **`.error()`**: Expected failures (parsing errors, single block failures, per-item errors in parallel loops)
+- **`.critical()`**: Data loss events (block skipped, incomplete ingestion, system threats)
+- **`.warning()`**: Retry attempts, performance issues, auto-repairs
+
+---
+
 ## Progress Management Architecture
 
 Archive Agent uses a hierarchical progress management system that provides true nested progress tracking with automatic cleanup and thread-safe concurrent updates.

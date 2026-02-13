@@ -6,6 +6,7 @@
 import concurrent.futures
 from typing import List, Any, Optional, Tuple
 
+import typer
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.util.format import format_file
 from archive_agent.core.ProgressManager import ProgressInfo
@@ -61,6 +62,8 @@ class EmbedProcessor:
                 progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
 
                 return chunk_index, chunk, _vector
+            except typer.Exit:
+                raise  # Network retries exhausted — don't swallow process exit
             except Exception as e:
                 self.logger.error(f"Failed to embed chunk ({chunk_index + 1}): {e}")
                 progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
@@ -81,6 +84,8 @@ class EmbedProcessor:
                 try:
                     result_index, chunk, vector = future.result()
                     results_dict[result_index] = (chunk, vector)
+                except typer.Exit:
+                    raise  # Network retries exhausted — don't swallow process exit
                 except Exception as exc:
                     self.logger.error(f"Chunk ({chunk_index + 1}) generated an exception: {exc}")
                     results_dict[chunk_index] = (original_chunk, None)
