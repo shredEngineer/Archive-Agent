@@ -3,6 +3,7 @@
 
 import json
 import hashlib
+import re
 import time
 from logging import Logger
 from abc import ABC, abstractmethod
@@ -45,6 +46,17 @@ class AiProvider(ABC):
         self.server_url = server_url
 
         self.supports_vision = self.params.model_vision != ""
+
+    @staticmethod
+    def _sanitize_json(json_raw: str) -> str:
+        """
+        Strip control characters that break JSON parsing.
+        AI models may echo control characters from garbage input (e.g., OCR artifacts).
+        Preserves newline, carriage return, and tab (valid JSON whitespace).
+        :param json_raw: Raw JSON string from AI response.
+        :return: Sanitized JSON string.
+        """
+        return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', json_raw)
 
     def _handle_cached_request(
             self,

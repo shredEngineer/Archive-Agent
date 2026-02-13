@@ -73,7 +73,7 @@ class OllamaProvider(AiProvider):
 
         json_raw = response["message"]["content"]
         try:
-            parsed_schema = ChunkSchema.model_validate_json(json_raw)
+            parsed_schema = ChunkSchema.model_validate_json(self._sanitize_json(json_raw))
         except Exception as e:
             raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
@@ -122,7 +122,7 @@ class OllamaProvider(AiProvider):
 
         json_raw = response["message"]["content"]
         try:
-            parsed_schema = RerankSchema.model_validate_json(json_raw)
+            parsed_schema = RerankSchema.model_validate_json(self._sanitize_json(json_raw))
         except Exception as e:
             raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
@@ -154,7 +154,7 @@ class OllamaProvider(AiProvider):
 
         json_raw = response["message"]["content"]
         try:
-            parsed_schema = QuerySchema.model_validate_json(json_raw)
+            parsed_schema = QuerySchema.model_validate_json(self._sanitize_json(json_raw))
         except Exception as e:
             raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
@@ -189,7 +189,7 @@ class OllamaProvider(AiProvider):
 
         json_raw = response["message"]["content"]
         try:
-            parsed_schema = VisionSchema.model_validate_json(json_raw)
+            parsed_schema = VisionSchema.model_validate_json(self._sanitize_json(json_raw))
         except Exception as e:
             raise AiProviderError(f"Invalid JSON:\n{json_raw}\n{e}\n{formatted_response}")
 
