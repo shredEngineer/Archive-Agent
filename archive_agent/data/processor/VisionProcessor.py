@@ -9,6 +9,8 @@ from typing import List, Union, Optional, Callable
 import io
 from logging import Logger
 
+import typer
+
 from PIL import Image
 
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
@@ -95,6 +97,8 @@ class VisionProcessor:
 
                 return request_index, _formatted_result
 
+            except typer.Exit:
+                raise  # Network retries exhausted — don't swallow process exit
             except Exception as e:
                 self.logger.error(f"Failed to process vision request ({request.image_index + 1}): {e}")
                 # Apply formatter to None for error case
@@ -117,6 +121,8 @@ class VisionProcessor:
                 try:
                     result_index, formatted_result = future.result()
                     results_dict[result_index] = formatted_result
+                except typer.Exit:
+                    raise  # Network retries exhausted — don't swallow process exit
                 except Exception as exc:
                     self.logger.error(f"Vision request ({request_index + 1}) generated an exception: {exc}")
                     # Apply formatter to None for exception case

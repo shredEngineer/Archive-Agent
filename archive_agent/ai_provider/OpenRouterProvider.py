@@ -9,7 +9,7 @@ from logging import Logger
 from openai import OpenAI
 
 from archive_agent.ai_provider.AiProvider import AiProvider
-from archive_agent.ai_provider.AiProviderError import AiProviderError
+from archive_agent.ai_provider.AiProviderError import AiProviderError, AiProviderMaxTokensError
 from archive_agent.ai.AiResult import AiResult
 from archive_agent.ai_provider.AiProviderParams import AiProviderParams
 
@@ -99,6 +99,13 @@ class OpenRouterProvider(AiProvider):
 
         formatted_response = json.dumps(response.__dict__, indent=2, default=str)
 
+        # Check for max_tokens truncation (non-retryable)
+        finish_reason = response.choices[0].finish_reason if response.choices else None
+        if finish_reason == "length":
+            raise AiProviderMaxTokensError(
+                f"Model hit max_tokens limit during chunking - response truncated\n{formatted_response}"
+            )
+
         json_raw = response.choices[0].message.content
         if json_raw is None:
             raise AiProviderError(f"Missing JSON\n{formatted_response}")
@@ -168,6 +175,13 @@ class OpenRouterProvider(AiProvider):
 
         formatted_response = json.dumps(response.__dict__, indent=2, default=str)
 
+        # Check for max_tokens truncation (non-retryable)
+        finish_reason = response.choices[0].finish_reason if response.choices else None
+        if finish_reason == "length":
+            raise AiProviderMaxTokensError(
+                f"Model hit max_tokens limit during reranking - response truncated\n{formatted_response}"
+            )
+
         json_raw = response.choices[0].message.content
         if json_raw is None:
             raise AiProviderError(f"Missing JSON\n{formatted_response}")
@@ -215,6 +229,13 @@ class OpenRouterProvider(AiProvider):
         )
 
         formatted_response = json.dumps(response.__dict__, indent=2, default=str)
+
+        # Check for max_tokens truncation (non-retryable)
+        finish_reason = response.choices[0].finish_reason if response.choices else None
+        if finish_reason == "length":
+            raise AiProviderMaxTokensError(
+                f"Model hit max_tokens limit during query - response truncated\n{formatted_response}"
+            )
 
         json_raw = response.choices[0].message.content
         if json_raw is None:
@@ -273,6 +294,13 @@ class OpenRouterProvider(AiProvider):
         )
 
         formatted_response = json.dumps(response.__dict__, indent=2, default=str)
+
+        # Check for max_tokens truncation (non-retryable)
+        finish_reason = response.choices[0].finish_reason if response.choices else None
+        if finish_reason == "length":
+            raise AiProviderMaxTokensError(
+                f"Model hit max_tokens limit during vision - response truncated\n{formatted_response}"
+            )
 
         json_raw = response.choices[0].message.content
         if json_raw is None:

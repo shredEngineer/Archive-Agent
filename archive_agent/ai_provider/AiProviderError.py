@@ -4,6 +4,14 @@
 
 class AiProviderError(Exception):
     """
-    AI provider error.
+    AI provider error (retryable).
+    """
+    pass
+
+
+class AiProviderMaxTokensError(Exception):
+    """
+    AI provider error: model hit max tokens (non-retryable).
+    Retrying with the same input will produce the same truncation.
     """
     pass
