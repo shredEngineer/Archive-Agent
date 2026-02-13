@@ -5,6 +5,7 @@ import json
 from enum import Enum
 from typing import cast, Dict, List, Optional
 
+import typer
 from openai import BadRequestError
 from qdrant_client.http.models import ScoredPoint
 
@@ -140,6 +141,8 @@ class AiManager(RetryManager):
 
                 return chunk_result
 
+            except typer.Exit:
+                raise  # Network retries exhausted — don't swallow process exit
             except Exception as e:
                 self.cli.logger.exception(f"Chunking error: {e}")
                 continue  # Retry
@@ -254,6 +257,8 @@ class AiManager(RetryManager):
 
                 return rerank_result
 
+            except typer.Exit:
+                raise  # Network retries exhausted — don't swallow process exit
             except Exception as e:
                 self.cli.logger.exception(f"Reranking error: {e}")
                 continue  # Retry
