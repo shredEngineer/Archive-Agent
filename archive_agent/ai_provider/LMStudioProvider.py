@@ -118,7 +118,9 @@ class LMStudioProvider(AiProvider):
             )
 
         except Exception as e:
-            raise AiProviderError(f"Embedding failed:\n{e}")
+            text_preview = text[:200] + "..." if len(text) > 200 else text
+            self.logger.debug(f"Embed failure for text ({len(text)} chars): {text_preview}")
+            raise AiProviderError(f"Embedding failed:\n{type(e).__name__}: {e}")
 
     def _perform_rerank_callback(self, prompt: str) -> AiResult:
         """

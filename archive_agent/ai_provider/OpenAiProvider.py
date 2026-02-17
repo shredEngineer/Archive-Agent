@@ -169,14 +169,19 @@ class OpenAiProvider(AiProvider):
         )
 
     def _perform_embed_callback(self, text: str) -> AiResult:
-        response = self.client.embeddings.create(
-            input=text,
-            model=self.params.model_embed,
-        )
-        return AiResult(
-            total_tokens=response.usage.total_tokens,
-            embedding=response.data[0].embedding,
-        )
+        try:
+            response = self.client.embeddings.create(
+                input=text,
+                model=self.params.model_embed,
+            )
+            return AiResult(
+                total_tokens=response.usage.total_tokens,
+                embedding=response.data[0].embedding,
+            )
+        except Exception as e:
+            text_preview = text[:200] + "..." if len(text) > 200 else text
+            self.logger.debug(f"Embed failure for text ({len(text)} chars): {text_preview}")
+            raise AiProviderError(f"Embedding failed:\n{type(e).__name__}: {e}")
 
     def _perform_rerank_callback(self, prompt: str) -> AiResult:
         # noinspection PyTypeChecker

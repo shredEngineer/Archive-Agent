@@ -4,6 +4,7 @@
 from logging import Logger
 from typing import Set, Optional, Callable
 
+import typer
 from PIL import Image, UnidentifiedImageError
 
 from archive_agent.ai_provider.AiProviderError import AiProviderMaxTokensError
@@ -71,6 +72,10 @@ def load_image(
         image_text = image_to_text_callback(ai, image, callback_progress_info)
     except AiProviderMaxTokensError as e:
         logger.warning(f"Image vision skipped — max tokens exceeded: {e}")
+        progress_info.progress_manager.complete_task(vision_ai_progress_key)
+        return None
+    except typer.Exit:
+        logger.critical(f"VISION SKIPPED: {format_file(file_path)} — all retries exhausted")
         progress_info.progress_manager.complete_task(vision_ai_progress_key)
         return None
 

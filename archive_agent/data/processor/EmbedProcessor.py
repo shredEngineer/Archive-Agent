@@ -64,7 +64,12 @@ class EmbedProcessor:
 
                 return chunk_index, chunk, _vector
             except typer.Exit:
-                raise  # Network retries exhausted — don't swallow process exit
+                self.logger.critical(
+                    f"CHUNK SKIPPED: Embedding chunk ({chunk_index + 1}) of {format_file(self.file_path)} "
+                    f"— all retries exhausted"
+                )
+                progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
+                return chunk_index, chunk, None
             except AiProviderMaxTokensError as e:
                 self.logger.warning(f"Embedding chunk ({chunk_index + 1}) skipped — max tokens exceeded: {e}")
                 progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
@@ -90,7 +95,11 @@ class EmbedProcessor:
                     result_index, chunk, vector = future.result()
                     results_dict[result_index] = (chunk, vector)
                 except typer.Exit:
-                    raise  # Network retries exhausted — don't swallow process exit
+                    self.logger.critical(
+                        f"CHUNK SKIPPED: Embedding chunk ({chunk_index + 1}) of {format_file(self.file_path)} "
+                        f"— all retries exhausted"
+                    )
+                    results_dict[chunk_index] = (original_chunk, None)
                 except AiProviderMaxTokensError as exc:
                     self.logger.warning(f"Chunk ({chunk_index + 1}) skipped — max tokens exceeded: {exc}")
                     results_dict[chunk_index] = (original_chunk, None)

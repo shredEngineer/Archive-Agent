@@ -99,7 +99,12 @@ class VisionProcessor:
                 return request_index, _formatted_result
 
             except typer.Exit:
-                raise  # Network retries exhausted — don't swallow process exit
+                self.logger.critical(
+                    f"VISION SKIPPED: Vision request ({request.image_index + 1}) of {self.file_path} "
+                    f"— all retries exhausted"
+                )
+                _formatted_result = request.formatter(None)
+                return request_index, _formatted_result
             except AiProviderMaxTokensError as e:
                 self.logger.warning(f"Vision request ({request.image_index + 1}) skipped — max tokens exceeded: {e}")
                 _formatted_result = request.formatter(None)
@@ -127,7 +132,12 @@ class VisionProcessor:
                     result_index, formatted_result = future.result()
                     results_dict[result_index] = formatted_result
                 except typer.Exit:
-                    raise  # Network retries exhausted — don't swallow process exit
+                    self.logger.critical(
+                        f"VISION SKIPPED: Vision request ({request_index + 1}) of {self.file_path} "
+                        f"— all retries exhausted"
+                    )
+                    formatted_result = original_request.formatter(None)
+                    results_dict[request_index] = formatted_result
                 except AiProviderMaxTokensError as exc:
                     self.logger.warning(f"Vision request ({request_index + 1}) skipped — max tokens exceeded: {exc}")
                     formatted_result = original_request.formatter(None)
