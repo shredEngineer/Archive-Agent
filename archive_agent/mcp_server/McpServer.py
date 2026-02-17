@@ -3,6 +3,7 @@
 #  This file is part of Archive Agent. See LICENSE for details.
 
 from archive_agent.core.ContextManager import ContextManager
+from archive_agent.db.QdrantManager import QdrantManager
 
 from archive_agent.ai.query.AiQuery import QuerySchema
 
@@ -77,15 +78,15 @@ async def get_files_changed() -> Dict[str, Any]:
 
 
 @mcp.tool()
-async def get_search_result(question: str) -> Dict[str, Any]:
+async def get_search_result(question: str, collection: Optional[str] = None) -> Dict[str, Any]:
     """
     Get the list of files relevant to the question.
     :param question: Question.
+    :param collection: Optional Qdrant collection name (defaults to active profile's collection).
     :return: {file_path: relevance_score, ...}.
     """
-    global _context
-    assert _context is not None  # makes pyright happy
-    points: List[ScoredPoint] = await _context.qdrant.search(question)
+    qdrant = await _get_qdrant(collection)
+    points: List[ScoredPoint] = await qdrant.search(question)
     return {
         parse_payload(point.payload).file_path: point.score
         for point in points
@@ -93,20 +94,20 @@ async def get_search_result(question: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-async def get_chunk_headers(file_path: str) -> Dict[str, Any]:
+async def get_chunk_headers(file_path: str, collection: Optional[str] = None) -> Dict[str, Any]:
     """
     Get the list of chunk headers for a specific file.
     Provides a quick overview of the document's contents structure.
     :param file_path: Path to the file.
+    :param collection: Optional Qdrant collection name (defaults to active profile's collection).
     :return: {
         "file_path": str,
         "chunks_total": int,
         "chunks": [{"chunk_index": int, "header": str, "page_range": List[int] | None, "line_range": List[int] | None}]
     }.
     """
-    global _context
-    assert _context is not None  # makes pyright happy
-    points = await _context.qdrant.get_chunks_by_file(file_path)
+    qdrant = await _get_qdrant(collection)
+    points = await qdrant.get_chunks_by_file(file_path)
 
     if not points:
         return {
@@ -146,11 +147,45 @@ def _extract_header_from_chunk_text(chunk_text: str) -> str:
     return ""
 
 
+async def _get_qdrant(collection: Optional[str] = None) -> QdrantManager:
+    """
+    Get QdrantManager for the specified collection, or the default one.
+    :param collection: Optional collection name override.
+    :return: QdrantManager instance.
+    :raises ValueError: If the specified collection does not exist.
+    """
+    global _context
+    assert _context is not None
+    if collection is None:
+        return _context.qdrant
+    qdrant = _context.qdrant.with_collection(collection)
+    exists = await qdrant.verify_collection_exists()
+    if not exists:
+        raise ValueError(f"Collection '{collection}' does not exist")
+    return qdrant
+
+
 @mcp.tool()
-async def get_answer_rag(question: str) -> Dict[str, Any]:
+async def get_collections() -> Dict[str, Any]:
+    """
+    Get the list of available Qdrant collections.
+    :return: {"collections": [str], "default": str}.
+    """
+    global _context
+    assert _context is not None
+    collections = await _context.qdrant.get_collections()
+    return {
+        "collections": collections,
+        "default": _context.qdrant.collection,
+    }
+
+
+@mcp.tool()
+async def get_answer_rag(question: str, collection: Optional[str] = None) -> Dict[str, Any]:
     """
     Get answer to question using RAG.
     :param question: Question.
+    :param collection: Optional Qdrant collection name (defaults to active profile's collection).
     :return: {
         "question_rephrased": str,
         "answer_list": [{"answer": str, "chunk_ref_list": List[str]}],
@@ -162,7 +197,8 @@ async def get_answer_rag(question: str) -> Dict[str, Any]:
     """
     global _context
     assert _context is not None  # makes pyright happy
-    query_result, _answer = await _context.qdrant.query(question)
+    qdrant = await _get_qdrant(collection)
+    query_result, _answer = await qdrant.query(question)
     query_result = cast(QuerySchema, query_result)
 
     if _context.to_json_auto_dir:
