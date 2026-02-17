@@ -2,6 +2,7 @@
 #  Copyright © 2025 Dr.-Ing. Paul Wilhelm <paul@wilhelm.dev>
 #  This file is part of Archive Agent. See LICENSE for details.
 
+import copy
 import os
 import typer
 import logging
@@ -161,6 +162,43 @@ class QdrantManager:
                 f"Make sure the Qdrant server is running ('./manage-qdrant.sh start')"
             )
             raise typer.Exit(code=1)
+
+    def with_collection(self, collection: str) -> 'QdrantManager':
+        """
+        Create a shallow copy of this manager using a different collection.
+        The new manager shares the underlying Qdrant client connection.
+        :param collection: Target collection name.
+        :return: QdrantManager pointing to the specified collection.
+        """
+        clone = copy.copy(self)
+        clone.collection = collection
+        return clone
+
+    async def verify_collection_exists(self) -> bool:
+        """
+        Verify that the current collection exists in Qdrant.
+        :return: True if collection exists, False otherwise.
+        """
+        retry_manager = RetryManager(**QdrantManager.QDRANT_RETRY_KWARGS)
+        try:
+            return await retry_manager.retry_async(
+                func=self.qdrant.collection_exists,
+                kwargs={"collection_name": self.collection}
+            )
+        except Exception:
+            return False
+
+    async def get_collections(self) -> List[str]:
+        """
+        Get list of all available Qdrant collections.
+        :return: List of collection names.
+        """
+        retry_manager = RetryManager(**QdrantManager.QDRANT_RETRY_KWARGS)
+        response = await retry_manager.retry_async(
+            func=self.qdrant.get_collections,
+            kwargs={}
+        )
+        return [c.name for c in response.collections]
 
     async def add(self, file_data: FileData, quiet: bool = False) -> bool:
         """
