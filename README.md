@@ -762,16 +762,19 @@ To save the query results to JSON files, run this:
 
 **Archive Agent** exposes these tools via MCP:
 
-| MCP tool            | Equivalent CLI command(s) | Argument(s) | Implementation | Description                                     |
-|---------------------|---------------------------|-------------|----------------|-------------------------------------------------|
-| `get_patterns`      | `patterns`                | None        | Synchronous    | Get the list of included / excluded patterns.   |
-| `get_files_tracked` | `track` and then `list`   | None        | Synchronous    | Get the list of tracked files.                  |
-| `get_files_changed` | `track` and then `diff`   | None        | Synchronous    | Get the list of changed files.                  |
-| `get_chunk_headers` | None                      | `file_path` | Asynchronous   | Get list of chunk headers for a file.           |
-| `get_search_result` | `search`                  | `question`  | Asynchronous   | Get the list of files relevant to the question. |
-| `get_answer_rag`    | `query`                   | `question`  | Asynchronous   | Get answer to question using RAG.               |
+| MCP tool            | Equivalent CLI command(s) | Argument(s)                        | Implementation | Description                                     |
+|---------------------|---------------------------|------------------------------------|----------------|-------------------------------------------------|
+| `get_patterns`      | `patterns`                | None                               | Synchronous    | Get the list of included / excluded patterns.   |
+| `get_files_tracked` | `track` and then `list`   | None                               | Synchronous    | Get the list of tracked files.                  |
+| `get_files_changed` | `track` and then `diff`   | None                               | Synchronous    | Get the list of changed files.                  |
+| `get_collections`   | None                      | None                               | Synchronous    | Get the list of available Qdrant collections.   |
+| `get_chunk_headers` | None                      | `file_path` [, `collection`]       | Asynchronous   | Get list of chunk headers for a file.           |
+| `get_search_result` | `search`                  | `question` [, `collection`]        | Asynchronous   | Get the list of files relevant to the question. |
+| `get_answer_rag`    | `query`                   | `question` [, `collection`]        | Asynchronous   | Get answer to question using RAG.               |
 
 📌 **Note:** These commands are **read-only**, preventing the AI from changing your Qdrant database.
+
+💡 **Good to know:** The optional `collection` parameter lets you query any Qdrant collection by name. If omitted, the active profile's collection is used. Use `#get_collections` to discover available collections.
 
 💡 **Good to know:** Just type `#get_answer_rag` (e.g.) in your IDE or AI extension to call the tool directly.
 
