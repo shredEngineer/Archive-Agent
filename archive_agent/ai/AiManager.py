@@ -17,6 +17,7 @@ from archive_agent.ai.vision.AiVisionEntity import AiVisionEntity
 from archive_agent.ai.vision.AiVisionOCR import AiVisionOCR
 from archive_agent.ai.vision.AiVisionSchema import VisionSchema
 from archive_agent.ai_provider.AiProvider import AiProvider
+from archive_agent.ai_provider.AiProviderError import AiProviderMaxTokensError
 
 from archive_agent.core.CliManager import CliManager
 from archive_agent.util.RetryManager import RetryManager
@@ -143,6 +144,8 @@ class AiManager(RetryManager):
 
             except typer.Exit:
                 raise  # Network retries exhausted — don't swallow process exit
+            except AiProviderMaxTokensError:
+                raise  # Non-retryable — retrying same input will always truncate
             except Exception as e:
                 self.cli.logger.exception(f"Chunking error: {e}")
                 continue  # Retry
@@ -259,6 +262,8 @@ class AiManager(RetryManager):
 
             except typer.Exit:
                 raise  # Network retries exhausted — don't swallow process exit
+            except AiProviderMaxTokensError:
+                raise  # Non-retryable — retrying same input will always truncate
             except Exception as e:
                 self.cli.logger.exception(f"Reranking error: {e}")
                 continue  # Retry

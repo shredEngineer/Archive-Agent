@@ -6,6 +6,7 @@ from typing import Set, Optional, Callable
 
 from PIL import Image, UnidentifiedImageError
 
+from archive_agent.ai_provider.AiProviderError import AiProviderMaxTokensError
 from archive_agent.ai.AiManager import AiManager
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.data.DocumentContent import DocumentContent
@@ -66,7 +67,12 @@ def load_image(
     # Original business logic: get AI instance and call callback directly
     ai = ai_factory.get_ai()
     callback_progress_info = progress_info.progress_manager.create_progress_info(vision_ai_progress_key)
-    image_text = image_to_text_callback(ai, image, callback_progress_info)
+    try:
+        image_text = image_to_text_callback(ai, image, callback_progress_info)
+    except AiProviderMaxTokensError as e:
+        logger.warning(f"Image vision skipped — max tokens exceeded: {e}")
+        progress_info.progress_manager.complete_task(vision_ai_progress_key)
+        return None
 
     progress_info.progress_manager.complete_task(vision_ai_progress_key)
 

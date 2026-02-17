@@ -8,6 +8,7 @@ from typing import List, Any, Optional, Tuple
 
 import typer
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
+from archive_agent.ai_provider.AiProviderError import AiProviderMaxTokensError
 from archive_agent.util.format import format_file
 from archive_agent.core.ProgressManager import ProgressInfo
 
@@ -64,6 +65,10 @@ class EmbedProcessor:
                 return chunk_index, chunk, _vector
             except typer.Exit:
                 raise  # Network retries exhausted — don't swallow process exit
+            except AiProviderMaxTokensError as e:
+                self.logger.warning(f"Embedding chunk ({chunk_index + 1}) skipped — max tokens exceeded: {e}")
+                progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
+                return chunk_index, chunk, None
             except Exception as e:
                 self.logger.error(f"Failed to embed chunk ({chunk_index + 1}): {e}")
                 progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
@@ -86,6 +91,9 @@ class EmbedProcessor:
                     results_dict[result_index] = (chunk, vector)
                 except typer.Exit:
                     raise  # Network retries exhausted — don't swallow process exit
+                except AiProviderMaxTokensError as exc:
+                    self.logger.warning(f"Chunk ({chunk_index + 1}) skipped — max tokens exceeded: {exc}")
+                    results_dict[chunk_index] = (original_chunk, None)
                 except Exception as exc:
                     self.logger.error(f"Chunk ({chunk_index + 1}) generated an exception: {exc}")
                     results_dict[chunk_index] = (original_chunk, None)

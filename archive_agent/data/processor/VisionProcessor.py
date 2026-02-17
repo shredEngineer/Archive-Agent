@@ -13,6 +13,7 @@ import typer
 
 from PIL import Image
 
+from archive_agent.ai_provider.AiProviderError import AiProviderMaxTokensError
 from archive_agent.ai.AiManagerFactory import AiManagerFactory
 from archive_agent.data.loader.image import ImageToTextCallback
 from archive_agent.util.text_util import splitlines_exact
@@ -99,6 +100,10 @@ class VisionProcessor:
 
             except typer.Exit:
                 raise  # Network retries exhausted — don't swallow process exit
+            except AiProviderMaxTokensError as e:
+                self.logger.warning(f"Vision request ({request.image_index + 1}) skipped — max tokens exceeded: {e}")
+                _formatted_result = request.formatter(None)
+                return request_index, _formatted_result
             except Exception as e:
                 self.logger.error(f"Failed to process vision request ({request.image_index + 1}): {e}")
                 # Apply formatter to None for error case
@@ -123,6 +128,10 @@ class VisionProcessor:
                     results_dict[result_index] = formatted_result
                 except typer.Exit:
                     raise  # Network retries exhausted — don't swallow process exit
+                except AiProviderMaxTokensError as exc:
+                    self.logger.warning(f"Vision request ({request_index + 1}) skipped — max tokens exceeded: {exc}")
+                    formatted_result = original_request.formatter(None)
+                    results_dict[request_index] = formatted_result
                 except Exception as exc:
                     self.logger.error(f"Vision request ({request_index + 1}) generated an exception: {exc}")
                     # Apply formatter to None for exception case

@@ -10,6 +10,7 @@ import logging
 from typing import Callable, Optional, Any, Dict, NoReturn
 
 from archive_agent.ai_provider.AiProviderError import AiProviderError
+from archive_agent.ai_provider.AiProviderError import AiProviderMaxTokensError
 
 from openai import OpenAIError
 
@@ -172,6 +173,9 @@ class RetryManager:
                 self._log_retry_attempt(e)
                 self.apply_delay()
 
+            except AiProviderMaxTokensError:
+                raise  # Non-retryable but not fatal — let callers handle gracefully
+
             except Exception as e:
                 logger.exception(f"Uncaught Exception `{type(e).__name__}`: {e}")
                 raise typer.Exit(code=1)
@@ -203,6 +207,9 @@ class RetryManager:
             except self._RETRY_EXCEPTIONS as e:
                 self._log_retry_attempt(e)
                 await self.apply_delay_async()
+
+            except AiProviderMaxTokensError:
+                raise  # Non-retryable but not fatal — let callers handle gracefully
 
             except Exception as e:
                 logger.exception(f"Uncaught Exception `{type(e).__name__}`: {e}")
