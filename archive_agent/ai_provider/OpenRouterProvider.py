@@ -4,6 +4,7 @@
 import typer
 import os
 import json
+import traceback
 from logging import Logger
 
 from openai import OpenAI
@@ -141,8 +142,12 @@ class OpenRouterProvider(AiProvider):
 
         except Exception as e:
             text_preview = text[:200] + "..." if len(text) > 200 else text
-            self.logger.debug(f"Embed failure for text ({len(text)} chars): {text_preview}")
-            raise AiProviderError(f"Embedding failed:\n{type(e).__name__}: {e}")
+            tb = traceback.format_exc()
+            raise AiProviderError(
+                f"Embedding failed ({len(text)} chars): {type(e).__name__}: {e}\n"
+                f"Text: {text_preview}\n"
+                f"Traceback:\n{tb}"
+            )
 
     def _perform_rerank_callback(self, prompt: str) -> AiResult:
         """

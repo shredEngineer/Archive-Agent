@@ -64,9 +64,11 @@ class EmbedProcessor:
 
                 return chunk_index, chunk, _vector
             except typer.Exit:
+                text_preview = chunk.text[:200] + "..." if len(chunk.text) > 200 else chunk.text
                 self.logger.critical(
-                    f"CHUNK SKIPPED: Embedding chunk ({chunk_index + 1}) of {format_file(self.file_path)} "
-                    f"— all retries exhausted"
+                    f"CHUNK SKIPPED: Embedding chunk ({chunk_index + 1}) / ({len(chunks)}) "
+                    f"of {format_file(self.file_path)} — all retries exhausted\n"
+                    f"Chunk text ({len(chunk.text)} chars): {text_preview}"
                 )
                 progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
                 return chunk_index, chunk, None
@@ -95,9 +97,11 @@ class EmbedProcessor:
                     result_index, chunk, vector = future.result()
                     results_dict[result_index] = (chunk, vector)
                 except typer.Exit:
+                    text_preview = original_chunk.text[:200] + "..." if len(original_chunk.text) > 200 else original_chunk.text
                     self.logger.critical(
-                        f"CHUNK SKIPPED: Embedding chunk ({chunk_index + 1}) of {format_file(self.file_path)} "
-                        f"— all retries exhausted"
+                        f"CHUNK SKIPPED: Embedding chunk ({chunk_index + 1}) / ({len(chunks)}) "
+                        f"of {format_file(self.file_path)} — all retries exhausted\n"
+                        f"Chunk text ({len(original_chunk.text)} chars): {text_preview}"
                     )
                     results_dict[chunk_index] = (original_chunk, None)
                 except AiProviderMaxTokensError as exc:
