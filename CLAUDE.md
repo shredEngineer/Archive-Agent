@@ -17,7 +17,7 @@ Archive Agent is an intelligent file indexer with powerful AI search (RAG engine
 
 ### Important Modules
 - `archive_agent/data/FileData.py` - File processing and payload creation
-- `archive_agent/data/ProgressManager.py` - Centralized hierarchical progress management
+- `archive_agent/core/ProgressManager.py` - Centralized hierarchical progress management
 - `archive_agent/data/loader/pdf.py` - PDF processing with business logic (OCR strategy resolution)
 - `archive_agent/data/loader/PdfDocument.py` - Clean PDF abstraction interfaces (PdfDocument, PdfPage, PdfPageContent)
 - `archive_agent/data/loader/backend/pdf_pymupdf.py` - PyMuPDF implementation backend (fully isolated)
@@ -45,9 +45,8 @@ Archive Agent is an intelligent file indexer with powerful AI search (RAG engine
 
 **CRITICAL**: Never run individual pytest commands or partial tests. The audit script is the ONLY approved way to run tests as it performs the complete validation suite:
 - Unit tests with pytest
-- Type checking with mypy  
-- Code style checking with ruff
-- Import sorting verification
+- Type checking with pyright
+- Code style checking with pycodestyle (PEP 8)
 
 This ensures all code meets project standards and prevents issues from being missed by partial testing.
 
@@ -99,7 +98,7 @@ When developing or modifying parallel processing components:
 - Files must end with exactly one newline
 
 ### Type Safety Requirements
-- **ABSOLUTELY FORBIDDEN: `# type: ignore` comments of any kind**
+- **ABSOLUTELY FORBIDDEN: `# type: ignore` comments of any kind** (sole exception: `pdf_pymupdf.py` backend for untyped PyMuPDF API)
 - **NEVER circumvent type checking** - fix the underlying design problem instead
 - **If types don't match, the code is wrong** - don't silence the type checker
 - **Test validation through proper pathways** - use parsing functions for invalid data tests, not direct constructors
@@ -220,7 +219,7 @@ Providing accurate, real-time updates for cumulative statistics like AI token us
 #### Unified Multithreading Style Guide
 
 **Key Requirements**:
-- **Module Constants**: Every parallel processing class must have `MAX_WORKERS = 8` at module top
+- **Module Constants**: Worker counts are configured via profile settings (default: 4 each for ingest/vision/embed)
 - **Class Location**: All parallel processing classes belong in `archive_agent/data/processor/` 
 - **Logger Hierarchy**: Use instance loggers from `ai.cli` - never module-level loggers
 - **ThreadPoolExecutor Usage**: Use `max_workers=MAX_WORKERS` directly (ThreadPoolExecutor automatically limits workers to task count)
@@ -472,7 +471,7 @@ VisionProcessor maintains exact formatting behavior for different OCR strategies
 - **Binary documents**: `"[{image_text}]"` (always brackets) or `"[Unprocessable Image]"`
 
 ### AI Provider Integration
-- Support multiple providers: OpenAI, Ollama, LM Studio
+- Support multiple providers: OpenAI, OpenRouter, Ollama, LM Studio
 - Configuration is profile-based in `~/.archive-agent-settings/`
 - AI operations are cached to avoid redundant processing
 - Token usage is tracked and displayed in real-time

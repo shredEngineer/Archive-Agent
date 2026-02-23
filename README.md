@@ -78,10 +78,10 @@ graph LR
   %% Query Pipeline
   subgraph Query
     F[<b>Ask Question</b>] --> G[<b>Embed Question</b><br>Model: text-embedding-3-large]
-    G --> H[<b>Retrieve Nearest Chunks</b><br>Score Min: 0.1<br>Chunks Max: 40]
+    G --> H[<b>Retrieve Nearest Chunks</b><br>Score Min: 0.1<br>Chunks Max: 30]
     E --> H
-    H --> I[<b>Rerank by Relevance</b><br>Chunks Max: 30]
-    I --> J[<b>Expand Context</b><br>Chunks Radius: 2]
+    H --> I[<b>Rerank by Relevance</b><br>Chunks Max: 8]
+    I --> J[<b>Expand Context</b><br>Chunks Radius: 1]
     J --> K[<b>Generate Answer</b>]
     K --> L[<b>Get Answer</b><br>in CLI, GUI, MCP]
   end
@@ -923,7 +923,7 @@ To get started, check out these epic modules:
 - The default config is defined in [`archive_agent/config/ConfigManager.py`](archive_agent/config/ConfigManager.py)  
 - The CLI commands are defined in [`archive_agent/__main__.py`](archive_agent/__main__.py)
 - The commit logic is implemented in [`archive_agent/core/CommitManager.py`](archive_agent/core/CommitManager.py)
-- The CLI verbosity is handled in [`archive_agent/util/CliManager.py`](archive_agent/core/CliManager.py)
+- The CLI verbosity is handled in [`archive_agent/core/CliManager.py`](archive_agent/core/CliManager.py)
 - The GUI is implemented in [`archive_agent/core/GuiManager.py`](archive_agent/core/GuiManager.py)
 - The AI API prompts for chunking, embedding, vision, and querying are defined in [`archive_agent/ai/AiManager.py`](archive_agent/ai/AiManager.py) 
 - The AI provider registry is located in [`archive_agent/ai_provider/ai_provider_registry.py`](archive_agent/ai_provider/ai_provider_registry.py)
