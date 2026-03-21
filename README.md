@@ -751,6 +751,25 @@ To save the query results to JSON files, run this:
 
 📌 **Note:** Press `CTRL+C` in the console to close the MCP server.
 
+### Standalone STRICT OCR
+
+To OCR a PDF file using the STRICT strategy and output a Markdown file, run this:
+
+```bash
+archive-agent standalone-ocr-strict "~/Documents/scan.pdf"
+```
+
+Each page is rendered as a full-page image and processed through AI vision OCR.
+The result is written as a `.md` file next to the PDF (e.g., `scan.md`).
+
+To set custom rendering resolution, pass the `--dpi` option (default: 150).
+
+To see additional information, pass the `--verbose` option.
+
+To bypass the [AI cache](#ai-cache) for this operation, pass the `--nocache` option.
+
+📌 **Note:** This command does **not** require a running Qdrant database.
+
 💡 **Good to know:** Use these MCP configurations to let your IDE or AI extension automate **Archive Agent**:
 
 - [`.vscode/mcp.json`](.vscode/mcp.json) for [GitHub Copilot agent mode (VS Code)](https://code.visualstudio.com/blogs/2025/02/24/introducing-copilot-agent-mode): 

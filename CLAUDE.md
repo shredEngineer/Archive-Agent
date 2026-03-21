@@ -31,6 +31,7 @@ Archive Agent is an intelligent file indexer with powerful AI search (RAG engine
 - `archive_agent/core/CliManager.py` - CLI display and logging with multithreading
 - `archive_agent/ai/AiManager.py` - AI API interactions and prompts
 - `archive_agent/__main__.py` - CLI command definitions
+- `archive_agent/standalone/StandaloneOcr.py` - Standalone STRICT OCR processor (lightweight, no Qdrant)
 
 ## Testing and Quality Assurance
 
@@ -475,6 +476,59 @@ VisionProcessor maintains exact formatting behavior for different OCR strategies
 - Configuration is profile-based in `~/.archive-agent-settings/`
 - AI operations are cached to avoid redundant processing
 - Token usage is tracked and displayed in real-time
+
+## Standalone OCR
+
+### `standalone-ocr-strict` Command
+
+A lightweight command that OCRs a PDF using STRICT strategy and outputs a Markdown file.
+Does NOT require a running Qdrant database or any watchlist/commit infrastructure.
+
+**Module**: `archive_agent/standalone/StandaloneOcr.py`
+
+**Lightweight Initialization**: Uses `StandaloneOcr.create_from_profile()` factory method which
+initializes only the minimal components needed for vision OCR:
+- `CliManager` — Console output and logging
+- `ProgressManager` — Progress tracking
+- `ProfileManager` — Profile selection (reads current profile)
+- `ConfigManager` — Configuration loading (AI provider, models, workers)
+- `CacheManager` — AI response caching
+- `AiManagerFactory` — Factory for creating AI manager instances
+
+Components NOT initialized (not needed):
+- `QdrantManager` — No database operations
+- `WatchlistManager` — No file tracking
+- `CommitManager` / `IngestionManager` — No ingestion pipeline
+- `DecoderSettings` — STRICT strategy is hardcoded
+
+**Processing Flow**:
+1. Open PDF with `create_pdf_document()` (PyMuPDF backend)
+2. Render each page as full-page image at configured DPI (default: 150)
+3. Build `VisionRequest` objects for all pages
+4. Process all pages in parallel via `VisionProcessor`
+5. Assemble results into Markdown with `# Page N` headings
+6. Write `.md` file next to the original PDF
+
+**Vision Callback**: Uses a dedicated `_ocr_callback()` function (module-level) that follows
+the standard `ImageToTextCallback` signature for thread safety. Each worker gets a dedicated
+`AiManager` instance via the factory pattern.
+
+**Output Format**:
+```markdown
+# Page 1
+
+OCR text from page one.
+
+# Page 2
+
+OCR text from page two.
+```
+
+Failed pages are marked with `*[Unprocessable page]*`.
+
+**No PyMuPDF Lock**: The standalone command does NOT use `_PDF_ANALYZING_LOCK` because
+it does not run concurrent file-level processing — only one PDF is processed at a time,
+with parallelism only at the vision request level.
 
 ## Common Development Tasks
 

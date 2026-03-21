@@ -429,5 +429,46 @@ def mcp(
     context.usage()
 
 
+@app.command(name="standalone-ocr-strict")
+def standalone_ocr_strict(
+        pdf_path: str = typer.Argument(
+            ...,
+            help="Path to the PDF file to OCR."
+        ),
+        nocache: bool = typer.Option(
+            False,
+            "--nocache",
+            help="Invalidate the AI cache."
+        ),
+        verbose: bool = typer.Option(
+            False,
+            "--verbose",
+            help="Show additional information."
+        ),
+        dpi: int = typer.Option(
+            150,
+            "--dpi",
+            help="DPI for full-page rendering (default: 150)."
+        ),
+) -> None:
+    """
+    OCR a PDF using STRICT strategy and output a Markdown file.
+
+    Each page is rendered as a full-page image and processed through
+    AI vision OCR. The result is written as a .md file next to the PDF.
+
+    This command does NOT require a running Qdrant database.
+    """
+    from archive_agent.standalone.StandaloneOcr import StandaloneOcr
+
+    ocr = StandaloneOcr.create_from_profile(
+        verbose=verbose,
+        nocache=nocache,
+        dpi=dpi,
+    )
+
+    ocr.process(pdf_path)
+
+
 if __name__ == "__main__":
     app()
