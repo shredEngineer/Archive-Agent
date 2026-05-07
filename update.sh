@@ -22,7 +22,13 @@ echo ""
 echo ".---------------------."
 echo "| Install spaCy model |"
 echo "'---------------------'"
-uv run python -m spacy download en_core_web_md
+# Idempotent: only download if the model isn't already importable. spacy's `download`
+# always uninstall+reinstalls (~33 MB) — skipping when present saves bandwidth and time.
+if uv run python -c "import en_core_web_md" >/dev/null 2>&1; then
+    echo "en_core_web_md already installed, skipping download"
+else
+    uv run python -m spacy download en_core_web_md
+fi
 
 echo ""
 echo ".-------------------------------------."
