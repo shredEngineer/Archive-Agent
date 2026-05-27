@@ -15,7 +15,7 @@ from archive_agent.ai.query.AiQuery import AiQuery, QuerySchema
 from archive_agent.ai.rerank.AiRerank import AiRerank, RerankSchema
 from archive_agent.ai.vision.AiVisionEntity import AiVisionEntity
 from archive_agent.ai.vision.AiVisionOCR import AiVisionOCR
-from archive_agent.ai.vision.AiVisionSchema import VisionSchema
+from archive_agent.ai.vision.AiVisionSchema import VisionSchema, VisionSchemaMultiline
 from archive_agent.ai_provider.AiProvider import AiProvider
 from archive_agent.ai_provider.AiProviderError import AiProviderMaxTokensError
 
@@ -27,6 +27,7 @@ from archive_agent.util.text_util import prepend_line_numbers
 class AiVisionRequest(Enum):
     ENTITY = 'entity'
     OCR = 'ocr'
+    OCR_STANDALONE = 'ocr_standalone'
 
 
 class AiManager(RetryManager):
@@ -299,10 +300,14 @@ class AiManager(RetryManager):
         :param image_base64: Image as UTF-8 encoded Base64 string.
         :return: VisionSchema.
         """
+        is_standalone = self.requested == AiVisionRequest.OCR_STANDALONE
+
         if self.requested == AiVisionRequest.ENTITY:
             prompt = AiVisionEntity.get_prompt_vision()
         elif self.requested == AiVisionRequest.OCR:
             prompt = AiVisionOCR.get_prompt_vision()
+        elif self.requested == AiVisionRequest.OCR_STANDALONE:
+            prompt = AiVisionOCR.get_prompt_vision_standalone()
         else:
             self.cli.logger.critical("⚠️ BUG DETECTED: Unrequested call to `AiManager.vision()` — falling back to OCR")
             prompt = AiVisionOCR.get_prompt_vision()
@@ -316,6 +321,14 @@ class AiManager(RetryManager):
         assert result.parsed_schema is not None
         vision_result = cast(VisionSchema, result.parsed_schema)
 
+        if is_standalone and not vision_result.is_rejected:
+            # Standalone OCR ONLY: re-parse the raw JSON with the multiline schema to
+            # preserve structural line breaks. The base VisionSchema (used everywhere else)
+            # collapses them to guarantee single-line output for the RAG pipeline.
+            vision_result = VisionSchemaMultiline.model_validate_json(
+                self.ai_provider._sanitize_json(result.output_text)
+            )
+
         if vision_result.is_rejected:
             self.ai_provider.invalidate_last_cached()
 
@@ -326,3 +339,6 @@ class AiManager(RetryManager):
 
     def request_ocr(self):
         self.requested = AiVisionRequest.OCR
+
+    def request_ocr_standalone(self):
+        self.requested = AiVisionRequest.OCR_STANDALONE

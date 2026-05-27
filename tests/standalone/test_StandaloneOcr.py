@@ -44,9 +44,9 @@ class TestBuildMarkdown:
         assert result == ""
 
     def test_single_page_with_text(self) -> None:
-        """Test markdown output for a single successful page."""
+        """Test markdown output for a single successful page (no page heading)."""
         result = build_markdown(["Hello world from page one."])
-        expected = "# Page 1\n\nHello world from page one.\n"
+        expected = "Hello world from page one.\n"
         assert result == expected
 
     def test_multiple_pages(self) -> None:
@@ -58,12 +58,20 @@ class TestBuildMarkdown:
         ]
         result = build_markdown(page_texts)
 
-        assert "# Page 1" in result
-        assert "# Page 2" in result
-        assert "# Page 3" in result
         assert "Text from page one." in result
         assert "Text from page two." in result
         assert "Text from page three." in result
+
+    def test_no_page_headings(self) -> None:
+        """Test that no '# Page N' headings are emitted (structure comes from OCR line breaks)."""
+        page_texts: List[Optional[str]] = ["Page one.", "Page two.", "Page three."]
+        result = build_markdown(page_texts)
+        assert "# Page" not in result
+
+    def test_multiline_text_is_preserved(self) -> None:
+        """Test that line breaks within a page are preserved (no collapse to single line)."""
+        result = build_markdown(["# Title\n\nA paragraph.\n\n- item one\n- item two"])
+        assert "# Title\n\nA paragraph.\n\n- item one\n- item two" in result
 
     def test_failed_page_shows_unprocessable_marker(self) -> None:
         """Test that None pages produce the unprocessable marker."""
@@ -75,7 +83,6 @@ class TestBuildMarkdown:
         result = build_markdown(page_texts)
 
         assert "*[Unprocessable page]*" in result
-        assert "# Page 2" in result
 
     def test_all_pages_failed(self) -> None:
         """Test output when all pages fail."""
@@ -83,14 +90,6 @@ class TestBuildMarkdown:
         result = build_markdown(page_texts)
 
         assert result.count("*[Unprocessable page]*") == 2
-        assert "# Page 1" in result
-        assert "# Page 2" in result
-
-    def test_page_numbering_starts_at_one(self) -> None:
-        """Test that page numbers start at 1, not 0."""
-        result = build_markdown(["Some text."])
-        assert "# Page 1" in result
-        assert "# Page 0" not in result
 
     def test_output_ends_with_newline(self) -> None:
         """Test that output ends with a trailing newline."""
@@ -98,15 +97,10 @@ class TestBuildMarkdown:
         assert result.endswith("\n")
 
     def test_pages_separated_by_blank_lines(self) -> None:
-        """Test that pages are separated by blank lines."""
+        """Test that consecutive pages are separated by a blank line."""
         page_texts: List[Optional[str]] = ["Page one.", "Page two."]
         result = build_markdown(page_texts)
-        lines = result.split("\n")
-
-        # After page text, there should be an empty line before next heading
-        page_one_text_index = lines.index("Page one.")
-        assert lines[page_one_text_index + 1] == ""
-        assert lines[page_one_text_index + 2] == "# Page 2"
+        assert "Page one.\n\nPage two." in result
 
     def test_unicode_spaces_are_sanitized(self) -> None:
         """Test that Unicode whitespace in page text is replaced with regular spaces."""

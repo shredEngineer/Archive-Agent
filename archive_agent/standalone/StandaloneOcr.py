@@ -232,6 +232,7 @@ class StandaloneOcr:
             verbose=self.verbose,
             file_path=file_path,
             max_workers=self.max_workers_vision,
+            allow_multiline=True,
         )
 
         results = vision_processor.process_vision_requests_parallel(
@@ -276,7 +277,7 @@ def _ocr_callback(
 
     image_base64 = image_to_base64(image_possibly_resized)
 
-    ai.request_ocr()
+    ai.request_ocr_standalone()
     vision_result = ai.vision(image_base64)
 
     progress_info.progress_manager.update_task(progress_info.parent_key, advance=1)
@@ -285,7 +286,7 @@ def _ocr_callback(
         ai.cli.logger.error(f"Image rejected: \"{vision_result.rejection_reason}\"")
         return None
 
-    return AiVisionOCR.format_vision_answer(vision_result=vision_result)
+    return AiVisionOCR.format_vision_answer_multiline(vision_result=vision_result)
 
 
 def get_output_path(pdf_path: str) -> Path:
@@ -330,8 +331,10 @@ def build_markdown(page_texts: List[Optional[str]]) -> str:
     """
     Assemble page OCR results into a Markdown document.
 
-    Each page gets a heading (``# Page N``) followed by its OCR text.
-    Failed pages are marked with ``*[Unprocessable page]*``.
+    Pages are concatenated WITHOUT page-number headings, so the document reads as
+    continuous structured text whose hierarchy is carried by the OCR line breaks.
+    Page boundaries become blank lines. Failed pages are marked with
+    ``*[Unprocessable page]*``.
 
     :param page_texts: List of OCR text per page (None for failed pages).
     :return: Markdown string.
@@ -341,16 +344,10 @@ def build_markdown(page_texts: List[Optional[str]]) -> str:
 
     parts: List[str] = []
 
-    for page_index, text in enumerate(page_texts):
-        page_number = page_index + 1
-        parts.append(f"# Page {page_number}")
-        parts.append("")
-
+    for text in page_texts:
         if text is not None:
             parts.append(sanitize_unicode(text))
         else:
             parts.append("*[Unprocessable page]*")
 
-        parts.append("")
-
-    return "\n".join(parts)
+    return "\n\n".join(parts) + "\n"

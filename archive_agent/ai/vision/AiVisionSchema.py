@@ -49,3 +49,21 @@ class VisionSchema(BaseModel):
     def strip_newlines(cls, v: str) -> str:
         """Strip newlines from answer field to ensure single-line output."""
         return ' '.join(v.splitlines()).strip()
+
+
+class VisionSchemaMultiline(VisionSchema):
+    """
+    Vision schema variant that PRESERVES line breaks in the `answer` field.
+
+    Used ONLY by the standalone-ocr-strict command, so its Markdown output can carry the
+    document's structure. The base `VisionSchema` collapses all newlines to guarantee
+    single-line output for the RAG ingestion pipeline; this subclass overrides that
+    validator to keep structural line breaks intact. The validator name MUST match the
+    base validator's name to override it (Pydantic keys field validators by function name).
+    """
+
+    @field_validator('answer')
+    @classmethod
+    def strip_newlines(cls, v: str) -> str:
+        """Override: preserve structural line breaks (do NOT collapse to a single line)."""
+        return v.strip()

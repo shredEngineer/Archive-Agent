@@ -39,7 +39,15 @@ class VisionProcessor:
     Handles both PDF and Binary document vision requests.
     """
 
-    def __init__(self, ai_factory: AiManagerFactory, logger: Logger, verbose: bool, file_path: str, max_workers: int):
+    def __init__(
+            self,
+            ai_factory: AiManagerFactory,
+            logger: Logger,
+            verbose: bool,
+            file_path: str,
+            max_workers: int,
+            allow_multiline: bool = False,
+    ):
         """
         Initialize vision processor.
         :param ai_factory: AI manager factory for creating worker instances.
@@ -47,12 +55,17 @@ class VisionProcessor:
         :param verbose: Enable verbose output.
         :param file_path: File path for logging context.
         :param max_workers: Max. workers.
+        :param allow_multiline: If True, skip the single-line validation so results may
+                                contain line breaks (used ONLY by standalone OCR). Default
+                                False preserves the original single-line guarantee for all
+                                regular ingestion paths.
         """
         self.ai_factory = ai_factory
         self.logger = logger
         self.verbose = verbose
         self.file_path = file_path
         self.max_workers = max_workers
+        self.allow_multiline = allow_multiline
 
     def process_vision_requests_parallel(
             self,
@@ -89,8 +102,9 @@ class VisionProcessor:
                     # Already PIL Image
                     vision_result = request.callback(ai_worker, request.image_data, progress_info)
 
-                # Validate single-line constraint before formatting (same as original)
-                if vision_result is not None:
+                # Validate single-line constraint before formatting (same as original).
+                # Skipped when allow_multiline is set (standalone OCR preserves structural line breaks).
+                if vision_result is not None and not self.allow_multiline:
                     assert len(splitlines_exact(vision_result)) == 1, f"Text from image must be single line:\n'{vision_result}'"
 
                 # Apply formatter to get final result
