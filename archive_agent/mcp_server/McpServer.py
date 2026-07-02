@@ -201,7 +201,13 @@ async def get_answer_rag(question: str, collection: Optional[str] = None) -> Dic
     query_result, _answer = await qdrant.query(question)
     query_result = cast(QuerySchema, query_result)
 
-    if _context.to_json_auto_dir:
+    # Auto-JSON export is bound to the ACTIVE profile's answers directory.
+    # When `collection` overrides to a DIFFERENT collection, writing there would
+    # leak that collection's content into the active profile's workspace
+    # (worst case: Internal/Zone-1 answers written into the CleanCorpus tree).
+    # Cross-collection answers are therefore returned to the caller only.
+    is_cross_collection = collection is not None and collection != _context.qdrant.collection
+    if _context.to_json_auto_dir and not is_cross_collection:
         json_filename = _context.to_json_auto_dir / generate_json_filename(question)
         if json_filename:
             write_to_json(
@@ -210,6 +216,12 @@ async def get_answer_rag(question: str, collection: Optional[str] = None) -> Dic
                 query_result=query_result.model_dump(),
                 answer_text=_answer,
             )
+    elif _context.to_json_auto_dir and is_cross_collection:
+        logger.info(
+            f"Skipping auto-JSON export for cross-collection query "
+            f"(collection '{collection}' != active '{_context.qdrant.collection}') — "
+            f"answers directory belongs to the active profile."
+        )
 
     return {
         "question_rephrased":       query_result.question_rephrased,
