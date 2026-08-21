@@ -44,7 +44,7 @@ start_qdrant() {
             if ! docker run -d \
                 --name "$CONTAINER_NAME" \
                 --restart unless-stopped \
-                -p 6333:6333 \
+                -p 127.0.0.1:6333:6333 \
                 -v ~/.archive-agent-qdrant-storage:/qdrant/storage \
                 qdrant/qdrant; then
                 echo "Archive Agent: Qdrant server: ERROR: Failed to start."
