@@ -4,6 +4,7 @@
 from archive_agent.core.ContextManager import ContextManager
 from archive_agent.util.text_util import replace_file_uris_with_markdown
 from archive_agent.util.json_util import generate_json_filename, write_to_json
+from archive_agent.util.local_auth import ENV_VAR as LOCAL_AUTH_ENV_VAR, get_password, password_matches
 
 from archive_agent import __version__
 
@@ -32,6 +33,9 @@ class GuiManager:
         """
         st.set_page_config(page_title="Archive Agent", page_icon="⚡", layout="centered")
 
+        # Nothing below renders or queries until the session is logged in.
+        GuiManager.require_login()
+
         # Build ContextManager once and cache in session_state
         if "context" not in st.session_state:
             st.session_state.context = ContextManager(
@@ -41,6 +45,32 @@ class GuiManager:
             )
 
         self.context: ContextManager = st.session_state.context
+
+    @staticmethod
+    def require_login() -> None:
+        """
+        Password gate (Streamlit has no HTTP auth hook): stop the script run until the
+        session has entered the workstation password. Fails closed if the password is unset.
+        """
+        password = get_password()
+        if not password:
+            st.error(f"{LOCAL_AUTH_ENV_VAR} is not set - refusing to serve without authentication.")
+            st.stop()
+
+        if st.session_state.get("authenticated", False):
+            return
+
+        with st.form("login_form"):
+            candidate = st.text_input("Password", type="password")
+            submitted = st.form_submit_button("Log in")
+
+        if submitted:
+            if password_matches(candidate, password):
+                st.session_state.authenticated = True
+                st.rerun()
+            st.error("Wrong password.")
+
+        st.stop()
 
     def run(self) -> None:
         """

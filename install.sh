@@ -51,7 +51,7 @@ else
 	echo ".------------------------------."
 	echo "| (sudo) Install Qdrant server |"
 	echo "'------------------------------'"
-	sudo ./manage-qdrant.sh start
+	sudo --preserve-env=LOCAL_AUTH_PASSWORD ./manage-qdrant.sh start
 fi
 
 echo ""

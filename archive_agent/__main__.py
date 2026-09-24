@@ -17,6 +17,8 @@ with Informer("Starting…"):
 
     from archive_agent.mcp_server.McpServer import McpServer
 
+    from archive_agent.util.local_auth import require_password
+
 
 logger = logging.getLogger(__name__)
 
@@ -363,6 +365,9 @@ def gui(
     insert ``--`` after the script path; everything following is passed through
     in ``sys.argv`` of the Streamlit app.
     """
+    # Fail closed: the GUI gates itself with LOCAL_AUTH_PASSWORD (inherited by the Streamlit subprocess).
+    require_password()
+
     logger.info("💡 GUI is starting…")
 
     gui_path = Path(__file__).parent / "core" / "GuiManager.py"
@@ -380,7 +385,8 @@ def gui(
         script_args.append(str(to_json_auto_dir))
 
     # Build command: put `--` before args so Streamlit forwards them to the script
-    cmd: List[str] = [sys.executable, "-m", "streamlit", "run", str(gui_path)]
+    # Bind IPv4 only (Streamlit's default also listens on [::]).
+    cmd: List[str] = [sys.executable, "-m", "streamlit", "run", str(gui_path), "--server.address", "0.0.0.0"]
     if script_args:
         cmd.append("--")
         cmd.extend(script_args)
@@ -412,6 +418,9 @@ def mcp(
     """
     Start MCP server.
     """
+    # Fail closed before connecting to anything.
+    require_password()
+
     to_json_auto_dir = None if to_json_auto is None else Path(to_json_auto).expanduser().resolve()
 
     context = ContextManager(invalidate_cache=nocache, verbose=verbose, to_json_auto_dir=to_json_auto_dir)

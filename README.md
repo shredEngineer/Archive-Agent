@@ -189,6 +189,15 @@ Please install these requirements before proceeding:
 
 This installation method should work on any Linux distribution derived from Ubuntu (e.g. Linux Mint). 
 
+📌 **Note:** The GUI, the MCP server and the Qdrant server are protected by one password,
+read from the environment variable `LOCAL_AUTH_PASSWORD`.
+Export it (e.g. in your shell profile) before installing or running **Archive Agent** —
+without it, `archive-agent gui`, `archive-agent mcp` and `manage-qdrant.sh` refuse to start:
+
+```bash
+export LOCAL_AUTH_PASSWORD='your-password'
+```
+
 To install **Archive Agent** in the current directory of your choice, run this once:
 
 ```bash
@@ -203,7 +212,7 @@ The `install.sh` script will execute the following steps:
 - Install the custom Python environment
 - Install the `spaCy` model for natural language processing (pre-chunking)
 - Install `pandoc` (used for document parsing)
-- Download and install the Qdrant docker image with persistent storage and auto-restart
+- Download and install the Qdrant docker image with persistent storage, auto-restart and `LOCAL_AUTH_PASSWORD` as its API key
 - Install a global `archive-agent` command for the current user
 
 **Archive Agent is now installed!**
@@ -726,6 +735,8 @@ To save the query results to JSON files, run this:
 
 📌 **Note:** Press `CTRL+C` in the console to close the GUI server.
 
+📌 **Note:** The GUI listens on all IPv4 interfaces (port `8501`) and asks for `LOCAL_AUTH_PASSWORD` before showing or querying anything.
+
 ### Start MCP Server
 
 To start the **Archive Agent** MCP server, run this:
@@ -750,6 +761,10 @@ To save the query results to JSON files, run this:
 📌 **Note:** As of **Archive Agent** v12.2.0, corresponding Markdown files (`.md`) containing the answers are also created when using the `--to-json-auto` option. (There is currently no way to opt out of this.)
 
 📌 **Note:** Press `CTRL+C` in the console to close the MCP server.
+
+📌 **Note:** Every request to the MCP server (the `/sse` stream and `/messages/`) must carry `LOCAL_AUTH_PASSWORD`,
+either as `Authorization: Bearer <password>` (MCP clients, scripts) or as HTTP Basic auth with any username (browsers, `curl -u x:<password>`).
+Anything else is answered with `401`.
 
 ### Standalone STRICT OCR
 
@@ -821,8 +836,10 @@ see [Archive Agent settings](#archive-agent-settings) and [Qdrant database](#qdr
 💡 **Good to know:** To also update the Qdrant docker image, run this:
 
 ```bash
-sudo ./manage-qdrant.sh update
+sudo --preserve-env=LOCAL_AUTH_PASSWORD ./manage-qdrant.sh update
 ```
+
+📌 **Note:** `sudo` strips the environment, hence `--preserve-env=LOCAL_AUTH_PASSWORD`; `manage-qdrant.sh` refuses to create a container without it.
 
 ---
 
@@ -926,7 +943,22 @@ The [Qdrant](https://qdrant.tech/) database is stored in `~/.archive-agent-qdran
 
 📌 **Note:** This folder is created by the Qdrant Docker image running as root.
 
+The Qdrant server listens on `127.0.0.1:6333` only and requires `LOCAL_AUTH_PASSWORD` as its API key
+(passed to the container as `QDRANT__SERVICE__API_KEY` by `manage-qdrant.sh`). Archive Agent sends it automatically.
+
 💡 **Good to know:** Visit your [Qdrant dashboard](http://localhost:6333/dashboard#/collections) to manage collections and snapshots.
+The dashboard asks for the API key (`LOCAL_AUTH_PASSWORD`). Direct REST calls need the `api-key` header:
+
+```bash
+curl -H "api-key: $LOCAL_AUTH_PASSWORD" http://127.0.0.1:6333/collections
+```
+
+📌 **Note:** A Qdrant container created without an API key (or with an outdated one) must be recreated once;
+`manage-qdrant.sh start` refuses to start a container without an API key. The storage is kept:
+
+```bash
+sudo --preserve-env=LOCAL_AUTH_PASSWORD ./manage-qdrant.sh recreate
+```
 
 ---
 
@@ -983,7 +1015,7 @@ export ARCHIVE_AGENT_QDRANT_IN_MEMORY=1
 ``` 
 
 - The environment variable is checked by `install.sh` to skip `manage-qdrant.sh`.
-- The environment variable is checked by `QdrantManager.py` to ignore server URL and use in-memory storage instead.
+- The environment variable is checked by `QdrantManager.py` to ignore server URL and API key and use in-memory storage instead.
 
 📌 **Note:** Qdrant in-memory storage is volatile (not persisted to disk).
 

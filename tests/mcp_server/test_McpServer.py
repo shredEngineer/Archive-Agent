@@ -67,3 +67,53 @@ class TestExtractHeaderFromChunkText:
         chunk_text = "# Données d'analyse: 日本語テスト\n\nBody with unicode."
         result = _extract_header_from_chunk_text(chunk_text)
         assert result == "Données d'analyse: 日本語テスト"
+
+
+class TestMcpServerAuth:
+    """Test suite for the MCP server's LOCAL_AUTH_PASSWORD guard."""
+
+    PASSWORD = "test-pw"
+
+    @staticmethod
+    def _client(monkeypatch, password):
+        from unittest.mock import Mock
+        from starlette.testclient import TestClient
+        from archive_agent.mcp_server.McpServer import McpServer
+
+        if password is None:
+            monkeypatch.delenv("LOCAL_AUTH_PASSWORD", raising=False)
+        else:
+            monkeypatch.setenv("LOCAL_AUTH_PASSWORD", password)
+        server = McpServer(context=Mock(), host="127.0.0.1", port=0)
+        return TestClient(server.app)
+
+    def test_refuses_to_start_without_password(self, monkeypatch):
+        """Test that the server fails closed if LOCAL_AUTH_PASSWORD is unset."""
+        import pytest
+        with pytest.raises(SystemExit):
+            self._client(monkeypatch, None)
+
+    def test_sse_without_credentials_is_401(self, monkeypatch):
+        """Test that /sse asks for Basic auth when no credentials are sent."""
+        client = self._client(monkeypatch, self.PASSWORD)
+        response = client.get("/sse")
+        assert response.status_code == 401
+        assert response.headers["www-authenticate"] == 'Basic realm="Archive-Agent MCP"'
+
+    def test_messages_with_wrong_credentials_is_401(self, monkeypatch):
+        """Test that /messages/ rejects a wrong password."""
+        client = self._client(monkeypatch, self.PASSWORD)
+        assert client.post("/messages/", headers={"Authorization": "Bearer wrong"}).status_code == 401
+        assert client.post("/messages/", auth=("x", "wrong")).status_code == 401
+
+    def test_messages_with_bearer_passes(self, monkeypatch):
+        """Test that a Bearer password reaches the MCP transport (400: no session_id)."""
+        client = self._client(monkeypatch, self.PASSWORD)
+        response = client.post("/messages/", headers={"Authorization": f"Bearer {self.PASSWORD}"})
+        assert response.status_code == 400
+
+    def test_messages_with_basic_passes(self, monkeypatch):
+        """Test that Basic auth with any username reaches the MCP transport (400: no session_id)."""
+        client = self._client(monkeypatch, self.PASSWORD)
+        response = client.post("/messages/", auth=("anyone", self.PASSWORD))
+        assert response.status_code == 400

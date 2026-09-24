@@ -30,6 +30,7 @@ from archive_agent.core.CliManager import CliManager
 from archive_agent.util.format import format_file
 from archive_agent.db.QdrantSchema import parse_payload
 from archive_agent.util.RetryManager import RetryManager
+from archive_agent.util.local_auth import ENV_VAR as LOCAL_AUTH_ENV_VAR, get_password
 
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
@@ -94,8 +95,10 @@ class QdrantManager:
             )
         else:
             self.cli.logger.info(f"Connecting to Qdrant server: '{server_url}'")
+            # The Qdrant server's API key is the workstation password (see `manage-qdrant.sh`).
             self.qdrant = AsyncQdrantClient(
                 url=server_url,
+                api_key=get_password(),
                 timeout=QdrantManager.QDRANT_REQUEST_TIMEOUT_S,
             )
 
@@ -159,7 +162,8 @@ class QdrantManager:
         except Exception as e:
             self.cli.logger.error(
                 f"Failed to connect to Qdrant collection: {e}\n"
-                f"Make sure the Qdrant server is running ('./manage-qdrant.sh start')"
+                f"Make sure the Qdrant server is running ('./manage-qdrant.sh start') "
+                f"and '{LOCAL_AUTH_ENV_VAR}' is set to its API key"
             )
             raise typer.Exit(code=1)
 

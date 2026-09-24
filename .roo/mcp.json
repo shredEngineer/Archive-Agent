@@ -3,7 +3,7 @@
     "remote-server": {
       "url": "http://127.0.0.1:8008/sse",
       "headers": {
-        "Authorization": "Bearer your-token"
+        "Authorization": "Bearer <LOCAL_AUTH_PASSWORD>"
       },
       "alwaysAllow": [
       ],

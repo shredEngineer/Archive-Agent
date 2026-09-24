@@ -32,6 +32,7 @@ Archive Agent is an intelligent file indexer with powerful AI search (RAG engine
 - `archive_agent/ai/AiManager.py` - AI API interactions and prompts
 - `archive_agent/__main__.py` - CLI command definitions
 - `archive_agent/standalone/StandaloneOcr.py` - Standalone STRICT OCR processor (lightweight, no Qdrant)
+- `archive_agent/util/local_auth.py` - `LOCAL_AUTH_PASSWORD` auth (MCP middleware, GUI gate, Qdrant API key)
 
 ## Testing and Quality Assurance
 
@@ -573,7 +574,9 @@ with parallelism only at the vision request level.
 - Local Qdrant instance via Docker
 - Collections per profile for isolation
 - Vector storage with metadata payloads
-- Dashboard at http://localhost:6333/dashboard
+- Listens on `127.0.0.1:6333` only; API key = `LOCAL_AUTH_PASSWORD` (container env `QDRANT__SERVICE__API_KEY`, set by `manage-qdrant.sh`)
+- `QdrantManager` passes `LOCAL_AUTH_PASSWORD` as `api_key` (never stored in the profile `config.json`)
+- Dashboard at http://localhost:6333/dashboard (asks for the API key); REST calls need the `api-key` header
 
 ### Data Persistence
 - Settings: `~/.archive-agent-settings/`
@@ -606,7 +609,8 @@ Use `--nocache` flag to bypass AI cache:
 ### Update Process
 ```bash
 ./update.sh  # Updates code
-sudo ./manage-qdrant.sh update  # Updates Qdrant Docker image
+sudo --preserve-env=LOCAL_AUTH_PASSWORD ./manage-qdrant.sh update    # Updates Qdrant Docker image
+sudo --preserve-env=LOCAL_AUTH_PASSWORD ./manage-qdrant.sh recreate  # Recreates the container (new API key; storage kept)
 ```
 
 ### Backward Compatibility
@@ -617,6 +621,10 @@ sudo ./manage-qdrant.sh update  # Updates Qdrant Docker image
 ## Security Considerations
 
 - API keys stored in environment variables
+- One password, `LOCAL_AUTH_PASSWORD`, guards everything; all three fail closed if it is unset:
+  - MCP server (`127.0.0.1:8008`): `LocalAuthMiddleware` on every route (`/sse`, `/messages/`), `Authorization: Bearer <password>` or HTTP Basic with any username, else `401`
+  - GUI (`0.0.0.0:8501`, IPv4 only via `--server.address 0.0.0.0`): in-app password gate (`GuiManager.require_login`) before anything renders or queries
+  - Qdrant: server API key, sent by `QdrantManager` as `api_key`
 - Local processing preserves privacy with Ollama/LM Studio
 - No telemetry or external data transmission
 - File access controlled by pattern-based permissions

@@ -8,13 +8,57 @@ set -e
 
 CONTAINER_NAME="archive-agent-qdrant-server"
 
+# Qdrant's API key is the workstation password LOCAL_AUTH_PASSWORD.
+# sudo strips the environment, so pass it through explicitly:
+#   sudo --preserve-env=LOCAL_AUTH_PASSWORD ./manage-qdrant.sh start
+
 # Function to display help message
 show_help() {
-    echo "Usage: $0 [start|stop|update]"
-    echo "  start:  Ensures the Qdrant server container is running."
-    echo "  stop:   Stops the Qdrant server container."
-    echo "  update: Pulls the latest Qdrant Docker image and restarts the container if it was running."
+    echo "Usage: sudo --preserve-env=LOCAL_AUTH_PASSWORD $0 [start|stop|update|recreate]"
+    echo "  start:    Ensures the Qdrant server container is running."
+    echo "  stop:     Stops the Qdrant server container."
+    echo "  update:   Pulls the latest Qdrant Docker image and restarts the container if it was running."
+    echo "  recreate: Removes and recreates the container (applies a new API key or image; storage is kept)."
     exit 1
+}
+
+# Function to fail closed if the API key is missing
+require_api_key() {
+    if [ -z "${LOCAL_AUTH_PASSWORD:-}" ]; then
+        echo "Archive Agent: Qdrant server: ERROR: LOCAL_AUTH_PASSWORD is not set; refusing to run Qdrant without an API key."
+        echo "Archive Agent: Qdrant server: Run: sudo --preserve-env=LOCAL_AUTH_PASSWORD $0 $1"
+        exit 1
+    fi
+}
+
+# Function to check if the existing container was created with an API key
+container_has_api_key() {
+    docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$CONTAINER_NAME" | grep -q '^QDRANT__SERVICE__API_KEY=.'
+}
+
+# Function to refuse (re)starting a container that was created without an API key
+require_container_api_key() {
+    if ! container_has_api_key; then
+        echo "Archive Agent: Qdrant server: ERROR: Container was created without an API key."
+        echo "Archive Agent: Qdrant server: Run: sudo --preserve-env=LOCAL_AUTH_PASSWORD $0 recreate"
+        exit 1
+    fi
+}
+
+# Function to create and start a new container
+run_qdrant() {
+    require_api_key "$1"
+    # `-e VAR` without a value takes it from docker's environment, keeping the key off the command line.
+    if ! QDRANT__SERVICE__API_KEY="$LOCAL_AUTH_PASSWORD" docker run -d \
+        --name "$CONTAINER_NAME" \
+        --restart unless-stopped \
+        -p 127.0.0.1:6333:6333 \
+        -e QDRANT__SERVICE__API_KEY \
+        -v ~/.archive-agent-qdrant-storage:/qdrant/storage \
+        qdrant/qdrant; then
+        echo "Archive Agent: Qdrant server: ERROR: Failed to start."
+        exit 1
+    fi
 }
 
 # Function to check if the container exists (running or stopped)
@@ -30,9 +74,11 @@ container_is_running() {
 # Function to start the Qdrant server
 start_qdrant() {
     if container_is_running; then
+        require_container_api_key
         echo "Archive Agent: Qdrant server: Already running."
     else
         if container_exists; then
+            require_container_api_key
             echo "Archive Agent: Qdrant server: Restarting..."
             if ! docker start "$CONTAINER_NAME"; then
                 echo "Archive Agent: Qdrant server: ERROR: Failed to restart."
@@ -41,15 +87,7 @@ start_qdrant() {
             echo "Archive Agent: Qdrant server: Restarted successfully."
         else
             echo "Archive Agent: Qdrant server: Starting for the first time..."
-            if ! docker run -d \
-                --name "$CONTAINER_NAME" \
-                --restart unless-stopped \
-                -p 127.0.0.1:6333:6333 \
-                -v ~/.archive-agent-qdrant-storage:/qdrant/storage \
-                qdrant/qdrant; then
-                echo "Archive Agent: Qdrant server: ERROR: Failed to start."
-                exit 1
-            fi
+            run_qdrant start
             echo "Archive Agent: Qdrant server: Started successfully."
         fi
     fi
@@ -74,6 +112,9 @@ stop_qdrant() {
 # Function to update the Qdrant Docker image
 update_qdrant() {
     local was_running=false
+    if container_exists; then
+        require_container_api_key
+    fi
     if container_is_running; then
         was_running=true
         echo "Archive Agent: Qdrant server: Running. Stopping it before update..."
@@ -107,6 +148,22 @@ update_qdrant() {
     fi
 }
 
+# Function to recreate the Qdrant server container
+recreate_qdrant() {
+    # Check before removing anything, so a missing key never leaves Qdrant down.
+    require_api_key recreate
+    if container_exists; then
+        echo "Archive Agent: Qdrant server: Removing container (storage is kept)..."
+        if ! docker rm -f "$CONTAINER_NAME"; then
+            echo "Archive Agent: Qdrant server: ERROR: Failed to remove container."
+            exit 1
+        fi
+    fi
+    echo "Archive Agent: Qdrant server: Creating container..."
+    run_qdrant recreate
+    echo "Archive Agent: Qdrant server: Recreated successfully."
+}
+
 # Main script logic
 if [ "$#" -ne 1 ]; then
     show_help
@@ -121,6 +178,9 @@ case "$1" in
         ;;
     update)
         update_qdrant
+        ;;
+    recreate)
+        recreate_qdrant
         ;;
     *)
         echo "Archive Agent: Qdrant server: ERROR: Invalid command: $1"

@@ -244,3 +244,53 @@ def test_get_chunks_by_file_returns_empty_for_nonexistent_file(monkeypatch):
     result = asyncio.run(manager.get_chunks_by_file("/nonexistent/file.txt"))
 
     assert result == []
+
+
+def _capture_client_kwargs(monkeypatch):
+    captured = {}
+
+    def fake_client(*args, **kwargs):
+        captured.update(kwargs)
+        return FakeQdrantClient([])
+
+    monkeypatch.delenv("ARCHIVE_AGENT_QDRANT_IN_MEMORY", raising=False)
+    monkeypatch.setattr(qdrant_module, "AsyncQdrantClient", fake_client)
+    return captured
+
+
+def _construct_manager():
+    return QdrantManager(
+        cli=CliManager(verbose=False),
+        ai_factory=FakeAiFactory(FakeAi(rerank_indices=[])),
+        server_url="http://qdrant.test",
+        collection="test",
+        vector_size=1,
+        retrieve_score_min=0.1,
+        retrieve_chunks_max=10,
+        retrieve_knee_enable=True,
+        retrieve_knee_sensitivity=1.0,
+        retrieve_knee_min_chunks=1,
+        rerank_chunks_max=10,
+        expand_chunks_radius=0,
+    )
+
+
+def test_client_gets_api_key_from_local_auth_password(monkeypatch):
+    """Test that the Qdrant API key is taken from LOCAL_AUTH_PASSWORD."""
+    captured = _capture_client_kwargs(monkeypatch)
+    monkeypatch.setenv("LOCAL_AUTH_PASSWORD", "test-pw")
+
+    _construct_manager()
+
+    assert captured["url"] == "http://qdrant.test"
+    assert captured["api_key"] == "test-pw"
+
+
+def test_client_without_local_auth_password_sends_no_api_key(monkeypatch):
+    """Test that no API key is sent when LOCAL_AUTH_PASSWORD is unset."""
+    captured = _capture_client_kwargs(monkeypatch)
+    monkeypatch.delenv("LOCAL_AUTH_PASSWORD", raising=False)
+
+    _construct_manager()
+
+    assert captured["api_key"] is None

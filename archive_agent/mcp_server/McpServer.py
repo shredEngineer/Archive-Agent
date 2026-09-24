@@ -10,6 +10,7 @@ from archive_agent.ai.query.AiQuery import QuerySchema
 from archive_agent.db.QdrantSchema import parse_payload
 
 from archive_agent.util.json_util import generate_json_filename, write_to_json
+from archive_agent.util.local_auth import LocalAuthMiddleware, require_password
 
 from qdrant_client.models import ScoredPoint
 
@@ -253,6 +254,9 @@ class McpServer:
         :param host: Host.
         :param port: Port.
         """
+        # Fail closed: refuse to serve without the workstation password.
+        password = require_password()
+
         global _context
         _context = context
 
@@ -284,12 +288,17 @@ class McpServer:
 
             return PlainTextResponse("ok")
 
-        self.app = Starlette(
-            debug=True,
-            routes=[
-                Route("/sse", endpoint=handle_sse),
-                Mount("/messages/", app=sse.handle_post_message),
-            ],
+        # Every route (the /sse stream and /messages/) requires Basic or Bearer auth.
+        self.app = LocalAuthMiddleware(
+            Starlette(
+                debug=True,
+                routes=[
+                    Route("/sse", endpoint=handle_sse),
+                    Mount("/messages/", app=sse.handle_post_message),
+                ],
+            ),
+            password=password,
+            realm="Archive-Agent MCP",
         )
 
         logger.info(f"MCP server running on http://{self.host}:{self.port}/")
