@@ -17,7 +17,7 @@ show_help() {
     echo "Usage: sudo --preserve-env=LOCAL_AUTH_PASSWORD $0 [start|stop|update|recreate]"
     echo "  start:    Ensures the Qdrant server container is running."
     echo "  stop:     Stops the Qdrant server container."
-    echo "  update:   Pulls the latest Qdrant Docker image and restarts the container if it was running."
+    echo "  update:   Pulls the latest Qdrant Docker image and recreates the container on it (storage is kept)."
     echo "  recreate: Removes and recreates the container (applies a new API key or image; storage is kept)."
     exit 1
 }
@@ -110,41 +110,48 @@ stop_qdrant() {
 }
 
 # Function to update the Qdrant Docker image
+# `docker start` reuses the image a container was created from, so a pulled image
+# only takes effect once the container is recreated. The pull runs first, while
+# Qdrant keeps serving; the container is only touched once the new image is there.
 update_qdrant() {
-    local was_running=false
+    require_api_key update
     if container_exists; then
         require_container_api_key
-    fi
-    if container_is_running; then
-        was_running=true
-        echo "Archive Agent: Qdrant server: Running. Stopping it before update..."
-        if ! docker stop "$CONTAINER_NAME"; then
-            echo "Archive Agent: Qdrant server: ERROR: Failed to stop for update. Aborting."
-            exit 1
-        fi
     fi
 
     echo "Archive Agent: Qdrant server: Pulling latest Qdrant Docker image (qdrant/qdrant)..."
     if ! docker pull qdrant/qdrant; then
-        echo "Archive Agent: Qdrant server: ERROR: Failed to pull latest Qdrant Docker image."
-        # Attempt to restart if it was running, even if pull failed
-        if $was_running; then
-            echo "Archive Agent: Qdrant server: Attempting to restart after failed pull."
-            docker start "$CONTAINER_NAME" || echo "Archive Agent: Qdrant server: ERROR: Failed to restart."
-        fi
+        echo "Archive Agent: Qdrant server: ERROR: Failed to pull latest Qdrant Docker image. Container left as it was."
         exit 1
     fi
-    echo "Archive Agent: Qdrant server: Qdrant Docker image updated successfully."
+
+    if ! container_exists; then
+        echo "Archive Agent: Qdrant server: No container yet. Run start to create it."
+        return
+    fi
+
+    if [ "$(docker inspect --format '{{.Image}}' "$CONTAINER_NAME")" = "$(docker image inspect --format '{{.Id}}' qdrant/qdrant)" ]; then
+        echo "Archive Agent: Qdrant server: Already on the latest image. No action needed."
+        return
+    fi
+
+    local was_running=false
+    if container_is_running; then
+        was_running=true
+    fi
+
+    echo "Archive Agent: Qdrant server: Recreating container on the new image (storage is kept)..."
+    if ! docker rm -f "$CONTAINER_NAME"; then
+        echo "Archive Agent: Qdrant server: ERROR: Failed to remove container."
+        exit 1
+    fi
+    run_qdrant update
 
     if $was_running; then
-        echo "Archive Agent: Qdrant server: Restarting after update..."
-        if ! docker start "$CONTAINER_NAME"; then
-            echo "Archive Agent: Qdrant server: ERROR: Failed to restart after update."
-            exit 1
-        fi
-        echo "Archive Agent: Qdrant server: Restarted successfully after update."
+        echo "Archive Agent: Qdrant server: Updated and running."
     else
-        echo "Archive Agent: Qdrant server: Was not running, so not restarting."
+        docker stop "$CONTAINER_NAME" >/dev/null
+        echo "Archive Agent: Qdrant server: Updated; left stopped as it was."
     fi
 }
 
