@@ -99,6 +99,11 @@ When developing or modifying parallel processing components:
 - Remove trailing whitespace and ensure proper blank lines
 - Files must end with exactly one newline
 
+### AI Output Quality: Fix the Prompt, Not the Output
+- Quality artifacts in AI/vision output (stray page numbers, doubled LaTeX backslashes in OCR, …) are fixed in the **prompt**, never with programmatic post-processing heuristics, which can mangle legitimate content
+- Vision calls run at `temperature=0.0`, so a (prompt, image) pair is deterministic and a prompt change is reproducible: iterate on the prompt (prominent, explicit exclusion sections work well) and verify against the real document with `--nocache`
+- Propose a code heuristic only if the user agrees to it
+
 ### Type Safety Requirements
 - **ABSOLUTELY FORBIDDEN: `# type: ignore` comments of any kind** (sole exception: `pdf_pymupdf.py` backend for untyped PyMuPDF API)
 - **NEVER circumvent type checking** - fix the underlying design problem instead
